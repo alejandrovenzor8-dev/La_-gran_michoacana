@@ -6,6 +6,7 @@ import POSPage from './pages/POSPage';
 import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import UsersPage from './pages/UsersPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="pos" element={<POSPage />} />
             <Route path="inventory" element={<InventoryPage />} />
+            <Route path="users" element={<UsersPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
