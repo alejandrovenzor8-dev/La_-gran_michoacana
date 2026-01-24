@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useCartStore, Product } from '@/store/cartStore';
 import { formatCurrency } from '@/lib/utils';
-import { Search, Trash2, Plus, Minus, CreditCard, Banknote, Printer, ShoppingBag } from 'lucide-react';
+import { Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
+import OrderConfirmationModal from '@/components/OrderConfirmationModal';
 
 // Mock products - Reemplazar con datos de la API
 const mockProducts: Product[] = [
@@ -21,6 +22,8 @@ const categories = ['Todos', 'Paletas', 'Helados', 'Raspados', 'Nieves'];
 export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<string | null>(null);
   const { items, addItem, removeItem, updateQuantity, clearCart, getTotal } = useCartStore();
 
   const filteredProducts = mockProducts.filter((product) => {
@@ -29,15 +32,29 @@ export default function POSPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleCheckout = (paymentMethod: string) => {
+  const handleCheckoutClick = (paymentMethod: string) => {
     if (items.length === 0) {
       toast.error('El carrito está vacío');
       return;
     }
 
-    // TODO: Procesar venta en la API
-    toast.success(`Venta completada - ${paymentMethod}`);
-    clearCart();
+    setPendingPaymentMethod(paymentMethod);
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmOrder = () => {
+    if (pendingPaymentMethod) {
+      // TODO: Procesar venta en la API
+      toast.success(`Venta completada - ${pendingPaymentMethod}`);
+      clearCart();
+    }
+    setShowConfirmation(false);
+    setPendingPaymentMethod(null);
+  };
+
+  const handleCancelOrder = () => {
+    setShowConfirmation(false);
+    setPendingPaymentMethod(null);
   };
 
   return (
@@ -159,7 +176,7 @@ export default function POSPage() {
         {/* Payment Buttons */}
         <div className="space-y-2">
           <button
-            onClick={() => handleCheckout('Efectivo')}
+            onClick={() => handleCheckoutClick('Efectivo')}
             disabled={items.length === 0}
             className="w-full bg-green-500 text-white py-3 rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
@@ -167,22 +184,24 @@ export default function POSPage() {
             Cobrar en Efectivo
           </button>
           <button
-            onClick={() => handleCheckout('Tarjeta')}
+            onClick={() => handleCheckoutClick('Tarjeta')}
             disabled={items.length === 0}
             className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <CreditCard className="w-5 h-5" />
             Cobrar con Tarjeta
           </button>
-          <button
-            disabled={items.length === 0}
-            className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <Printer className="w-5 h-5" />
-            Imprimir Ticket
-          </button>
         </div>
       </div>
-    </div>
+
+      {/* Order Confirmation Modal */}
+      <OrderConfirmationModal
+        isOpen={showConfirmation}
+        items={items}
+        total={getTotal()}
+        paymentMethod={pendingPaymentMethod || ''}
+        onConfirm={handleConfirmOrder}
+        onCancel={handleCancelOrder}
+      />    </div>
   );
 }
