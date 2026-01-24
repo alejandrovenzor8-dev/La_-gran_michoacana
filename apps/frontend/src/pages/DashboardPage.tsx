@@ -35,11 +35,11 @@ export default function DashboardPage() {
   ];
 
   const recentSales = [
-    { id: 1, time: '10:45 AM', items: 3, total: 125.0, cashier: 'María' },
-    { id: 2, time: '10:38 AM', items: 2, total: 85.0, cashier: 'Juan' },
-    { id: 3, time: '10:22 AM', items: 5, total: 245.5, cashier: 'María' },
-    { id: 4, time: '10:15 AM', items: 1, total: 45.0, cashier: 'Carlos' },
-    { id: 5, time: '10:08 AM', items: 4, total: 180.0, cashier: 'Juan' },
+    { id: 1, time: '10:45 AM', items: 3, total: 125.0, cashier: 'María', sucursal: 'Centro' },
+    { id: 2, time: '10:38 AM', items: 2, total: 85.0, cashier: 'Juan', sucursal: 'Norte' },
+    { id: 3, time: '10:22 AM', items: 5, total: 245.5, cashier: 'María', sucursal: 'Centro' },
+    { id: 4, time: '10:15 AM', items: 1, total: 45.0, cashier: 'Carlos', sucursal: 'Sur' },
+    { id: 5, time: '10:08 AM', items: 4, total: 180.0, cashier: 'Juan', sucursal: 'Oriente' },
   ];
 
   return (
@@ -81,6 +81,7 @@ export default function DashboardPage() {
                   Productos
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Total</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Sucursal</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Cajero</th>
               </tr>
             </thead>
@@ -92,6 +93,7 @@ export default function DashboardPage() {
                   <td className="py-3 px-4 text-sm font-medium text-gray-800">
                     {formatCurrency(sale.total)}
                   </td>
+                  <td className="py-3 px-4 text-sm text-gray-600">{sale.sucursal}</td>
                   <td className="py-3 px-4 text-sm text-gray-600">{sale.cashier}</td>
                 </tr>
               ))}
