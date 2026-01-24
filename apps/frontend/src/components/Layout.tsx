@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   IceCream,
+  Users,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -18,6 +19,7 @@ export default function Layout() {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
     { name: 'Inventario', href: '/inventory', icon: Package },
+    { name: 'Usuarios', href: '/users', icon: Users },
     { name: 'Reportes', href: '/reports', icon: BarChart3 },
     { name: 'Configuración', href: '/settings', icon: Settings },
   ];
