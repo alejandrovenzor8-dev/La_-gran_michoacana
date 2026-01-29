@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCartStore, Product } from '@/store/cartStore';
+import { useBroadcastListener } from '@/hooks/useBroadcastListener';
 import { formatCurrency } from '@/lib/utils';
-import { Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag } from 'lucide-react';
+import { openCustomerDisplayAutoPositioned, closeCustomerDisplay, isCustomerDisplayOpen as checkIfDisplayOpen } from '@/lib/customerDisplay';
+import { Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import OrderConfirmationModal from '@/components/OrderConfirmationModal';
+import SyncIndicator from '@/components/SyncIndicator';
 
 // Mock products - Reemplazar con datos de la API
 const mockProducts: Product[] = [
@@ -24,7 +27,49 @@ export default function POSPage() {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<string | null>(null);
-  const { items, addItem, removeItem, updateQuantity, clearCart, getTotal } = useCartStore();
+  const [customerDisplayWindow, setCustomerDisplayWindow] = useState<Window | null>(null);
+  const [isCustomerDisplayOpen, setIsCustomerDisplayOpen] = useState(false);
+  
+  // Escuchar cambios desde la ventana del cliente
+  useBroadcastListener();
+  
+  // Obtener datos del store de forma reactiva
+  const items = useCartStore((state) => state.items);
+  const addItem = useCartStore((state) => state.addItem);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const getTotal = useCartStore((state) => state.getTotal);
+
+  // Verificar si la ventana de cliente está abierta
+  useEffect(() => {
+    const checkWindowStatus = () => {
+      setIsCustomerDisplayOpen(prev => 
+        prev ? checkIfDisplayOpen(customerDisplayWindow) : false
+      );
+    };
+
+    const interval = setInterval(checkWindowStatus, 1000);
+    return () => clearInterval(interval);
+  }, [customerDisplayWindow]);
+
+  const openCustomerDisplayHandler = () => {
+    const newWindow = openCustomerDisplayAutoPositioned();
+
+    if (newWindow) {
+      setCustomerDisplayWindow(newWindow);
+      setIsCustomerDisplayOpen(true);
+      toast.success('Pantalla de cliente abierta');
+    } else {
+      toast.error('No se pudo abrir la pantalla de cliente. Verifica la configuración de pop-ups.');
+    }
+  };
+
+  const closeCustomerDisplayHandler = () => {
+    closeCustomerDisplay(customerDisplayWindow);
+    setCustomerDisplayWindow(null);
+    setIsCustomerDisplayOpen(false);
+  };
 
   const filteredProducts = mockProducts.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -114,7 +159,35 @@ export default function POSPage() {
 
       {/* Cart Section */}
       <div className="w-96 bg-white rounded-xl shadow-md p-6 flex flex-col">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Carrito</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-800">Carrito</h2>
+          <div className="flex items-center gap-2">
+            <SyncIndicator 
+              isConnected={isCustomerDisplayOpen} 
+              itemsCount={items.length}
+              lastUpdate={new Date()}
+            />
+            {isCustomerDisplayOpen && (
+              <div className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">
+                <Monitor className="w-3 h-3" />
+                Activa
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Customer Display Button */}
+        <button
+          onClick={isCustomerDisplayOpen ? closeCustomerDisplayHandler : openCustomerDisplayHandler}
+          className={`w-full mb-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            isCustomerDisplayOpen
+              ? 'bg-red-500 text-white hover:bg-red-600'
+              : 'bg-blue-500 text-white hover:bg-blue-600'
+          }`}
+        >
+          <Monitor className="w-4 h-4" />
+          {isCustomerDisplayOpen ? 'Cerrar Pantalla Cliente' : 'Abrir Pantalla Cliente'}
+        </button>
 
         {/* Cart Items */}
         <div className="flex-1 overflow-auto mb-4">
