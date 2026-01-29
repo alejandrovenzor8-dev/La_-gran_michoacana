@@ -1,8 +1,9 @@
-import { app, BrowserWindow, screen, ipcMain } from 'electron';
+import { app, BrowserWindow, screen, ipcMain, session } from 'electron';
 import path from 'path';
 
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
+let loginWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV !== 'production';
 const VITE_DEV_SERVER_URL = 'http://localhost:5173';
@@ -12,6 +13,38 @@ let cartState = {
   items: [],
   total: 0,
 };
+
+function createLoginWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  
+  loginWindow = new BrowserWindow({
+    x: primaryDisplay.bounds.x,
+    y: primaryDisplay.bounds.y,
+    width: primaryDisplay.bounds.width,
+    height: primaryDisplay.bounds.height,
+    title: 'Super Coldy POS - Login',
+    resizable: true,
+    fullscreen: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  if (isDev) {
+    loginWindow.loadURL(`${VITE_DEV_SERVER_URL}/#/login`);
+    loginWindow.webContents.openDevTools();
+  } else {
+    loginWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
+      hash: '/login',
+    });
+  }
+
+  loginWindow.on('closed', () => {
+    loginWindow = null;
+  });
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -128,19 +161,99 @@ ipcMain.handle('cart:get', () => {
   return cartState;
 });
 
-app.whenReady().then(() => {
+// IPC Handler para login exitoso - abre las dos ventanas principales
+ipcMain.handle('login:success', () => {
+  console.log('🔓 Login exitoso detectado en main.ts');
+  
+  // Cerrar ventana de login
+  if (loginWindow && !loginWindow.isDestroyed()) {
+    loginWindow.close();
+    loginWindow = null;
+  }
+  
+  // Crear las dos ventanas principales
   createMainWindow();
   createCustomerDisplay();
+  
+  return { success: true };
+});
+
+// IPC Handler para limpiar sesión
+ipcMain.handle('clear:session', async () => {
+  console.log('🔐 Limpiando sesión y localStorage...');
+  
+  try {
+    // Limpiar localStorage
+    await session.defaultSession.clearStorageData({
+      storages: ['localstorage'],
+    });
+    console.log('✅ localStorage limpiado');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error limpiando localStorage:', error);
+    return { success: false };
+  }
+});
+
+// IPC Handler para logout - cierra todas las ventanas y vuelve al login
+ipcMain.handle('logout', async () => {
+  console.log('🚪 Logout detectado - cerrando ventanas...');
+  
+  try {
+    // Cerrar ventana del cliente
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.close();
+      customerWindow = null;
+      console.log('✅ Pantalla cliente cerrada');
+    }
+    
+    // Cerrar ventana principal
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+      mainWindow = null;
+      console.log('✅ Ventana principal cerrada');
+    }
+    
+    // Limpiar localStorage
+    await session.defaultSession.clearStorageData({
+      storages: ['localstorage'],
+    });
+    console.log('✅ Sesión limpiada');
+    
+    // Crear ventana de login
+    createLoginWindow();
+    console.log('✅ Ventana de login reabierta');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error en logout:', error);
+    return { success: false };
+  }
+});
+
+app.whenReady().then(() => {
+  // Solo crear ventana de login al inicio
+  createLoginWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
-      createCustomerDisplay();
+      createLoginWindow();
     }
   });
 });
 
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
+  // Limpiar sesión y localStorage antes de cerrar
+  console.log('🔐 Limpiando sesión al cerrar la aplicación...');
+  try {
+    await session.defaultSession.clearStorageData({
+      storages: ['localstorage'],
+    });
+    console.log('✅ Sesión limpiada al cerrar');
+  } catch (error) {
+    console.error('❌ Error limpiando sesión:', error);
+  }
+
   if (process.platform !== 'darwin') {
     app.quit();
   }

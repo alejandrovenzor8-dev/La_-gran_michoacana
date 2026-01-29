@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // API segura expuesta al renderer
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Notificar login exitoso
+  onLoginSuccess: () => {
+    return ipcRenderer.invoke('login:success');
+  },
+  
   // Enviar actualización del carrito
   updateCart: (data: any) => {
     ipcRenderer.send('cart:update', data);
@@ -43,16 +48,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeCartListeners: () => {
     // Ya no hace nada, los listeners se remueven mediante las funciones retornadas
   },
+
+  // Limpiar sesión (localStorage)
+  clearSession: () => {
+    return ipcRenderer.invoke('clear:session');
+  },
+
+  // Cerrar ventanas y volver al login
+  logout: () => {
+    return ipcRenderer.invoke('logout');
+  },
 });
 
 // Type definitions para TypeScript
 export interface ElectronAPI {
+  onLoginSuccess: () => Promise<{ success: boolean }>;
   updateCart: (data: any) => void;
   clearCart: () => void;
   getCart: () => Promise<any>;
   onCartUpdated: (callback: (data: any) => void) => () => void;
   onCartCleared: (callback: () => void) => () => void;
   removeCartListeners: () => void;
+  clearSession: () => Promise<{ success: boolean }>;
+  logout: () => Promise<{ success: boolean }>;
 }
 
 declare global {

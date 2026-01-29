@@ -31,11 +31,90 @@
   * {
     @apply border-border;
   }
+  html, body, #root {
+    @apply h-full w-full m-0 p-0;
+  }
   body {
     @apply bg-background text-foreground;
   }
 }
 
+/* Animaciones personalizadas */
+@layer utilities {
+  @keyframes slide-in-from-bottom {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-from-top {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes zoom-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-in {
+    animation: fade-in 0.5s ease-in-out;
+  }
+
+  .fade-in {
+    animation: fade-in 0.5s ease-in-out;
+  }
+
+  .slide-in-from-bottom {
+    animation: slide-in-from-bottom 0.5s ease-out;
+  }
+
+  .slide-in-from-top {
+    animation: slide-in-from-top 0.3s ease-out;
+  }
+
+  .zoom-in {
+    animation: zoom-in 0.5s ease-out;
+  }
+
+  .duration-700 {
+    animation-duration: 0.7s;
+  }
+
+  .duration-1000 {
+    animation-duration: 1s;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+}
 /* Estilos para scroll en pantalla del cliente */
 .customer-scroll {
   scrollbar-width: thick !important;
