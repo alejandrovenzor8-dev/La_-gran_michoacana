@@ -94,10 +94,20 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   clearCart: () => {
     set({ items: [], total: 0 });
+    
+    // Sincronizar con Electron
+    if (isElectron) {
+      window.electronAPI.clearCart();
+    }
   },
 
   setCart: (items) => {
     const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     set({ items, total });
+    
+    // Sincronizar con Electron
+    if (isElectron) {
+      window.electronAPI.updateCart({ items, total });
+    }
   },
 }));
