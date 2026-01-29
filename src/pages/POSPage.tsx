@@ -1,10 +1,11 @@
 import { useCartStore } from '@/stores/cartStore';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, LogOut } from 'lucide-react';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Productos de ejemplo
 const PRODUCTS = [
@@ -48,14 +49,10 @@ export default function POSPage() {
   // Escuchar el evento de limpiar carrito desde Electron
   useEffect(() => {
     if (window.electronAPI) {
-      const unsubscribe = window.electronAPI.onCartCleared(() => {
+      window.electronAPI.onCartCleared(() => {
         // Limpiar el carrito sin llamar a Electron (ya fue limpiado)
         useCartStore.setState({ items: [], total: 0 });
       });
-
-      return () => {
-        unsubscribe();
-      };
     }
   }, []);
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Lock, User, ChevronRight } from 'lucide-react';
 
@@ -8,6 +9,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,22 +21,22 @@ export default function LoginPage() {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     if (login(username, password)) {
-      // Notificar a Electron que el login fue exitoso
+      console.log('✅ Login local exitoso');
+      
+      // Navegar a la página POS
+      navigate('/pos');
+      
+      // Notificar a Electron que el login fue exitoso (en background, no esperamos respuesta)
       const isElectron = typeof window !== 'undefined' && window.electronAPI;
       if (isElectron) {
         try {
           console.log('📱 Notificando login a Electron...');
-          await window.electronAPI.onLoginSuccess();
-          console.log('✅ Electron notificado');
+          window.electronAPI.onLoginSuccess().catch((err: any) => {
+            console.error('❌ Error notificando login a Electron:', err);
+          });
         } catch (err) {
           console.error('❌ Error notificando login a Electron:', err);
-          // Si hay error en Electron pero el login local fue exitoso, continuar
-          // (esto permite desarrollo sin Electron)
         }
-      } else {
-        console.log('⚠️ No está en Electron, navegando normalmente');
-        // En navegador, simplemente recargar la página para que se vea el cambio
-        window.location.reload();
       }
     } else {
       setError('Usuario o contraseña incorrectos');
