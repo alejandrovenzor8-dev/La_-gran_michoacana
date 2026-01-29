@@ -35,3 +35,37 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Estilos para scroll en pantalla del cliente */
+.customer-scroll {
+  scrollbar-width: thick !important;
+  scrollbar-color: #8b5cf6 #f3f4f6 !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.customer-scroll::-webkit-scrollbar {
+  width: 35px !important;
+}
+
+.customer-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6 !important;
+  border-radius: 15px !important;
+  margin: 10px 0 !important;
+}
+
+.customer-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8b5cf6, #7c3aed) !important;
+  border-radius: 15px !important;
+  border: 4px solid #f3f4f6 !important;
+  min-height: 50px !important;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5) !important;
+}
+
+.customer-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #7c3aed, #6d28d9) !important;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.8) !important;
+}
+
+.customer-scroll::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(to bottom, #6d28d9, #5b21b6) !important;
+}
