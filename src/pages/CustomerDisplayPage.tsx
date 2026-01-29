@@ -21,20 +21,21 @@ export default function CustomerDisplayPage() {
       });
 
       // Escuchar actualizaciones
-      window.electronAPI.onCartUpdated((data) => {
+      const unsubscribeUpdated = window.electronAPI.onCartUpdated((data) => {
         setLocalItems(data.items);
         setLocalTotal(data.total);
         setShowAd(data.items.length === 0);
       });
 
-      window.electronAPI.onCartCleared(() => {
+      const unsubscribeCleared = window.electronAPI.onCartCleared(() => {
         setLocalItems([]);
         setLocalTotal(0);
         setShowAd(true);
       });
 
       return () => {
-        window.electronAPI.removeCartListeners();
+        unsubscribeUpdated();
+        unsubscribeCleared();
       };
     } else {
       // Fallback para desarrollo en navegador
