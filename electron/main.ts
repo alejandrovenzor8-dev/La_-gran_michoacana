@@ -50,7 +50,7 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 1024,
-    title: 'Super Coldy POS - Cajero',
+    title: 'La Gran Michoacana POS - Cajero',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -111,7 +111,7 @@ function createCustomerDisplay() {
     y: displayBounds.y,
     width: displayBounds.width,
     height: displayBounds.height,
-    title: 'Super Coldy - Pantalla Cliente',
+    title: 'La Gran Michoacana - Pantalla Cliente',
     fullscreen: !!externalDisplay,
     frame: !externalDisplay, // Con frame si es misma pantalla, sin frame si es externo
     alwaysOnTop: false,

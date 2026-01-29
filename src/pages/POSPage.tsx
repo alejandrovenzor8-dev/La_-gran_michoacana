@@ -60,7 +60,7 @@ export default function POSPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
               <Package className="w-8 h-8 text-primary" />
-              Super Coldy POS
+              La Gran Michoacana POS
             </h1>
             <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
             {user && (
@@ -182,15 +182,6 @@ export default function POSPage() {
           </div>
 
           <div className="space-y-2">
-            <Button
-              className="w-full h-12 text-lg"
-              disabled={items.length === 0}
-              onClick={() => {
-                alert('Procesando pago... (función por implementar)');
-              }}
-            >
-              Procesar Pago
-            </Button>
             <Button
               variant="outline"
               className="w-full"
