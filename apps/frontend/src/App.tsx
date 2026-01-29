@@ -7,6 +7,7 @@ import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
+import CustomerDisplayPage from './pages/CustomerDisplayPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -16,6 +17,9 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          
+          {/* Pantalla de cliente - sin protección */}
+          <Route path="/customer-display" element={<CustomerDisplayPage />} />
           
           <Route
             path="/"
