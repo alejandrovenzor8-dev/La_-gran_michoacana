@@ -33,7 +33,7 @@ export default function POSPage() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
             <Package className="w-8 h-8 text-primary" />
-            Super Coldy POS
+            La Gran Michoacana POS
           </h1>
           <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
         </div>

@@ -56,7 +56,7 @@ export default function CustomerDisplayPage() {
               🍦
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-white">Super Coldy</h1>
+              <h1 className="text-4xl font-bold text-white">La Gran Michoacana</h1>
               <p className="text-white/80 text-lg">Las mejores paletas y helados</p>
             </div>
           </div>
@@ -135,7 +135,7 @@ function Advertisement() {
         </div>
 
         <div className="mt-8 text-2xl font-semibold">
-          ¡Bienvenido a Super Coldy!
+          ¡Bienvenido a La Gran Michoacana!
         </div>
       </div>
     </motion.div>
