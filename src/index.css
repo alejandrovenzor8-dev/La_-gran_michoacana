@@ -114,6 +114,7 @@
   .animation-delay-2000 {
     animation-delay: 2s;
   }
+}
 /* Estilos para scroll en pantalla del cliente */
 .customer-scroll {
   scrollbar-width: thick !important;
