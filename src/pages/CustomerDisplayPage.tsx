@@ -13,18 +13,18 @@ export default function CustomerDisplayPage() {
     if (window.electronAPI) {
       // Cargar estado inicial
       window.electronAPI.getCart().then((cart) => {
-        if (cart && cart.items) {
-          setLocalItems(cart.items);
-          setLocalTotal(cart.total);
-          setShowAd(cart.items.length === 0);
+        if (cart) {
+          setLocalItems(cart.items || []);
+          setLocalTotal(cart.total || 0);
+          setShowAd((cart.items || []).length === 0);
         }
       });
 
       // Escuchar actualizaciones
       window.electronAPI.onCartUpdated((data) => {
-        setLocalItems(data.items);
-        setLocalTotal(data.total);
-        setShowAd(data.items.length === 0);
+        setLocalItems(data.items || []);
+        setLocalTotal(data.total || 0);
+        setShowAd((data.items || []).length === 0);
       });
 
       window.electronAPI.onCartCleared(() => {
