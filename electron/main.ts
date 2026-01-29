@@ -114,8 +114,13 @@ ipcMain.on('cart:update', (event, data) => {
 
 ipcMain.on('cart:clear', () => {
   cartState = { items: [], total: 0 };
+  // Enviar evento a la pantalla del cliente
   if (customerWindow && !customerWindow.isDestroyed()) {
     customerWindow.webContents.send('cart:cleared');
+  }
+  // Enviar evento a la pantalla principal para limpiar Zustand
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('cart:cleared');
   }
 });
 

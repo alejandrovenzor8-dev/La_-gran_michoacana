@@ -19,18 +19,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Escuchar actualizaciones del carrito (para pantalla cliente)
   onCartUpdated: (callback: (data: any) => void) => {
-    ipcRenderer.on('cart:updated', (event, data) => callback(data));
+    const listener = (event: any, data: any) => callback(data);
+    ipcRenderer.on('cart:updated', listener);
+    
+    // Retornar función para desuscribirse
+    return () => {
+      ipcRenderer.removeListener('cart:updated', listener);
+    };
   },
   
   // Escuchar cuando se limpia el carrito
   onCartCleared: (callback: () => void) => {
-    ipcRenderer.on('cart:cleared', callback);
+    const listener = (event: any) => callback();
+    ipcRenderer.on('cart:cleared', listener);
+    
+    // Retornar función para desuscribirse
+    return () => {
+      ipcRenderer.removeListener('cart:cleared', listener);
+    };
   },
   
-  // Remover listeners
+  // Remover listeners (obsoleto, pero se mantiene para compatibilidad)
   removeCartListeners: () => {
-    ipcRenderer.removeAllListeners('cart:updated');
-    ipcRenderer.removeAllListeners('cart:cleared');
+    // Ya no hace nada, los listeners se remueven mediante las funciones retornadas
   },
 });
 
@@ -39,8 +50,8 @@ export interface ElectronAPI {
   updateCart: (data: any) => void;
   clearCart: () => void;
   getCart: () => Promise<any>;
-  onCartUpdated: (callback: (data: any) => void) => void;
-  onCartCleared: (callback: () => void) => void;
+  onCartUpdated: (callback: (data: any) => void) => () => void;
+  onCartCleared: (callback: () => void) => () => void;
   removeCartListeners: () => void;
 }
 

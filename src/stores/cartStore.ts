@@ -93,9 +93,6 @@ export const useCartStore = create<CartStore>((set, get) => ({
   },
 
   clearCart: () => {
-    if (isElectron) {
-      window.electronAPI.clearCart();
-    }
     set({ items: [], total: 0 });
   },
 
