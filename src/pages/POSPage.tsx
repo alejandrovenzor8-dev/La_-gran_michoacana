@@ -142,15 +142,6 @@ export default function POSPage() {
 
           <div className="space-y-2">
             <Button
-              className="w-full h-12 text-lg"
-              disabled={items.length === 0}
-              onClick={() => {
-                alert('Procesando pago... (función por implementar)');
-              }}
-            >
-              Procesar Pago
-            </Button>
-            <Button
               variant="outline"
               className="w-full"
               disabled={items.length === 0}
