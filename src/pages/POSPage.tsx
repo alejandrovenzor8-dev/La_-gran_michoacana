@@ -1,8 +1,10 @@
 import { useCartStore } from '@/stores/cartStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Productos de ejemplo
 const PRODUCTS = [
@@ -18,6 +20,30 @@ const PRODUCTS = [
 
 export default function POSPage() {
   const { items, total, addItem, removeItem, updateQuantity, clearCart } = useCartStore();
+  const { user, logout } = useAuthStore((state) => ({
+    user: state.user,
+    logout: state.logout,
+  }));
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    logout();
+    
+    // Si está en Electron, llamar al logout handler
+    const isElectron = typeof window !== 'undefined' && window.electronAPI;
+    if (isElectron) {
+      try {
+        console.log('📱 Notificando logout a Electron...');
+        await window.electronAPI.logout();
+        console.log('✅ Electron notificado de logout');
+      } catch (err) {
+        console.error('❌ Error notificando logout a Electron:', err);
+        navigate('/login');
+      }
+    } else {
+      navigate('/login');
+    }
+  };
 
   const handleAddProduct = (product: typeof PRODUCTS[0]) => {
     addItem({
@@ -30,12 +56,27 @@ export default function POSPage() {
     <div className="h-screen flex bg-gray-50">
       {/* Panel de Productos */}
       <div className="flex-1 p-6 overflow-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <Package className="w-8 h-8 text-primary" />
-            Super Coldy POS
-          </h1>
-          <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+              <Package className="w-8 h-8 text-primary" />
+              Super Coldy POS
+            </h1>
+            <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
+            {user && (
+              <p className="text-sm text-gray-500 mt-2">
+                Conectado como: <span className="font-semibold">{user.username}</span> ({user.role})
+              </p>
+            )}
+          </div>
+          <Button
+            variant="destructive"
+            onClick={handleLogout}
+            className="h-10 gap-2 flex items-center"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar Sesión
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
