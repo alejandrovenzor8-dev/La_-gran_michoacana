@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Monitor, Settings, LogOut, Menu, X } from 'lucide-react';
+import { ShoppingCart, Monitor, Settings, LogOut, Menu, X, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from './ui/button';
@@ -32,6 +32,12 @@ export function Sidebar() {
       label: 'Pantalla Cliente',
       path: '/customer-display',
       icon: <Monitor className="w-5 h-5" />,
+    },
+    {
+      id: 'users',
+      label: 'Gestión de Usuarios',
+      path: '/users',
+      icon: <Users className="w-5 h-5" />,
     },
     {
       id: 'settings',
