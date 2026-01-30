@@ -4,6 +4,7 @@ import POSPage from './pages/POSPage';
 import CustomerDisplayPage from './pages/CustomerDisplayPage';
 import InventoryPage from './pages/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
+import UsersPage from './pages/UsersPage';
 import LoginPage from './pages/LoginPage';
 import { MainLayout } from './components/MainLayout';
 import { useAuthStore } from './stores/authStore';
@@ -39,11 +40,7 @@ function App() {
             />
             <Route
               path="/customer-display"
-              element={
-                <MainLayout>
-                  <CustomerDisplayPage />
-                </MainLayout>
-              }
+              element={<CustomerDisplayPage />}
             />
             <Route
               path="/inventory"
@@ -58,6 +55,14 @@ function App() {
               element={
                 <MainLayout>
                   <SettingsPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <MainLayout>
+                  <UsersPage />
                 </MainLayout>
               }
             />
