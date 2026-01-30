@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import POSPage from './pages/POSPage';
 import CustomerDisplayPage from './pages/CustomerDisplayPage';
+import InventoryPage from './pages/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
 import LoginPage from './pages/LoginPage';
@@ -40,6 +41,14 @@ function App() {
             <Route
               path="/customer-display"
               element={<CustomerDisplayPage />}
+            />
+            <Route
+              path="/inventory"
+              element={
+                <MainLayout>
+                  <InventoryPage />
+                </MainLayout>
+              }
             />
             <Route
               path="/settings"
