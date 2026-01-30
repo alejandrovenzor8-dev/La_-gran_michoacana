@@ -28,12 +28,6 @@ export function Sidebar() {
       icon: <ShoppingCart className="w-5 h-5" />,
     },
     {
-      id: 'display',
-      label: 'Pantalla Cliente',
-      path: '/customer-display',
-      icon: <Monitor className="w-5 h-5" />,
-    },
-    {
       id: 'settings',
       label: 'Configuración',
       path: '/settings',
