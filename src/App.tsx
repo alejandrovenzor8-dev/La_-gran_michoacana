@@ -2,7 +2,9 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import POSPage from './pages/POSPage';
 import CustomerDisplayPage from './pages/CustomerDisplayPage';
+import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
+import { MainLayout } from './components/MainLayout';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -26,8 +28,30 @@ function App() {
         ) : (
           <>
             <Route path="/" element={<Navigate to="/pos" replace />} />
-            <Route path="/pos" element={<POSPage />} />
-            <Route path="/customer-display" element={<CustomerDisplayPage />} />
+            <Route
+              path="/pos"
+              element={
+                <MainLayout>
+                  <POSPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/customer-display"
+              element={
+                <MainLayout>
+                  <CustomerDisplayPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <MainLayout>
+                  <SettingsPage />
+                </MainLayout>
+              }
+            />
             <Route path="/login" element={<Navigate to="/pos" replace />} />
           </>
         )}

@@ -43,7 +43,7 @@ export default function CustomerDisplayPage() {
   }, []);
 
   return (
-    <div className="h-screen w-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 overflow-hidden">
+    <div className="h-full w-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 overflow-hidden flex flex-col">
       {/* Header */}
       <header className="bg-white/10 backdrop-blur-md p-6 shadow-lg">
         <div className="flex items-center justify-between">
@@ -75,7 +75,7 @@ export default function CustomerDisplayPage() {
       </header>
 
       {/* Contenido Principal */}
-      <div className="flex flex-col h-[calc(100vh-120px)] p-8">
+      <div className="flex-1 flex flex-col p-8 overflow-auto">
         <AnimatePresence mode="wait">
           {showAd ? (
             <Advertisement key="ad" />
