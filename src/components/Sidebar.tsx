@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Monitor, Settings, LogOut, Menu, X } from 'lucide-react';
+import { ShoppingCart, Monitor, Settings, LogOut, Menu, X, Package } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from './ui/button';
@@ -26,6 +26,12 @@ export function Sidebar() {
       label: 'Punto de Venta',
       path: '/pos',
       icon: <ShoppingCart className="w-5 h-5" />,
+    },
+    {
+      id: 'inventory',
+      label: 'Inventario',
+      path: '/inventory',
+      icon: <Package className="w-5 h-5" />,
     },
     {
       id: 'settings',
