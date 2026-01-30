@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import POSPage from './pages/POSPage';
 import CustomerDisplayPage from './pages/CustomerDisplayPage';
 import SettingsPage from './pages/SettingsPage';
+import UsersPage from './pages/UsersPage';
 import LoginPage from './pages/LoginPage';
 import { MainLayout } from './components/MainLayout';
 import { useAuthStore } from './stores/authStore';
@@ -38,17 +39,21 @@ function App() {
             />
             <Route
               path="/customer-display"
-              element={
-                <MainLayout>
-                  <CustomerDisplayPage />
-                </MainLayout>
-              }
+              element={<CustomerDisplayPage />}
             />
             <Route
               path="/settings"
               element={
                 <MainLayout>
                   <SettingsPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <MainLayout>
+                  <UsersPage />
                 </MainLayout>
               }
             />
