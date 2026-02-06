@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { usePermissionsStore } from './permissionsStore';
 
 interface User {
   username: string;
@@ -48,6 +49,10 @@ export const useAuthStore = create<AuthStore>()(
             user,
             isAuthenticated: true,
           });
+
+          // Inicializar permisos del usuario si es la primera vez
+          const permissionsStore = usePermissionsStore.getState();
+          permissionsStore.initializeUserPermissions(username, userCredentials.role);
 
           console.log(`✅ Login exitoso: ${username} (${userCredentials.role})`);
           return true;
