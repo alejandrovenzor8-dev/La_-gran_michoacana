@@ -5,8 +5,10 @@ import CustomerDisplayPage from './pages/CustomerDisplayPage';
 import InventoryPage from './pages/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
+import PermissionsPage from './pages/PermissionsPage';
 import LoginPage from './pages/LoginPage';
 import { MainLayout } from './components/MainLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -33,9 +35,11 @@ function App() {
             <Route
               path="/pos"
               element={
-                <MainLayout>
-                  <POSPage />
-                </MainLayout>
+                <ProtectedRoute module="pos">
+                  <MainLayout>
+                    <POSPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route
@@ -45,25 +49,41 @@ function App() {
             <Route
               path="/inventory"
               element={
-                <MainLayout>
-                  <InventoryPage />
-                </MainLayout>
+                <ProtectedRoute module="inventory">
+                  <MainLayout>
+                    <InventoryPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/settings"
               element={
-                <MainLayout>
-                  <SettingsPage />
-                </MainLayout>
+                <ProtectedRoute module="settings">
+                  <MainLayout>
+                    <SettingsPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/users"
               element={
-                <MainLayout>
-                  <UsersPage />
-                </MainLayout>
+                <ProtectedRoute module="users">
+                  <MainLayout>
+                    <UsersPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/permissions"
+              element={
+                <ProtectedRoute module="permissions">
+                  <MainLayout>
+                    <PermissionsPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route path="/login" element={<Navigate to="/pos" replace />} />

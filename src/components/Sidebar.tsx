@@ -1,14 +1,17 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Monitor, Settings, LogOut, Menu, X, Users, Package } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { usePermissionsStore } from '@/stores/permissionsStore';
 import { Button } from './ui/button';
+import type { ModuleType } from '@/types/permissions';
 
 interface NavItem {
   id: string;
   label: string;
   path: string;
   icon: React.ReactNode;
+  module: ModuleType;
 }
 
 export function Sidebar() {
@@ -19,6 +22,7 @@ export function Sidebar() {
     user: state.user,
     logout: state.logout,
   }));
+  const hasPermission = usePermissionsStore((state) => state.hasPermission);
 
   const navItems: NavItem[] = [
     {
@@ -26,26 +30,43 @@ export function Sidebar() {
       label: 'Punto de Venta',
       path: '/pos',
       icon: <ShoppingCart className="w-5 h-5" />,
+      module: 'pos' as ModuleType,
     },
     {
       id: 'inventory',
       label: 'Inventario',
       path: '/inventory',
       icon: <Package className="w-5 h-5" />,
+      module: 'inventory' as ModuleType,
     },
     {
       id: 'users',
       label: 'Gestión de Usuarios',
       path: '/users',
       icon: <Users className="w-5 h-5" />,
+      module: 'users' as ModuleType,
+    },
+    {
+      id: 'permissions',
+      label: 'Permisos y Seguridad',
+      path: '/permissions',
+      icon: <Shield className="w-5 h-5" />,
+      module: 'permissions' as ModuleType,
     },
     {
       id: 'settings',
       label: 'Configuración',
       path: '/settings',
       icon: <Settings className="w-5 h-5" />,
+      module: 'settings' as ModuleType,
     },
   ];
+
+  // Filtrar elementos del menú basándose en permisos del usuario
+  const visibleNavItems = navItems.filter((item) => {
+    if (!user) return false;
+    return hasPermission(user.username, item.module);
+  });
 
   const handleLogout = async () => {
     logout();
@@ -107,7 +128,7 @@ export function Sidebar() {
 
         {/* Navegación */}
         <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <button
