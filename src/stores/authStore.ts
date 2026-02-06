@@ -50,6 +50,8 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: true,
           });
 
+          // Inicializar permisos del usuario basándose en su rol
+          usePermissionsStore.getState().initializeUserPermissions(username, userCredentials.role);
           // Inicializar permisos del usuario si es la primera vez
           const permissionsStore = usePermissionsStore.getState();
           permissionsStore.initializeUserPermissions(username, userCredentials.role);

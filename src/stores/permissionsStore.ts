@@ -31,6 +31,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
     users: true,
     settings: true,
     permissions: true,
+    reports: true,
   },
   gerente: {
     pos: true,
@@ -38,6 +39,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
     users: true,
     settings: true,
     permissions: false,
+    reports: true,
   },
   cajero: {
     pos: true,
@@ -45,6 +47,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
     users: false,
     settings: false,
     permissions: false,
+    reports: true,
   },
 };
 

@@ -1,5 +1,5 @@
 // Tipos de módulos disponibles en el sistema
-export type ModuleType = 'pos' | 'inventory' | 'users' | 'settings' | 'permissions';
+export type ModuleType = 'pos' | 'inventory' | 'users' | 'settings' | 'permissions' | 'reports';
 
 // Interfaz de permisos de usuario (simple - solo acceso/no acceso)
 export interface UserPermissions {
@@ -13,6 +13,7 @@ export interface RolePermissions {
   users: boolean;
   settings: boolean;
   permissions: boolean;
+  reports: boolean;
 }
 
 // Información completa del módulo
@@ -48,5 +49,10 @@ export const AVAILABLE_MODULES: ModuleInfo[] = [
     id: 'permissions',
     label: 'Permisos y Seguridad',
     description: 'Gestión de permisos de usuarios',
+  },
+  {
+    id: 'reports',
+    label: 'Reportes',
+    description: 'Reportes de ventas y cortes de caja',
   },
 ];

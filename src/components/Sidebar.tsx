@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { usePermissionsStore } from '@/stores/permissionsStore';
@@ -22,7 +22,8 @@ export function Sidebar() {
     user: state.user,
     logout: state.logout,
   }));
-  const hasPermission = usePermissionsStore((state) => state.hasPermission);
+
+  const { hasPermission } = usePermissionsStore();
 
   const navItems: NavItem[] = [
     {
@@ -38,6 +39,13 @@ export function Sidebar() {
       path: '/inventory',
       icon: <Package className="w-5 h-5" />,
       module: 'inventory' as ModuleType,
+    },
+    {
+      id: 'reports',
+      label: 'Reportes',
+      path: '/reports',
+      icon: <BarChart3 className="w-5 h-5" />,
+      module: 'reports' as ModuleType,
     },
     {
       id: 'users',
