@@ -7,14 +7,13 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-  "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
-  "build": "npm run build:electron && vite build && electron-builder",
-  "preview": "vite preview",
-  "build:vite": "vite build",
-  "build:electron": "tsc -p tsconfig.electron.json",
-  "start": "electron ."
-},
-
+    "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "build": "npm run build:electron && vite build && electron-builder",
+    "preview": "vite preview",
+    "build:vite": "vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "start": "electron ."
+  },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
@@ -23,6 +22,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.3",
+    "recharts": "^3.7.0",
     "tailwind-merge": "^2.2.1",
     "zustand": "^4.5.0"
   },

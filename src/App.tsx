@@ -5,18 +5,30 @@ import CustomerDisplayPage from './pages/CustomerDisplayPage';
 import InventoryPage from './pages/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
+import PermissionsPage from './pages/PermissionsPage';
+import ReportsPage from './pages/ReportsPage';
 import LoginPage from './pages/LoginPage';
 import { MainLayout } from './components/MainLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
+import { usePermissionsStore } from './stores/permissionsStore';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  const initializeUserPermissions = usePermissionsStore((state) => state.initializeUserPermissions);
 
   // Cargar datos persistidos al iniciar
   useEffect(() => {
     // Esto dispara la carga del localStorage
     useAuthStore.getState();
-  }, []);
+    
+    // Si hay un usuario autenticado, asegurarse de que tenga permisos inicializados
+    if (user) {
+      initializeUserPermissions(user.username, user.role);
+      console.log('🔐 Permisos inicializados para:', user.username);
+    }
+  }, [user, initializeUserPermissions]);
 
   return (
     <HashRouter>
@@ -33,9 +45,11 @@ function App() {
             <Route
               path="/pos"
               element={
-                <MainLayout>
-                  <POSPage />
-                </MainLayout>
+                <ProtectedRoute module="pos">
+                  <MainLayout>
+                    <POSPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route
@@ -45,25 +59,51 @@ function App() {
             <Route
               path="/inventory"
               element={
-                <MainLayout>
-                  <InventoryPage />
-                </MainLayout>
+                <ProtectedRoute module="inventory">
+                  <MainLayout>
+                    <InventoryPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/settings"
               element={
-                <MainLayout>
-                  <SettingsPage />
-                </MainLayout>
+                <ProtectedRoute module="settings">
+                  <MainLayout>
+                    <SettingsPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/users"
               element={
-                <MainLayout>
-                  <UsersPage />
-                </MainLayout>
+                <ProtectedRoute module="users">
+                  <MainLayout>
+                    <UsersPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/permissions"
+              element={
+                <ProtectedRoute module="permissions">
+                  <MainLayout>
+                    <PermissionsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute module="reports">
+                  <MainLayout>
+                    <ReportsPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route path="/login" element={<Navigate to="/pos" replace />} />
