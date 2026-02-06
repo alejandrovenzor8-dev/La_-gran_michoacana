@@ -52,6 +52,9 @@ export const useAuthStore = create<AuthStore>()(
 
           // Inicializar permisos del usuario basándose en su rol
           usePermissionsStore.getState().initializeUserPermissions(username, userCredentials.role);
+          // Inicializar permisos del usuario si es la primera vez
+          const permissionsStore = usePermissionsStore.getState();
+          permissionsStore.initializeUserPermissions(username, userCredentials.role);
 
           console.log(`✅ Login exitoso: ${username} (${userCredentials.role})`);
           return true;

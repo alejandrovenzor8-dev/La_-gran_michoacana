@@ -22,6 +22,7 @@ export function Sidebar() {
     user: state.user,
     logout: state.logout,
   }));
+
   const { hasPermission } = usePermissionsStore();
 
   const navItems: NavItem[] = [
