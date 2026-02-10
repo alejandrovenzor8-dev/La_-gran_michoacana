@@ -5,29 +5,56 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 yarn.lock
+.pnp
+.pnp.js
 
 # Production
 dist/
 build/
+out/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
+.env.production.local
 
-# IDE
+# IDE & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+*.sublime-project
+*.sublime-workspace
+.editorconfig
 
 # Logs
 logs/
 *.log
+npm-debug.log*
 
 # Prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# Hot module reloading
+.hot/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# OS specific
+Thumbs.db
+.Thumbs.db
+.directory
 prisma/dev.db
 prisma/dev.db-journal
 

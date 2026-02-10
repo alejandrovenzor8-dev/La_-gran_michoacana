@@ -13,10 +13,12 @@ dotenv.config();
 
 const app: Express = express();
 
-// Conectar a la base de datos
+// Conectar a la base de datos (no debe bloquear el startup del servidor)
 connectDatabase().catch((error) => {
-  logger.error('Error en startup de base de datos:', error);
-  process.exit(1);
+  logger.warn('⚠️ Advertencia: No se pudo conectar a la base de datos en startup', {
+    message: error instanceof Error ? error.message : 'Error desconocido',
+  });
+  logger.warn('El servidor continuará ejecutándose. La conexión se intentará en las próximas peticiones.');
 });
 
 // Middlewares de seguridad
