@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken } from '../utils/jwt';
-import { logger } from '../utils/logger';
+import { verifyAccessToken } from '../utils/jwt.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Extender el tipo Request de Express para incluir la información del usuario autenticado

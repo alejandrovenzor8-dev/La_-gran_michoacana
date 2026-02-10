@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { body, validationResult, ValidationChain } from 'express-validator';
-import { logger } from '../utils/logger';
-import { validatePasswordStrength } from '../utils/password';
+import { logger } from '../utils/logger.js';
+import { validatePasswordStrength } from '../utils/password.js';
 
 /**
  * Middleware para manejar errores de validación de express-validator

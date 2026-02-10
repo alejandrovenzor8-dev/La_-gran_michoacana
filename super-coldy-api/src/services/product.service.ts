@@ -1,6 +1,6 @@
-import prisma from '../config/database';
-import { AppError } from '../middlewares/errorHandler';
-import { logger } from '../utils/logger';
+import prisma from '../config/database.js';
+import { AppError } from '../middlewares/errorHandler.js';
+import { logger } from '../utils/logger.js';
 import { Decimal } from '@prisma/client/runtime/library';
 
 /**

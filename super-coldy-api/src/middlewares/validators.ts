@@ -1,5 +1,5 @@
 import { body, param, query, ValidationChain } from 'express-validator';
-import { validatePasswordStrength } from '../utils/password';
+import { validatePasswordStrength } from '../utils/password.js';
 
 /**
  * Validadores reutilizables para las rutas de la API

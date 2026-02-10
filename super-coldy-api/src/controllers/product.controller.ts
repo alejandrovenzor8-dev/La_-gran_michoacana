@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { productService } from '../services/product.service';
-import { logger } from '../utils/logger';
-import { AppError, asyncHandler } from '../middlewares/errorHandler';
+import { productService } from '../services/product.service.js';
+import { logger } from '../utils/logger.js';
+import { AppError, asyncHandler } from '../middlewares/errorHandler.js';
 
 /**
  * Controlador de Productos
@@ -46,9 +46,11 @@ class ProductController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
-      const active = req.query.active === 'true' ? true : undefined;
-      const category = req.query.category as string | undefined;
-      const minStock = req.query.minStock === 'true';
+      const activeParam = req.query.active;
+      const active = activeParam === 'true' ? true : activeParam === 'false' ? false : undefined;
+      const category = (req.query.category as string) || undefined;
+      const minStockParam = req.query.minStock;
+      const minStock = minStockParam === 'true' ? true : false;
 
       logger.debug('Obteniendo productos', { page, limit, active, category });
 
@@ -77,7 +79,14 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const productId = req.params.id;
+      if (!productId) {
+        throw new AppError('ID de producto requerido', 400);
+      }
+      const id = parseInt(productId);
+      if (isNaN(id)) {
+        throw new AppError('ID de producto debe ser un número válido', 400);
+      }
 
       logger.debug('Obteniendo producto', { id });
 
@@ -103,7 +112,14 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const productId = req.params.id;
+      if (!productId) {
+        throw new AppError('ID de producto requerido', 400);
+      }
+      const id = parseInt(productId);
+      if (isNaN(id)) {
+        throw new AppError('ID de producto debe ser un número válido', 400);
+      }
 
       logger.info('Actualizando producto', { id });
 
@@ -130,7 +146,14 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const productId = req.params.id;
+      if (!productId) {
+        throw new AppError('ID de producto requerido', 400);
+      }
+      const id = parseInt(productId);
+      if (isNaN(id)) {
+        throw new AppError('ID de producto debe ser un número válido', 400);
+      }
 
       logger.info('Desactivando producto', { id });
 
@@ -214,7 +237,14 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const productId = req.params.id;
+      if (!productId) {
+        throw new AppError('ID de producto requerido', 400);
+      }
+      const id = parseInt(productId);
+      if (isNaN(id)) {
+        throw new AppError('ID de producto debe ser un número válido', 400);
+      }
       const { quantity, reason } = req.body;
 
       if (!req.user) {

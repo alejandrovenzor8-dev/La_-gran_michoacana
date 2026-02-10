@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { authService } from '../services/auth.service';
-import { logger } from '../utils/logger';
+import { authService } from '../services/auth.service.js';
+import { logger } from '../utils/logger.js';
 import { UserRole } from '@prisma/client';
 
 /**
@@ -10,7 +10,7 @@ interface RegisterRequestBody {
   username: string;
   email: string;
   password: string;
-  fullName?: string;
+  fullName?: string | undefined;
   role?: UserRole;
 }
 
@@ -68,7 +68,7 @@ class AuthController {
 
       // Generar tokens para el nuevo usuario
       const { generateAccessToken, generateRefreshToken } = await import(
-        '../utils/jwt'
+        '../utils/jwt.js'
       );
       const accessToken = generateAccessToken(user.id, user.role);
       const refreshToken = generateRefreshToken(user.id);

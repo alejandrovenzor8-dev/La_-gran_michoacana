@@ -3,11 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { connectDatabase } from './config/database';
-import { logger } from './utils/logger';
-import { notFound, errorHandler } from './middlewares/errorHandler';
-import authRoutes from './routes/auth.routes';
-import productRoutes from './routes/product.routes';
+import { connectDatabase } from './config/database.js';
+import { logger } from './utils/logger.js';
+import { notFound, errorHandler } from './middlewares/errorHandler.js';
+import authRoutes from './routes/auth.routes.js';
+import productRoutes from './routes/product.routes.js';
 
 dotenv.config();
 
