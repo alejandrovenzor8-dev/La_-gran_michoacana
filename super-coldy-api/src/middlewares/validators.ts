@@ -273,40 +273,130 @@ export const validateUpdateProduct = (): ValidationChain[] => [
 export const validateCreateSale = (): ValidationChain[] => [
   body('items')
     .isArray({ min: 1 })
-    .withMessage('Debe haber al menos un item en la venta'),
+    .withMessage('Debe incluir al menos un item'),
   body('items.*.productId')
-    .isInt({ min: 1 })
-    .withMessage('ID de producto inválido'),
+    .notEmpty()
+    .withMessage('ID de producto requerido')
+    .isString()
+    .withMessage('ID de producto debe ser string'),
+  body('items.*.productName')
+    .notEmpty()
+    .withMessage('Nombre de producto requerido')
+    .isString()
+    .withMessage('Nombre debe ser string')
+    .isLength({ max: 200 })
+    .withMessage('Nombre muy largo'),
   body('items.*.quantity')
     .isInt({ min: 1 })
-    .withMessage('Cantidad debe ser mayor a 0'),
+    .withMessage('Cantidad debe ser entero positivo'),
   body('items.*.unitPrice')
-    .isDecimal({ decimal_digits: '1,2' })
-    .withMessage('Precio unitario inválido')
-    .custom((value) => parseFloat(value) > 0)
-    .withMessage('Precio unitario debe ser mayor a 0'),
+    .isFloat({ min: 0 })
+    .withMessage('Precio unitario debe ser número positivo'),
+  body('items.*.subtotal')
+    .isFloat({ min: 0 })
+    .withMessage('Subtotal debe ser número positivo'),
+  body('items.*.discount')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Descuento debe ser número positivo'),
   body('paymentMethod')
+    .notEmpty()
+    .withMessage('Método de pago requerido')
     .isIn(['EFECTIVO', 'TARJETA', 'MIXTO'])
     .withMessage('Método de pago inválido'),
-  body('discount')
-    .optional()
-    .isDecimal({ decimal_digits: '1,2' })
-    .withMessage('Descuento inválido')
-    .custom((value) => parseFloat(value) >= 0)
-    .withMessage('Descuento no puede ser negativo'),
-  body('tax')
-    .optional()
-    .isDecimal({ decimal_digits: '1,2' })
-    .withMessage('Impuesto inválido')
-    .custom((value) => parseFloat(value) >= 0)
-    .withMessage('Impuesto no puede ser negativo'),
   body('amountReceived')
     .optional()
-    .isDecimal({ decimal_digits: '1,2' })
-    .withMessage('Monto recibido inválido'),
+    .isFloat({ min: 0 })
+    .withMessage('Monto recibido debe ser número positivo'),
+  body('discount')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Descuento debe ser número positivo'),
+  body('tax')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Impuesto debe ser número positivo'),
   body('notes')
     .optional()
-    .trim()
+    .isString()
+    .withMessage('Notas deben ser texto')
     .isLength({ max: 500 })
-    .withMessage('Notas muy largas'),
+    .withMessage('Notas muy largas (max 500 caracteres)'),
+  body('source')
+    .optional()
+    .isIn(['DESKTOP', 'MOBILE'])
+    .withMessage('Source inválido'),
+];
+
+/**
+ * Validadores para ID de venta
+ */
+export const validateSaleId = (): ValidationChain[] => [
+  param('id')
+    .notEmpty()
+    .withMessage('ID de venta requerido')
+    .isString()
+    .withMessage('ID de venta debe ser string'),
+];
+
+/**
+ * Validadores para filtros de ventas
+ */
+export const validateSaleFilters = (): ValidationChain[] => [
+  query('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Fecha de inicio inválida (usar formato ISO 8601)'),
+  query('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Fecha fin inválida (usar formato ISO 8601)'),
+  query('userId')
+    .optional()
+    .isString()
+    .withMessage('ID de usuario debe ser string'),
+  query('paymentMethod')
+    .optional()
+    .isIn(['EFECTIVO', 'TARJETA', 'MIXTO'])
+    .withMessage('Método de pago inválido'),
+  query('status')
+    .optional()
+    .isIn(['COMPLETED', 'CANCELLED', 'REFUNDED'])
+    .withMessage('Status inválido'),
+  query('source')
+    .optional()
+    .isIn(['DESKTOP', 'MOBILE'])
+    .withMessage('Source inválido'),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Página debe ser entero positivo'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit debe ser entre 1 y 100'),
+];
+
+/**
+ * Validadores para reporte diario
+ */
+export const validateDailyReport = (): ValidationChain[] => [
+  query('date')
+    .optional()
+    .isISO8601()
+    .withMessage('Fecha inválida (usar formato YYYY-MM-DD)'),
+];
+
+/**
+ * Validadores para estadísticas de ventas
+ */
+export const validateStatsQuery = (): ValidationChain[] => [
+  query('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Fecha de inicio inválida'),
+  query('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Fecha fin inválida'),
 ];
