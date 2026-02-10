@@ -346,12 +346,7 @@ class ProductService {
         where: {
           AND: [
             { active: true },
-            {
-              OR: [
-                { stock: { lte: threshold } },
-                { stock: prisma.product.fields.minStock },
-              ],
-            },
+            { stock: { lte: threshold } },
           ],
         },
         orderBy: { stock: 'asc' },

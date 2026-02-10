@@ -48,7 +48,7 @@ export const generateAccessToken = (userId: number, role: string): string => {
     };
 
     const options: SignOptions = {
-      expiresIn,
+      expiresIn: expiresIn as any,
       algorithm: 'HS256',
     };
 
@@ -76,7 +76,7 @@ export const generateRefreshToken = (userId: number): string => {
     };
 
     const options: SignOptions = {
-      expiresIn: refreshExpiresIn,
+      expiresIn: refreshExpiresIn as any,
       algorithm: 'HS256',
     };
 

@@ -38,12 +38,12 @@ export const validate = (
     // Formatear errores
     const formattedErrors: FormattedError[] = errors.array().map((error: ValidationError) => {
       // Manejo de diferentes tipos de errores de express-validator
-      let field = 'unknown';
+      let field: string = 'unknown';
 
       if (error.type === 'field') {
-        field = error.path;
+        field = error.path as string;
       } else if ('param' in error) {
-        field = error.param;
+        field = error.param as string;
       }
 
       return {

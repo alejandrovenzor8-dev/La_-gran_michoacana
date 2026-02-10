@@ -111,7 +111,7 @@ export const ownershipMiddleware = (
     return;
   }
 
-  const userId = parseInt(req.params.userId, 10);
+  const userId = parseInt(Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId, 10);
 
   if (req.user.userId !== userId && req.user.role !== 'ADMIN') {
     logger.warn('Intento de acceso a recursos de otro usuario', {
