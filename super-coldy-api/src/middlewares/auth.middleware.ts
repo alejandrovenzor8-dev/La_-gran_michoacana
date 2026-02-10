@@ -174,7 +174,7 @@ export const checkOwnership = (
     }
 
     // Obtener userId del parámetro de la ruta
-    const paramUserId = parseInt(req.params.userId, 10);
+    const paramUserId = parseInt(Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId, 10);
 
     // Verificar que sea propietario del recurso o sea ADMIN
     if (req.user.userId !== paramUserId && req.user.role !== 'ADMIN') {

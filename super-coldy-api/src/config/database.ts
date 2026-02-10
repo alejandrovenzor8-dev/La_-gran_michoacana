@@ -11,7 +11,6 @@ const prismaClientSingleton = () => {
   // Configurar logs según el ambiente
   const logConfig: Prisma.PrismaClientOptions['log'] = isDevelopment
     ? [
-        { level: 'query', emit: 'event' },
         { level: 'info', emit: 'stdout' },
         { level: 'warn', emit: 'stdout' },
         { level: 'error', emit: 'stdout' },
@@ -24,16 +23,6 @@ const prismaClientSingleton = () => {
   const client = new PrismaClient({
     log: logConfig,
   });
-
-  // En desarrollo, registrar eventos de query para debugging
-  if (isDevelopment) {
-    client.$on('query', (e: Prisma.QueryEvent) => {
-      logger.debug(`[DB Query] ${e.query}`, {
-        duration: `${e.duration}ms`,
-        params: e.params,
-      });
-    });
-  }
 
   return client;
 };

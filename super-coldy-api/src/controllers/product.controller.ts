@@ -79,7 +79,7 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const productId = req.params.id;
+      const productId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       if (!productId) {
         throw new AppError('ID de producto requerido', 400);
       }
@@ -112,7 +112,7 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const productId = req.params.id;
+      const productId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       if (!productId) {
         throw new AppError('ID de producto requerido', 400);
       }
@@ -146,7 +146,7 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const productId = req.params.id;
+      const productId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       if (!productId) {
         throw new AppError('ID de producto requerido', 400);
       }
@@ -237,7 +237,7 @@ class ProductController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const productId = req.params.id;
+      const productId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       if (!productId) {
         throw new AppError('ID de producto requerido', 400);
       }
