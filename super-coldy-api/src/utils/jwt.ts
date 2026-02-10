@@ -1,5 +1,5 @@
 import jwt, { SignOptions, VerifyOptions } from 'jsonwebtoken';
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 /**
  * Interface para el payload de JWT

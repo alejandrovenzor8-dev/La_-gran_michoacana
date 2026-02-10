@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 // Tipos para la instancia de Prisma
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;

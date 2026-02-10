@@ -1,6 +1,6 @@
-import app from './app';
-import { disconnectDatabase } from './config/database';
-import { logger } from './utils/logger';
+import app from './app.js';
+import { disconnectDatabase } from './config/database.js';
+import { logger } from './utils/logger.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

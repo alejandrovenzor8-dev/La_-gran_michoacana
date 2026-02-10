@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 /**
  * Número de rounds de salt para bcryptjs

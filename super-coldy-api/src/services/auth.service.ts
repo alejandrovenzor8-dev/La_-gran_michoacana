@@ -1,12 +1,12 @@
-import prisma from '../config/database';
-import { AppError, asyncHandler } from '../middlewares/errorHandler';
-import { hashPassword, comparePassword } from '../utils/password';
+import prisma from '../config/database.js';
+import { AppError, asyncHandler } from '../middlewares/errorHandler.js';
+import { hashPassword, comparePassword } from '../utils/password.js';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-} from '../utils/jwt';
-import { logger } from '../utils/logger';
+} from '../utils/jwt.js';
+import { logger } from '../utils/logger.js';
 import { User, UserRole } from '@prisma/client';
 
 /**

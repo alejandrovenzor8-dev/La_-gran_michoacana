@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
-import { productController } from '../controllers/product.controller';
-import { authenticateToken, requireRole } from '../middlewares/auth.middleware';
-import { validate } from '../middlewares/validation.middleware';
-import { asyncHandler } from '../middlewares/errorHandler';
+import { productController } from '../controllers/product.controller.js';
+import { authenticateToken, requireRole } from '../middlewares/auth.middleware.js';
+import { validate } from '../middlewares/validation.middleware.js';
+import { asyncHandler } from '../middlewares/errorHandler.js';
 
 const router = Router();
 
