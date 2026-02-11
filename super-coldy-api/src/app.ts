@@ -8,6 +8,7 @@ import { logger } from './utils/logger.js';
 import { notFound, errorHandler } from './middlewares/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
+import saleRoutes from './routes/sale.routes.js';
 
 dotenv.config();
 
@@ -50,9 +51,8 @@ app.use('/api/auth', authRoutes);
 // Rutas de productos
 app.use('/api/products', productRoutes);
 
-// Importar y registrar otras rutas aquí
-// app.use('/api/users', userRoutes);
-// app.use('/api/sales', saleRoutes);
+// Rutas de ventas
+app.use('/api/sales', saleRoutes);
 
 // ============================================================
 // MANEJO DE ERRORES
