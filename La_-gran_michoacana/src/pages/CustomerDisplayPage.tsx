@@ -2,11 +2,16 @@ import { useEffect, useState, useRef } from 'react';
 import { useCartStore, CartItem } from '@/stores/cartStore';
 import { formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { eventBus } from '@/lib/eventBus';
 
 export default function CustomerDisplayPage() {
   const [localItems, setLocalItems] = useState<CartItem[]>([]);
   const [localTotal, setLocalTotal] = useState(0);
   const [showAd, setShowAd] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [saleId, setSaleId] = useState<string | null>(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     // Verificar si estamos en Electron
@@ -22,16 +27,42 @@ export default function CustomerDisplayPage() {
 
       // Escuchar actualizaciones
       window.electronAPI.onCartUpdated((data) => {
-        setLocalItems(data.items || []);
+        const newItems = data.items || [];
+        setLocalItems(newItems);
         setLocalTotal(data.total || 0);
-        setShowAd((data.items || []).length === 0);
+        // Actualizar showAd solo si hay items (no mostrar ad si hay items)
+        setShowAd(newItems.length === 0);
+        setPaymentMethod(null); // Resetear payment method
+        setSaleId(null);
       });
 
       window.electronAPI.onCartCleared(() => {
         setLocalItems([]);
         setLocalTotal(0);
         setShowAd(true);
+        setPaymentMethod(null);
+        setSaleId(null);
+        setShowSuccessMessage(false);
       });
+
+      // Escuchar notificación de método de pago
+      if (window.electronAPI.onPaymentMethod) {
+        window.electronAPI.onPaymentMethod((data) => {
+          setPaymentMethod(data.method);
+          setSaleId(data.saleId);
+        });
+      }
+
+      // Escuchar notificación de pago completado
+      if (window.electronAPI.onPaymentCompleted) {
+        window.electronAPI.onPaymentCompleted((data) => {
+          setShowSuccessMessage(true);
+          // Ocultar el mensaje después de 5 segundos
+          setTimeout(() => {
+            setShowSuccessMessage(false);
+          }, 5000);
+        });
+      }
     } else {
       // Fallback para desarrollo en navegador
       const items = useCartStore.getState().items;
@@ -40,6 +71,39 @@ export default function CustomerDisplayPage() {
       setLocalTotal(total);
       setShowAd(items.length === 0);
     }
+
+    // Escuchar eventos globales
+    const unsubCheckout = eventBus.on('CHECKOUT_FROM_CLIENT', () => {
+      setIsProcessing(true);
+    });
+
+    const unsubPaymentMethod = eventBus.on('PAYMENT_METHOD', (data) => {
+      setPaymentMethod(data.method);
+      setSaleId(data.saleId);
+    });
+
+    const unsubPaymentCompleted = eventBus.on('PAYMENT_COMPLETED', () => {
+      setTimeout(() => {
+        setIsProcessing(false);
+        setShowAd(true);
+      }, 1500);
+    });
+
+    const unsubCartCleared = eventBus.on('CART_CLEARED', () => {
+      // Limpiar items locales
+      setLocalItems([]);
+      setLocalTotal(0);
+      setPaymentMethod(null);
+      setSaleId(null);
+    });
+
+    // Cleanup
+    return () => {
+      unsubCheckout();
+      unsubPaymentMethod();
+      unsubPaymentCompleted();
+      unsubCartCleared();
+    };
   }, []);
 
   return (
@@ -80,7 +144,15 @@ export default function CustomerDisplayPage() {
           {showAd ? (
             <Advertisement key="ad" />
           ) : (
-            <CartDisplay key="cart" items={localItems} total={localTotal} />
+            <CartDisplay 
+              key="cart" 
+              items={localItems} 
+              total={localTotal}
+              paymentMethod={paymentMethod}
+              saleId={saleId}
+              showSuccessMessage={showSuccessMessage}
+              isProcessing={isProcessing}
+            />
           )}
         </AnimatePresence>
       </div>
@@ -139,11 +211,10 @@ function Advertisement() {
 }
 
 // Componente del Carrito
-function CartDisplay({ items, total }: { items: CartItem[]; total: number }) {
+function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, isProcessing }: { items: CartItem[]; total: number; paymentMethod?: string | null; saleId?: string | null; showSuccessMessage?: boolean; isProcessing?: boolean }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const scrollThumbRef = useRef<HTMLDivElement>(null);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -266,6 +337,33 @@ function CartDisplay({ items, total }: { items: CartItem[]; total: number }) {
         animate={{ scale: 1 }}
         className="bg-white rounded-3xl p-8 shadow-2xl"
       >
+        {/* Método de Pago */}
+        {paymentMethod && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-green-50 border-2 border-green-500 rounded-2xl flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-4xl">
+                {paymentMethod === 'EFECTIVO' && '💵'}
+                {paymentMethod === 'TARJETA' && '💳'}
+                {paymentMethod === 'MIXTO' && '💰'}
+              </span>
+              <div>
+                <p className="text-sm text-gray-600">Método de Pago</p>
+                <p className="text-3xl font-bold text-green-700">{paymentMethod}</p>
+              </div>
+            </div>
+            {saleId && (
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Venta #</p>
+                <p className="text-2xl font-bold text-gray-800">{saleId.slice(0, 8)}</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+        
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
@@ -287,62 +385,72 @@ function CartDisplay({ items, total }: { items: CartItem[]; total: number }) {
         {/* Botones de Acción */}
         <div className="flex gap-4">
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={!isProcessing ? { scale: 1.05 } : {}}
+            whileTap={!isProcessing ? { scale: 0.95 } : {}}
             onClick={() => {
-              if (window.electronAPI) {
-                window.electronAPI.updateCart({ items, total });
-              }
-              setShowSuccessMessage(true);
-              
-              // Después de 3 segundos, limpiar el carrito
-              setTimeout(() => {
-                if (window.electronAPI) {
-                  window.electronAPI.clearCart();
+              if (!isProcessing) {
+                // Notificar a POSPage que abra el PaymentDialog
+                eventBus.emit('CHECKOUT_FROM_CLIENT', {});
+                
+                // También notificar a través de Electron si está disponible
+                if (window.electronAPI?.checkoutFromClient) {
+                  window.electronAPI.checkoutFromClient();
                 }
-                setShowSuccessMessage(false);
-              }, 3000);
+              }
             }}
-            disabled={items.length === 0}
-            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-bold py-6 px-6 rounded-2xl text-4xl transition-all shadow-lg hover:shadow-xl"
+            disabled={items.length === 0 || isProcessing}
+            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-bold py-6 px-6 rounded-2xl text-4xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
           >
             ✅ Aceptar
           </motion.button>
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={!isProcessing ? { scale: 1.05 } : {}}
+            whileTap={!isProcessing ? { scale: 0.95 } : {}}
             onClick={() => {
-              if (window.electronAPI) {
+              if (!isProcessing && window.electronAPI) {
                 window.electronAPI.clearCart();
               }
             }}
-            className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-6 px-6 rounded-2xl text-4xl transition-all shadow-lg hover:shadow-xl"
+            disabled={isProcessing}
+            className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-bold py-6 px-6 rounded-2xl text-4xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
           >
             ❌ Cancelar
           </motion.button>
         </div>
       </motion.div>
 
-      {/* Mensaje de éxito */}
+      {/* Mensaje de Procesando */}
       <AnimatePresence>
-        {showSuccessMessage && <SuccessMessage />}
+        {isProcessing && <ProcessingMessage />}
       </AnimatePresence>
     </motion.div>
   );
 }
 
 // Componente de mensaje de éxito
-function SuccessMessage() {
+function ProcessingMessage({ success = false }: { success?: boolean }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -50 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -50 }}
-      className="fixed top-0 left-0 right-0 bg-green-500 text-white py-8 px-6 text-center shadow-2xl z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-40"
     >
-      <div className="text-6xl mb-4">✅</div>
-      <h2 className="text-5xl font-bold">¡Compra Aceptada!</h2>
-      <p className="text-2xl mt-3 opacity-90">Gracias por su compra</p>
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        className="bg-white rounded-3xl shadow-2xl p-12 text-center"
+      >
+        {/* Spinner animado */}
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="mx-auto w-24 h-24 mb-6 border-8 border-blue-100 border-t-blue-500 rounded-full"
+        />
+        <h2 className="text-5xl font-bold text-gray-800 mb-3">Procesando venta...</h2>
+        <p className="text-2xl text-gray-600">Por favor espere</p>
+      </motion.div>
     </motion.div>
   );
 }

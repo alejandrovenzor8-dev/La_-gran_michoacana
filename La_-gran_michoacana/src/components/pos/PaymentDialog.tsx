@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCartStore } from '@/stores/cartStore';
 import { saleService } from '@/lib/saleService';
 import { useAuthStore } from '@/stores/authStore';
+import { eventBus } from '@/lib/eventBus';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -104,16 +105,50 @@ export function PaymentDialog({
       const sale = await saleService.createSale(saleData);
 
       // Notificar éxito con toast
+      const saleIdString = String(sale.id || '');
       toast.success('¡Venta completada!', {
-        description: `Total: $${sale.total} - Venta #${sale.id.slice(0, 8)}`,
+        description: `Total: $${sale.total} - Venta #${saleIdString.slice(0, 8)}`,
         duration: 5000
       });
+
+      // Notificar al CustomerDisplay con el método de pago
+      if (window.electronAPI?.notifyPaymentMethod) {
+        window.electronAPI.notifyPaymentMethod({
+          method: paymentMethod,
+          total: sale.total,
+          saleId: saleIdString
+        });
+      } else {
+        // Fallback usando eventBus
+        eventBus.emit('PAYMENT_METHOD', {
+          method: paymentMethod,
+          total: sale.total,
+          saleId: saleIdString
+        });
+      }
+
+      // Notificar al CustomerDisplay que muestre mensaje de éxito
+      if (window.electronAPI?.notifyPaymentCompleted) {
+        window.electronAPI.notifyPaymentCompleted({
+          total: sale.total,
+          saleId: saleIdString
+        });
+      } else {
+        // Fallback usando eventBus
+        eventBus.emit('PAYMENT_COMPLETED', {
+          total: sale.total,
+          saleId: saleIdString
+        });
+      }
 
       // Callback con la venta
       onPaymentComplete(sale);
 
       // Limpiar carrito
       clearCart();
+
+      // Notificar que el carrito se limpió
+      eventBus.emit('CART_CLEARED', {});
 
       // Cerrar diálogo
       onClose();

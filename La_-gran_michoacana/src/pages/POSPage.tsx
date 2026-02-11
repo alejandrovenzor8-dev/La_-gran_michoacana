@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { productService, Product } from '@/lib/productService';
 import { saleService, Sale, SaleItem } from '@/lib/saleService';
 import { PaymentDialog } from '@/components/pos/PaymentDialog';
+import { eventBus } from '@/lib/eventBus';
 
 export default function POSPage() {
   const { items, total, addItem, removeItem, updateQuantity, clearCart } = useCartStore();
@@ -19,25 +20,46 @@ export default function POSPage() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   // Cargar productos del backend
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await productService.getAllProducts();
-        // Asegurarse de que data es siempre un array
-        setProducts(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Error loading products:', err);
-        setError('Error al cargar los productos');
-        setProducts([]); // Establecer array vacío en caso de error
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await productService.getAllProducts();
+      // Asegurarse de que data es siempre un array
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading products:', err);
+      setError('Error al cargar los productos');
+      setProducts([]); // Establecer array vacío en caso de error
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Escuchar eventos del CustomerDisplay
+  useEffect(() => {
+    // Escuchar evento de checkout del ClienteDisplay
+    const unsubscribe = eventBus.on('CHECKOUT_FROM_CLIENT', () => {
+      setIsPaymentDialogOpen(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Cargar productos del backend
+  useEffect(() => {
     loadProducts();
   }, []);
+
+  // Recargar productos cuando el carrito se vacía (después de una venta)
+  useEffect(() => {
+    if (items.length === 0 && products.length > 0) {
+      // Se acaba de completar una venta, recargar productos
+      loadProducts();
+    }
+  }, [items.length]);
 
   // Escuchar el evento de limpiar carrito desde Electron
   useEffect(() => {
@@ -77,8 +99,13 @@ export default function POSPage() {
   const handlePaymentComplete = (sale: any) => {
     console.log('✅ Venta completada:', sale);
     
-    // El toast ya se muestra desde PaymentDialog
-    // Aquí puedes agregar lógica adicional si es necesaria
+    // El PaymentDialog ya limpia el carrito
+    // Aquí solo recargamos los productos para la siguiente venta
+    loadProducts();
+    
+    // Cerrar el PaymentDialog automáticamente
+    setIsPaymentDialogOpen(false);
+    
     if (window.electronAPI) {
       window.electronAPI.onCheckoutComplete?.();
     }
