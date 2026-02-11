@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,8 +9,10 @@ import {
   Download,
   Receipt,
   Clock,
+  Loader,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { saleService } from '@/lib/saleService';
 import {
   LineChart,
   Line,
@@ -37,16 +39,47 @@ export default function ReportsPage() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split('T')[0]
   );
+  const [loading, setLoading] = useState(false);
+  const [statsData, setStatsData] = useState<any>(null);
+  const [dailyData, setDailyData] = useState<any>(null);
 
-  // Datos simulados de ventas
-  const salesData = {
-    day: { total: 15234.5, transactions: 45, avgTicket: 338.54 },
-    week: { total: 89432.25, transactions: 287, avgTicket: 311.59 },
-    month: { total: 342156.75, transactions: 1234, avgTicket: 277.25 },
-    year: { total: 4123890.0, transactions: 15678, avgTicket: 262.95 },
-  };
+  // Cargar estadísticas del backend
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        const stats = await saleService.getSalesStats();
+        setStatsData(stats || null);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        setStatsData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const currentData = salesData[selectedPeriod];
+    loadStats();
+  }, []);
+
+  // Cargar reporte diario cuando cambia la fecha
+  useEffect(() => {
+    const loadDailyReport = async () => {
+      try {
+        setLoading(true);
+        const report = await saleService.getDailyReport(selectedDate);
+        setDailyData(report || null);
+      } catch (error) {
+        console.error('Error loading daily report:', error);
+        setDailyData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (selectedDate) {
+      loadDailyReport();
+    }
+  }, [selectedDate]);
 
   // Datos para gráfico de líneas (ventas por día)
   const salesTrendData = [
@@ -68,13 +101,33 @@ export default function ReportsPage() {
   ];
 
   // Datos para gráfico circular (productos más vendidos)
-  const topProductsData = [
-    { name: 'Paletas', value: 2175, color: '#FF6B6B' },
-    { name: 'Nieves', value: 2940, color: '#4ECDC4' },
-    { name: 'Raspados', value: 1740, color: '#45B7D1' },
-    { name: 'Helados', value: 2280, color: '#FFA07A' },
-    { name: 'Bebidas', value: 975, color: '#98D8C8' },
-  ];
+  const topProductsData =
+    statsData?.topProducts?.map((product: any, index: number) => ({
+      name: product.name,
+      value: product.quantity,
+      color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5],
+    })) || [
+      { name: 'Paletas', value: 2175, color: '#FF6B6B' },
+      { name: 'Nieves', value: 2940, color: '#4ECDC4' },
+      { name: 'Raspados', value: 1740, color: '#45B7D1' },
+      { name: 'Helados', value: 2280, color: '#FFA07A' },
+      { name: 'Bebidas', value: 975, color: '#98D8C8' },
+    ];
+
+  // Datos actuales de ventas (usando backend si está disponible)
+  const currentData = dailyData
+    ? {
+        total: dailyData.totalRevenue || 0,
+        transactions: dailyData.transactions || 0,
+        avgTicket: dailyData.averageTicket || 0,
+      }
+    : statsData
+      ? {
+          total: statsData.totalRevenue || 0,
+          transactions: statsData.transactionCount || 0,
+          avgTicket: statsData.averageTicket || 0,
+        }
+      : { total: 0, transactions: 0, avgTicket: 0 };
 
   const handlePrintCut = () => {
     alert('Imprimiendo corte de caja...');

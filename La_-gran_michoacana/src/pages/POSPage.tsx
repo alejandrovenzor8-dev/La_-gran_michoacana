@@ -3,24 +3,39 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react';
-import { useEffect } from 'react';
-
-// Productos de ejemplo
-const PRODUCTS = [
-  { id: '1', name: 'Paleta de Fresa', price: 15, emoji: '🍓', category: 'Paletas' },
-  { id: '2', name: 'Paleta de Mango', price: 15, emoji: '🥭', category: 'Paletas' },
-  { id: '3', name: 'Paleta de Limón', price: 15, emoji: '🍋', category: 'Paletas' },
-  { id: '4', name: 'Helado de Vainilla', price: 25, emoji: '🍦', category: 'Helados' },
-  { id: '5', name: 'Helado de Chocolate', price: 25, emoji: '🍫', category: 'Helados' },
-  { id: '6', name: 'Helado de Napolitano', price: 30, emoji: '🍨', category: 'Helados' },
-  { id: '7', name: 'Raspado', price: 20, emoji: '🧊', category: 'Raspados' },
-  { id: '8', name: 'Agua Fresca', price: 18, emoji: '🥤', category: 'Bebidas' },
-];
+import { ShoppingCart, Plus, Minus, Trash2, Package, Loader } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { productService, Product } from '@/lib/productService';
+import { saleService, Sale, SaleItem } from '@/lib/saleService';
 
 export default function POSPage() {
   const { items, total, addItem, removeItem, updateQuantity, clearCart } = useCartStore();
   const user = useAuthStore((state) => state.user);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Cargar productos del backend
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await productService.getAllProducts();
+        // Asegurarse de que data es siempre un array
+        setProducts(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError('Error al cargar los productos');
+        setProducts([]); // Establecer array vacío en caso de error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   // Escuchar el evento de limpiar carrito desde Electron
   useEffect(() => {
@@ -32,12 +47,68 @@ export default function POSPage() {
     }
   }, []);
 
-  const handleAddProduct = (product: typeof PRODUCTS[0]) => {
+  const handleAddProduct = (product: Product) => {
     addItem({
-      ...product,
+      id: String(product.id),
+      name: product.name,
+      price: product.price,
       quantity: 1,
+      emoji: '🛒',
+      category: product.category,
     });
   };
+
+  const handleCheckout = async () => {
+    if (items.length === 0) {
+      alert('El carrito está vacío');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+
+      // Crear objetos de items de venta
+      const saleItems: SaleItem[] = items.map((item) => ({
+        productId: parseInt(item.id),
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      // Crear venta en el backend
+      const sale: Sale = {
+        total,
+        items: saleItems,
+        paymentMethod: 'cash',
+      };
+
+      const createdSale = await saleService.createSale(sale);
+      console.log('✅ Venta registrada:', createdSale);
+
+      // Limpiar carrito
+      clearCart();
+      alert(`✅ Venta registrada exitosamente. ID: ${createdSale.id}`);
+
+      if (window.electronAPI) {
+        window.electronAPI.onCheckoutComplete?.();
+      }
+    } catch (err) {
+      console.error('Error processing checkout:', err);
+      alert('Error al procesar la venta');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">Cargando productos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex bg-gray-50">
@@ -57,22 +128,30 @@ export default function POSPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {PRODUCTS.map((product) => (
-            <Card
-              key={product.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleAddProduct(product)}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="text-6xl mb-3">{product.emoji}</div>
-                <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                <p className="text-sm text-gray-600 mb-3">{product.category}</p>
-                <p className="text-2xl font-bold text-primary">
-                  {formatCurrency(product.price)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+          {products.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <Package className="w-16 h-16 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500">No hay productos disponibles</p>
+            </div>
+          ) : (
+            products.map((product) => (
+              <Card
+                key={product.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => handleAddProduct(product)}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="text-6xl mb-3">🛍️</div>
+                  <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
+                  <p className="text-sm text-gray-600 mb-3">{product.category}</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {formatCurrency(product.price)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Stock: {product.quantity}</p>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
 
@@ -160,9 +239,23 @@ export default function POSPage() {
 
           <div className="space-y-2">
             <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3"
+              disabled={items.length === 0 || isProcessing}
+              onClick={handleCheckout}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                'Finalizar Venta'
+              )}
+            </Button>
+            <Button
               variant="outline"
               className="w-full"
-              disabled={items.length === 0}
+              disabled={items.length === 0 || isProcessing}
               onClick={clearCart}
             >
               Limpiar Carrito

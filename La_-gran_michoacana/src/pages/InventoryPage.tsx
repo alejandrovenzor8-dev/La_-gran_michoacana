@@ -1,100 +1,19 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Package, Edit, Trash2, Upload, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Package, Edit, Trash2, Upload, X, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  image?: string;
-  quantity: number;
-  price: number;
-  category?: string;
-  emoji?: string;
-}
+import { productService, Product } from '@/lib/productService';
 
 export default function InventoryPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editImageChanged, setEditImageChanged] = useState(false);  // Rastrear si la imagen fue cambiada
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const itemsPerPage = 3;
-  
-  // Productos de ejemplo - esto debería venir de una base de datos
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: '1',
-      name: 'Paleta de Fresa',
-      description: 'Deliciosa paleta de agua sabor fresa',
-      emoji: '🍓',
-      quantity: 50,
-      price: 15,
-      category: 'Paletas'
-    },
-    {
-      id: '2',
-      name: 'Paleta de Mango',
-      description: 'Refrescante paleta de mango natural',
-      emoji: '🥭',
-      quantity: 45,
-      price: 15,
-      category: 'Paletas'
-    },
-    {
-      id: '3',
-      name: 'Paleta de Limón',
-      description: 'Paleta de limón con chile',
-      emoji: '🍋',
-      quantity: 40,
-      price: 15,
-      category: 'Paletas'
-    },
-    {
-      id: '4',
-      name: 'Helado de Vainilla',
-      description: 'Cremoso helado de vainilla',
-      emoji: '🍦',
-      quantity: 30,
-      price: 25,
-      category: 'Helados'
-    },
-    {
-      id: '5',
-      name: 'Helado de Chocolate',
-      description: 'Delicioso helado de chocolate',
-      emoji: '🍫',
-      quantity: 28,
-      price: 25,
-      category: 'Helados'
-    },
-    {
-      id: '6',
-      name: 'Helado de Napolitano',
-      description: 'Tres sabores en uno',
-      emoji: '🍨',
-      quantity: 25,
-      price: 30,
-      category: 'Helados'
-    },
-    {
-      id: '7',
-      name: 'Raspado',
-      description: 'Raspado de hielo con jarabe',
-      emoji: '🧊',
-      quantity: 35,
-      price: 20,
-      category: 'Raspados'
-    },
-    {
-      id: '8',
-      name: 'Agua Fresca',
-      description: 'Agua fresca del día',
-      emoji: '🥤',
-      quantity: 20,
-      price: 18,
-      category: 'Bebidas'
-    },
-  ]);
 
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
@@ -109,12 +28,32 @@ export default function InventoryPage() {
   const [editFormData, setEditFormData] = useState<Partial<Product>>({
     name: '',
     description: '',
-    emoji: '',
     image: '',
     quantity: 0,
     price: 0,
     category: ''
   });
+
+  // Cargar productos del backend
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await productService.getAllProducts();
+        // Asegurarse de que data es siempre un array
+        setProducts(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError('Error al cargar los productos');
+        setProducts([]); // Establecer array vacío en caso de error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -133,6 +72,7 @@ export default function InventoryPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setEditFormData({ ...editFormData, image: reader.result as string, emoji: '' });
+        setEditImageChanged(true);  // Marcar que la imagen ha sido cambiada por el usuario
       };
       reader.readAsDataURL(file);
     }
@@ -144,6 +84,7 @@ export default function InventoryPage() {
 
   const removeEditImage = () => {
     setEditFormData({ ...editFormData, image: '' });
+    setEditImageChanged(true);  // Marcar que la imagen ha sido modificada
   };
 
   const nextProduct = () => {
@@ -160,46 +101,184 @@ export default function InventoryPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Crear nuevo producto
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: formData.name || '',
-      description: formData.description || '',
-      emoji: formData.emoji,
-      image: formData.image,
-      quantity: formData.quantity || 0,
-      price: formData.price || 0,
-      category: formData.category
-    };
-    setProducts([...products, newProduct]);
-    
-    // Resetear formulario
-    setFormData({
-      name: '',
-      description: '',
-      emoji: '',
-      image: '',
-      quantity: 0,
-      price: 0,
-      category: ''
-    });
+    if (!formData.name || !formData.price) {
+      alert('Por favor completa el nombre y precio del producto');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Preparar datos del producto
+      const quantity = Number(formData.quantity) || 0;
+      console.log('📝 Preparando producto:', {
+        name: formData.name,
+        price: Number(formData.price),
+        quantity: quantity,
+        imageSize: formData.image ? formData.image.length : 0
+      });
+      
+      // Limitar el tamaño de la imagen (máximo 100KB)
+      let imageToSend = formData.image;
+      if (imageToSend && imageToSend.length > 100000) {
+        console.warn('⚠️ Imagen demasiado grande, no se enviará');
+        imageToSend = '';
+      }
+      
+      // Crear producto en el backend
+      const newProduct = await productService.createProduct({
+        name: formData.name,
+        description: formData.description || '',
+        price: Number(formData.price),
+        quantity: quantity,
+        category: formData.category,
+        image: imageToSend,
+      });
+
+      console.log('✅ Producto creado (respuesta del servidor):', newProduct);
+      
+      // Manejar diferentes estructuras de respuesta
+      let product = newProduct;
+      if ((newProduct as any).product) {
+        product = (newProduct as any).product;
+        console.log('📦 Extrayendo producto de estructura anidada:', product);
+      }
+      
+      console.log('📊 Estructura del producto:', { 
+        id: product?.id, 
+        name: product?.name,
+        keys: product ? Object.keys(product) : 'null'
+      });
+      
+      // Validar que el producto tenga datos mínimos
+      if (!product || !product.name) {
+        console.error('Error: Producto creado sin datos válidos', product);
+        alert('Error: El producto no tiene datos válidos. Por favor revisa la consola.');
+        return;
+      }
+      
+      // Usar el id del producto, o generar uno si es necesario
+      const productId = product.id || Date.now();
+      
+      // Normalizar el producto recibido del servidor
+      const normalizedProduct: Product = {
+        id: productId,
+        name: product.name || 'Producto sin nombre',
+        description: product.description || '',
+        price: typeof product.price === 'string' ? Number(product.price) : (product.price ?? 0),
+        quantity: typeof product.quantity === 'string' ? Number(product.quantity) : (product.quantity ?? 0),
+        category: product.category || '',
+        image: product.image || '',
+      };
+      
+      console.log('✨ Producto normalizado:', normalizedProduct);
+      
+      // Agregar el producto a la lista local
+      const updatedProducts = [...(Array.isArray(products) ? products : []), normalizedProduct];
+      console.log('📝 Productos después de crear:', updatedProducts);
+      setProducts(updatedProducts);
+      
+      // Resetear formulario
+      setFormData({
+        name: '',
+        description: '',
+        emoji: '',
+        image: '',
+        quantity: 0,
+        price: 0,
+        category: ''
+      });
+
+      console.log('✅ Producto creado exitosamente');
+    } catch (err: any) {
+      console.error('Error creating product:', err);
+      const errorMessage = err?.message || 'Error al crear el producto';
+      
+      if (errorMessage.includes('entity too large') || errorMessage.includes('413')) {
+        alert('⚠️ Error: La imágenes es demasiado grande. Intenta con una imagen más pequeña. El producto se creó sin imagen.');
+      } else {
+        alert(`❌ Error: ${errorMessage}`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingProduct) {
-      // Editar producto existente
-      setProducts(products.map(p => 
+    if (!editingProduct || !editFormData.name || !editFormData.price) {
+      alert('Por favor completa el nombre y precio del producto');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Preparar datos del producto
+      const quantity = Number(editFormData.quantity) || 0;
+      
+      console.log('📋 handleEditSubmit - Datos a editar:');
+      console.log('  Producto ID:', editingProduct.id);
+      console.log('  Nombre:', editFormData.name);
+      console.log('  Stock anterior:', editingProduct.quantity);
+      console.log('  Stock nuevo:', quantity);
+      console.log('  Precio:', Number(editFormData.price));
+      console.log('  Categoría:', editFormData.category);
+      console.log('  Imagen modificada:', editImageChanged);
+      
+      // Construir payload - SOLO incluir imagen si fue modificada
+      const payload: any = {
+        name: editFormData.name,
+        description: editFormData.description || '',
+        price: Number(editFormData.price),
+        quantity: quantity,
+        category: editFormData.category,
+      };
+      
+      console.log('📤 handleEditSubmit - Payload antes de completar:', JSON.stringify(payload, null, 2));
+      
+      // Solo agregar imagen si el usuario la cambió
+      if (editImageChanged) {
+        // Validar tamaño si fue modificada por el usuario
+        let imageToSend = editFormData.image;
+        if (imageToSend && imageToSend.length > 100000) {
+          console.warn('⚠️ Imagen demasiado grande, no se enviará');
+          imageToSend = '';
+        }
+        payload.image = imageToSend;
+        console.log('📤 Enviando imagen modificada:', imageToSend ? `${imageToSend.length} bytes` : 'sin imagen');
+      } else {
+        console.log('📤 No se envía imagen (no fue modificada)');
+      }
+
+      // Actualizar producto en el backend
+      const updatedProduct = await productService.updateProduct(editingProduct.id, payload);
+
+      console.log('✅ Respuesta del servidor:', updatedProduct);
+      console.log('📋 Cambios solicitados:', { 
+        originalStock: editingProduct.quantity, 
+        nuevoStock: quantity,
+        cambio: quantity - (editingProduct.quantity || 0)
+      });
+      
+      // VERIFICAR que el cambio se guardó realmente
+      if (updatedProduct.quantity !== quantity) {
+        console.warn('⚠️ ADVERTENCIA: El stock en la respuesta NO coincide con lo enviado');
+        console.warn('Enviado:', quantity, 'Recibido:', updatedProduct.quantity);
+      }
+
+      // Actualizar la lista local
+      setProducts((Array.isArray(products) ? products : []).map(p => 
         p.id === editingProduct.id 
-          ? { ...p, ...editFormData } as Product
+          ? updatedProduct
           : p
       ));
-      setShowEditModal(false);
-      setEditingProduct(null);
+
+      // RESETEAR TODO ANTES DE CERRAR MODAL
       setEditFormData({
         name: '',
         description: '',
@@ -209,31 +288,97 @@ export default function InventoryPage() {
         price: 0,
         category: ''
       });
+      setEditingProduct(null);
+      setEditImageChanged(false);
+      setShowEditModal(false);  // Cerrar modal ÚLTIMO
+      
+      // Mostrar mensaje de éxito SIN alert() que bloquea la interacción
+      console.log('✅ Producto actualizado exitosamente');
+    } catch (err: any) {
+      console.error('❌ Error completo updating product:', {
+        message: err?.message,
+        status: err?.status,
+        response: err?.response,
+        fullError: err
+      });
+      const errorMessage = err?.message || 'Error al actualizar el producto';
+      
+      if (errorMessage.includes('entity too large') || errorMessage.includes('413')) {
+        console.warn('⚠️ Error: La imagen es demasiado grande.');
+      } else {
+        console.error(`❌ Error: ${errorMessage}`);
+      }
+      
+      // NO CERRAR EL MODAL SI HAY ERROR - para que el usuario pueda reintentar
+      console.log('📋 Estado actual de editFormData:', editFormData);
+      console.log('📋 Estado actual de editImageChanged:', editImageChanged);
+    } finally {
+      setIsSubmitting(false);
+      console.log('✅ Modal y estado limpiados');
+      // Asegurar que el estado se limpia completamente
+      if (!showEditModal) {
+        setEditingProduct(null);
+        setEditImageChanged(false);
+      }
     }
   };
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setEditFormData(product);
+    setEditImageChanged(false);  // Reiniciar el estado de imagen
     setShowEditModal(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('¿Estás seguro de eliminar este producto?')) {
-      setProducts(products.filter(p => p.id !== id));
-      // Ajustar el índice si es necesario
-      const newProductsLength = products.length - 1;
-      const maxIndex = Math.ceil(newProductsLength / itemsPerPage) - 1;
-      if (currentIndex > maxIndex && maxIndex >= 0) {
-        setCurrentIndex(maxIndex);
+      try {
+        setIsSubmitting(true);
+        
+        // Eliminar del backend
+        await productService.deleteProduct(id);
+        
+        console.log('✅ Producto eliminado');
+        
+        // Eliminar de la lista local
+        setProducts((Array.isArray(products) ? products : []).filter(p => p.id !== id));
+        
+        // Ajustar el índice si es necesario
+        const newProductsLength = (Array.isArray(products) ? products : []).length - 1;
+        const maxIndex = Math.ceil(newProductsLength / itemsPerPage) - 1;
+        if (currentIndex > maxIndex && maxIndex >= 0) {
+          setCurrentIndex(maxIndex);
+        }
+
+        alert('✅ Producto eliminado exitosamente');
+      } catch (err) {
+        console.error('Error deleting product:', err);
+        alert('Error al eliminar el producto');
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
 
+  // Asegurar que products es siempre un array
+  const safeProducts = Array.isArray(products) ? products : [];
+  // Filtrar productos válidos (con id)
+  const validProducts = safeProducts.filter(p => p && p.id);
   const startIndex = currentIndex * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentProducts = products.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const currentProducts = validProducts.slice(startIndex, endIndex);
+  const totalPages = validProducts.length > 0 ? Math.ceil(validProducts.length / itemsPerPage) : 0;
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">Cargando inventario...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-50 to-purple-50">
@@ -258,6 +403,7 @@ export default function InventoryPage() {
                   onClick={() => {
                     setShowEditModal(false);
                     setEditingProduct(null);
+                    setEditImageChanged(false);  // Resetear el estado de imagen
                   }}
                   className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
                 >
@@ -312,7 +458,7 @@ export default function InventoryPage() {
                       <label className="block text-sm font-medium mb-2">Nombre del Producto *</label>
                       <input
                         type="text"
-                        value={editFormData.name}
+                        value={editFormData.name ?? ''}
                         onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="Ej: Paleta de Fresa"
@@ -324,7 +470,7 @@ export default function InventoryPage() {
                       <label className="block text-sm font-medium mb-2">Categoría</label>
                       <input
                         type="text"
-                        value={editFormData.category}
+                        value={editFormData.category ?? ''}
                         onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="Ej: Paletas, Helados"
@@ -335,7 +481,7 @@ export default function InventoryPage() {
                       <label className="block text-sm font-medium mb-2">Cantidad en Stock *</label>
                       <input
                         type="number"
-                        value={editFormData.quantity}
+                        value={editFormData.quantity ?? 0}
                         onChange={(e) => setEditFormData({ ...editFormData, quantity: parseInt(e.target.value) || 0 })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="0"
@@ -348,7 +494,7 @@ export default function InventoryPage() {
                       <label className="block text-sm font-medium mb-2">Precio de Venta ($) *</label>
                       <input
                         type="number"
-                        value={editFormData.price}
+                        value={editFormData.price ?? 0}
                         onChange={(e) => setEditFormData({ ...editFormData, price: parseFloat(e.target.value) || 0 })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="0.00"
@@ -364,13 +510,21 @@ export default function InventoryPage() {
                         onClick={() => {
                           setShowEditModal(false);
                           setEditingProduct(null);
+                          setEditImageChanged(false);  // Resetear el estado de imagen
                         }}
                         className="bg-gray-500 hover:bg-gray-600 px-6"
                       >
                         Cancelar
                       </Button>
-                      <Button type="submit" className="px-6">
-                        Guardar Cambios
+                      <Button type="submit" className="px-6" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <>
+                            <Loader className="w-4 h-4 mr-2 animate-spin" />
+                            Guardando...
+                          </>
+                        ) : (
+                          'Guardar Cambios'
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -432,7 +586,7 @@ export default function InventoryPage() {
                   <label className="block text-sm font-medium mb-2">Nombre del Producto *</label>
                   <input
                     type="text"
-                    value={formData.name}
+                    value={formData.name ?? ''}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     placeholder="Ej: Paleta de Fresa"
@@ -444,7 +598,7 @@ export default function InventoryPage() {
                   <label className="block text-sm font-medium mb-2">Categoría</label>
                   <input
                     type="text"
-                    value={formData.category}
+                    value={formData.category ?? ''}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     placeholder="Ej: Paletas, Helados"
@@ -455,7 +609,7 @@ export default function InventoryPage() {
                   <label className="block text-sm font-medium mb-2">Cantidad en Stock *</label>
                   <input
                     type="number"
-                    value={formData.quantity}
+                    value={formData.quantity ?? 0}
                     onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     placeholder="0"
@@ -468,7 +622,7 @@ export default function InventoryPage() {
                   <label className="block text-sm font-medium mb-2">Precio de Venta ($) *</label>
                   <input
                     type="number"
-                    value={formData.price}
+                    value={formData.price ?? 0}
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     placeholder="0.00"
@@ -497,8 +651,15 @@ export default function InventoryPage() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" className="px-6">
-                    Agregar Producto
+                  <Button type="submit" className="px-6" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader className="w-4 h-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Agregar Producto'
+                    )}
                   </Button>
                 </div>
               </div>
@@ -507,7 +668,7 @@ export default function InventoryPage() {
         </Card>
 
         {/* Carrusel de Productos */}
-        {products.length > 0 ? (
+        {Array.isArray(products) && products.length > 0 ? (
           <>
             <div className="relative mb-8">
               <Card className="p-8 shadow-2xl">
@@ -517,7 +678,7 @@ export default function InventoryPage() {
                     type="button"
                     onClick={prevProduct}
                     className="rounded-full w-12 h-12 flex items-center justify-center shrink-0"
-                    disabled={products.length <= itemsPerPage}
+                    disabled={validProducts.length <= itemsPerPage}
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </Button>
@@ -532,7 +693,7 @@ export default function InventoryPage() {
                     type="button"
                     onClick={nextProduct}
                     className="rounded-full w-12 h-12 flex items-center justify-center shrink-0"
-                    disabled={products.length <= itemsPerPage}
+                    disabled={validProducts.length <= itemsPerPage}
                   >
                     <ChevronRight className="w-6 h-6" />
                   </Button>
@@ -565,25 +726,25 @@ export default function InventoryPage() {
                           </span>
                         )}
                         <h3 className="text-xl font-bold text-gray-800 mb-4">
-                          {product.name}
+                          {product.name || 'Producto sin nombre'}
                         </h3>
 
                         <div className="grid grid-cols-2 gap-3 mb-4">
                           <div className="bg-green-50 p-3 rounded-lg">
                             <p className="text-xs text-gray-600 mb-1">Stock</p>
                             <p className="text-lg font-bold text-green-600">
-                              {product.quantity}
+                              {product.quantity || 0}
                             </p>
                           </div>
                           <div className="bg-blue-50 p-3 rounded-lg">
                             <p className="text-xs text-gray-600 mb-1">Precio</p>
                             <p className="text-lg font-bold text-blue-600">
-                              ${product.price.toFixed(2)}
+                              ${Number(product.price || 0).toFixed(2)}
                             </p>
                           </div>
                         </div>
 
-                        {product.quantity < 10 && (
+                        {(product.quantity || 0) < 10 && (
                           <div className="bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
                             <p className="text-red-600 text-xs font-medium">
                               ⚠️ Stock bajo
@@ -604,10 +765,11 @@ export default function InventoryPage() {
                           <Button
                             type="button"
                             onClick={() => handleDelete(product.id)}
-                            className="flex-1 bg-red-500 hover:bg-red-600 text-sm py-2"
+                            disabled={isSubmitting}
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-sm py-2 disabled:opacity-50"
                           >
                             <Trash2 className="w-3 h-3 mr-1" />
-                            Eliminar
+                            {isSubmitting ? 'Eliminando...' : 'Eliminar'}
                           </Button>
                         </div>
                       </div>
@@ -662,7 +824,7 @@ export default function InventoryPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {products.map((product, index) => (
+                    {(Array.isArray(products) ? products : []).map((product, index) => (
                       <tr 
                         key={product.id}
                         className={`hover:bg-gray-50 transition-colors ${
@@ -680,7 +842,7 @@ export default function InventoryPage() {
                             ) : (
                               <div className="text-3xl">{product.emoji || '📦'}</div>
                             )}
-                            <div className="font-semibold text-gray-800">{product.name}</div>
+                            <div className="font-semibold text-gray-800">{product.name || 'Producto sin nombre'}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -694,18 +856,18 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <span className={`px-3 py-2 rounded-lg font-bold ${
-                            product.quantity < 10 
+                            (product.quantity || 0) < 10 
                               ? 'bg-red-100 text-red-600' 
-                              : product.quantity < 30
+                              : (product.quantity || 0) < 30
                               ? 'bg-yellow-100 text-yellow-600'
                               : 'bg-green-100 text-green-600'
                           }`}>
-                            {product.quantity}
+                            {product.quantity || 0}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <span className="text-lg font-bold text-blue-600">
-                            ${product.price.toFixed(2)}
+                            ${Number(product.price || 0).toFixed(2)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -721,7 +883,8 @@ export default function InventoryPage() {
                             <button
                               type="button"
                               onClick={() => handleDelete(product.id)}
-                              className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                              disabled={isSubmitting}
+                              className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Eliminar"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -741,11 +904,11 @@ export default function InventoryPage() {
                     <strong>{products.length}</strong> productos en total
                   </span>
                   <span className="text-gray-600">
-                    <strong>{products.reduce((sum, p) => sum + p.quantity, 0)}</strong> unidades en stock
+                    <strong>{(Array.isArray(products) ? products : []).reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)}</strong> unidades en stock
                   </span>
                   <span className="text-gray-600">
                     Valor total: <strong className="text-blue-600">
-                      ${products.reduce((sum, p) => sum + (p.price * p.quantity), 0).toFixed(2)}
+                      ${(Array.isArray(products) ? products : []).reduce((sum, p) => sum + ((Number(p.price) || 0) * (Number(p.quantity) || 0)), 0).toFixed(2)}
                     </strong>
                   </span>
                 </div>

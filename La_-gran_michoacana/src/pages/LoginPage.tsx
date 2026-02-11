@@ -4,44 +4,41 @@ import { useAuthStore } from '../stores/authStore';
 import { Lock, User, ChevronRight } from 'lucide-react';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('password123');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const { login, isLoading, error } = useAuthStore((state) => ({
+    login: state.login,
+    isLoading: state.isLoading,
+    error: state.error,
+  }));
+  const clearError = useAuthStore((state) => state.clearError);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    clearError();
 
-    // Pequeño delay para mejorar UX
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    if (login(username, password)) {
-      console.log('✅ Login local exitoso');
+    const success = await login(username, password);
+    
+    if (success) {
+      console.log('✅ Login exitoso');
       
       // Navegar a la página POS
       navigate('/pos');
       
       // Notificar a Electron que el login fue exitoso (en background, no esperamos respuesta)
-      const isElectron = typeof window !== 'undefined' && window.electronAPI;
+      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
       if (isElectron) {
         try {
           console.log('📱 Notificando login a Electron...');
-          window.electronAPI.onLoginSuccess().catch((err: any) => {
+          (window as any).electronAPI.onLoginSuccess().catch((err: any) => {
             console.error('❌ Error notificando login a Electron:', err);
           });
         } catch (err) {
           console.error('❌ Error notificando login a Electron:', err);
         }
       }
-    } else {
-      setError('Usuario o contraseña incorrectos');
-      setPassword('');
-      setIsLoading(false);
     }
   };
 
@@ -154,19 +151,13 @@ export default function LoginPage() {
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-300"></div>
                 <span className="font-mono font-medium">admin</span>
                 <span className="text-white/40">/</span>
-                <span className="font-mono font-medium">admin123</span>
+                <span className="font-mono font-medium">password123</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-blue-50">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-300"></div>
-                <span className="font-mono font-medium">cajero</span>
+                <span className="font-mono font-medium">cajera</span>
                 <span className="text-white/40">/</span>
-                <span className="font-mono font-medium">cajero123</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-blue-50">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-300"></div>
-                <span className="font-mono font-medium">gerente</span>
-                <span className="text-white/40">/</span>
-                <span className="font-mono font-medium">gerente123</span>
+                <span className="font-mono font-medium">password123</span>
               </div>
             </div>
           </div>

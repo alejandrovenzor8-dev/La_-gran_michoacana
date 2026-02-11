@@ -1,75 +1,116 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { usePermissionsStore } from './permissionsStore';
+import { apiClient } from '../lib/apiClient';
 
 interface User {
+  id: number;
   username: string;
-  role: 'admin' | 'cajero' | 'gerente';
+  email: string;
+  fullName?: string;
+  role: 'ADMIN' | 'CAJERO' | 'GERENTE';
+}
+
+interface AuthResponse {
+  status: string;
+  message: string;
+  data: {
+    user: User;
+    accessToken: string;
+    refreshToken: string;
+  };
 }
 
 interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
+  accessToken: string | null;
+  refreshToken: string | null;
+  isLoading: boolean;
+  error: string | null;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
+  clearError: () => void;
 }
-
-// Base de datos simulada de usuarios
-const USERS_DB: Record<string, { password: string; role: 'admin' | 'cajero' | 'gerente' }> = {
-  admin: {
-    password: 'admin123',
-    role: 'admin',
-  },
-  cajero: {
-    password: 'cajero123',
-    role: 'cajero',
-  },
-  gerente: {
-    password: 'gerente123',
-    role: 'gerente',
-  },
-};
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      accessToken: null,
+      refreshToken: null,
+      isLoading: false,
+      error: null,
 
-      login: (username: string, password: string) => {
-        const userCredentials = USERS_DB[username];
-
-        if (userCredentials && userCredentials.password === password) {
-          const user: User = {
+      login: async (username: string, password: string) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          const response = await apiClient.post<AuthResponse>('/auth/login', {
             username,
-            role: userCredentials.role,
+            password,
+          });
+
+          const { user, accessToken, refreshToken } = response.data;
+
+          // Guardar tokens
+          localStorage.setItem('auth_token', accessToken);
+          localStorage.setItem('refresh_token', refreshToken);
+          apiClient.setToken(accessToken);
+
+          // Convertir ADMIN a admin para compatibilidad con PermissionsStore
+          const roleMap: Record<string, 'admin' | 'cajero' | 'gerente'> = {
+            ADMIN: 'admin',
+            CAJERO: 'cajero',
+            GERENTE: 'gerente',
           };
 
           set({
-            user,
+            user: { ...user, role: user.role as any },
             isAuthenticated: true,
+            accessToken,
+            refreshToken,
+            isLoading: false,
           });
 
-          // Inicializar permisos del usuario basándose en su rol
-          usePermissionsStore.getState().initializeUserPermissions(username, userCredentials.role);
-          // Inicializar permisos del usuario si es la primera vez
-          const permissionsStore = usePermissionsStore.getState();
-          permissionsStore.initializeUserPermissions(username, userCredentials.role);
+          // Inicializar permisos del usuario
+          usePermissionsStore.getState().initializeUserPermissions(
+            username,
+            roleMap[user.role] || 'cajero'
+          );
 
-          console.log(`✅ Login exitoso: ${username} (${userCredentials.role})`);
+          console.log(`✅ Login exitoso: ${username} (${user.role})`);
           return true;
+        } catch (error: any) {
+          const errorMessage = error.data?.message || error.message || 'Error en el login';
+          set({
+            isLoading: false,
+            error: errorMessage,
+            user: null,
+            isAuthenticated: false,
+          });
+          console.error(`❌ Error en login:`, errorMessage);
+          return false;
         }
-
-        console.warn(`❌ Intento de login fallido: ${username}`);
-        return false;
       },
 
       logout: () => {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        apiClient.clearToken();
         set({
           user: null,
           isAuthenticated: false,
+          accessToken: null,
+          refreshToken: null,
+          error: null,
         });
         console.log('🚪 Sesión cerrada');
+      },
+
+      clearError: () => {
+        set({ error: null });
       },
     }),
     {
@@ -77,7 +118,15 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
       }),
+      onRehydrate: (state) => {
+        // Restaurar token después de hidratar desde localStorage
+        if (state.accessToken) {
+          apiClient.setToken(state.accessToken);
+        }
+      },
     }
   )
 );

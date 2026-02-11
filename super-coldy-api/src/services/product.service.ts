@@ -28,6 +28,7 @@ export interface ProductUpdateInput {
   price?: number | Decimal;
   cost?: number | Decimal;
   category?: string;
+  stock?: number;
   minStock?: number;
   barcode?: string;
   imageUrl?: string;
@@ -251,16 +252,32 @@ class ProductService {
         updateData.cost = data.cost ? new Decimal(data.cost.toString()) : null;
       }
       if (data.category !== undefined) updateData.category = data.category;
+      if (data.stock !== undefined) updateData.stock = data.stock;
       if (data.minStock !== undefined) updateData.minStock = data.minStock;
       if (data.barcode !== undefined) updateData.barcode = data.barcode;
       if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
       if (data.emoji !== undefined) updateData.emoji = data.emoji;
       if (data.active !== undefined) updateData.active = data.active;
 
+      logger.info('🔧 BACKEND - updateProduct: Datos recibidos del cliente', {
+        productId: id,
+        datosRecibidos: JSON.stringify(data),
+      });
+      logger.info('🔧 BACKEND - updateProduct: Objeto updateData que se enviará a BD', {
+        productId: id,
+        updateData: JSON.stringify(updateData),
+      });
+
       // Actualizar producto
       const product = await prisma.product.update({
         where: { id },
         data: updateData,
+      });
+
+      logger.info('🔧 BACKEND - updateProduct: Respuesta de BD', {
+        productId: id,
+        stock: product.stock,
+        respuesta: JSON.stringify(product),
       });
 
       logger.info('Producto actualizado', { productId: id });
