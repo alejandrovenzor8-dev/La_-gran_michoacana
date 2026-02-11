@@ -1,3 +1,4 @@
+// Database configuration trigger
 import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
