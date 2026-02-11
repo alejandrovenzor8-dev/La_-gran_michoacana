@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { Toaster } from 'sonner';
 import POSPage from './pages/POSPage';
 import CustomerDisplayPage from './pages/CustomerDisplayPage';
 import InventoryPage from './pages/InventoryPage';
@@ -110,6 +111,12 @@ function App() {
           </>
         )}
       </Routes>
+      <Toaster 
+        position="top-right" 
+        richColors 
+        expand={false}
+        duration={4000}
+      />
     </HashRouter>
   );
 }

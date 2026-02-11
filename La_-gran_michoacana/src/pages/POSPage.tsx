@@ -3,10 +3,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Package, Loader } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { productService, Product } from '@/lib/productService';
 import { saleService, Sale, SaleItem } from '@/lib/saleService';
+import { PaymentDialog } from '@/components/pos/PaymentDialog';
 
 export default function POSPage() {
   const { items, total, addItem, removeItem, updateQuantity, clearCart } = useCartStore();
@@ -15,6 +16,7 @@ export default function POSPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   // Cargar productos del backend
   useEffect(() => {
@@ -58,6 +60,30 @@ export default function POSPage() {
     });
   };
 
+  const handleFinalizeSale = () => {
+    if (items.length === 0) {
+      alert('El carrito está vacío. Agrega productos antes de finalizar la venta.');
+      return;
+    }
+
+    if (total <= 0) {
+      alert('El total debe ser mayor a $0');
+      return;
+    }
+
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handlePaymentComplete = (sale: any) => {
+    console.log('✅ Venta completada:', sale);
+    
+    // El toast ya se muestra desde PaymentDialog
+    // Aquí puedes agregar lógica adicional si es necesaria
+    if (window.electronAPI) {
+      window.electronAPI.onCheckoutComplete?.();
+    }
+  };
+
   const handleCheckout = async () => {
     if (items.length === 0) {
       alert('El carrito está vacío');
@@ -67,14 +93,12 @@ export default function POSPage() {
     try {
       setIsProcessing(true);
 
-      // Crear objetos de items de venta
       const saleItems: SaleItem[] = items.map((item) => ({
         productId: parseInt(item.id),
         quantity: item.quantity,
         price: item.price,
       }));
 
-      // Crear venta en el backend
       const sale: Sale = {
         total,
         items: saleItems,
@@ -84,7 +108,6 @@ export default function POSPage() {
       const createdSale = await saleService.createSale(sale);
       console.log('✅ Venta registrada:', createdSale);
 
-      // Limpiar carrito
       clearCart();
       alert(`✅ Venta registrada exitosamente. ID: ${createdSale.id}`);
 
@@ -239,30 +262,33 @@ export default function POSPage() {
 
           <div className="space-y-2">
             <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3"
+              onClick={handleFinalizeSale}
               disabled={items.length === 0 || isProcessing}
-              onClick={handleCheckout}
+              size="lg"
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-6 text-lg"
             >
-              {isProcessing ? (
-                <>
-                  <Loader className="w-4 h-4 mr-2 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                'Finalizar Venta'
-              )}
+              <DollarSign className="mr-2 h-6 w-6" />
+              Finalizar Venta (${total.toFixed(2)})
             </Button>
             <Button
-              variant="outline"
-              className="w-full"
-              disabled={items.length === 0 || isProcessing}
               onClick={clearCart}
+              variant="outline"
+              disabled={items.length === 0}
+              className="w-full"
             >
+              <Trash2 className="mr-2 h-4 w-4" />
               Limpiar Carrito
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={() => setIsPaymentDialogOpen(false)}
+        onPaymentComplete={handlePaymentComplete}
+      />
     </div>
   );
 }
