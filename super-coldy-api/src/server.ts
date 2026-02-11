@@ -1,15 +1,23 @@
 import app from './app.js';
 import { disconnectDatabase } from './config/database.js';
 import { logger } from './utils/logger.js';
+import { initializeDatabase } from './utils/initializeDb.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   logger.info(`🚀 Servidor corriendo en puerto ${PORT}`);
   logger.info(`📍 http://localhost:${PORT}`);
+  
+  // Inicializar base de datos si está vacía
+  try {
+    await initializeDatabase();
+  } catch (error) {
+    logger.error('Error inicializando BD:', error);
+  }
 });
 
 /**
