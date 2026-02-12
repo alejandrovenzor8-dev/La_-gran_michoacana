@@ -14,7 +14,7 @@ railway login
 
 ### Paso 3: Conectarse a tu proyecto
 ```powershell
-# Listar tus proyectos
+# Listar tus proyectosss
 railway list
 
 # Linkear al proyecto correcto (selecciónalo del menú)
