@@ -62,6 +62,30 @@ router.get(
 );
 
 /**
+ * GET /api/sales/weekly-trend
+ * @desc    Obtener tendencia de ventas de la última semana
+ * @access  Private (GERENTE, ADMIN)
+ * @note    Esta ruta debe estar ANTES de /:id para evitar conflicto
+ */
+router.get(
+  '/weekly-trend',
+  requireRole('GERENTE', 'ADMIN'),
+  asyncHandler(saleController.getWeeklyTrend.bind(saleController))
+);
+
+/**
+ * GET /api/sales/monthly-comparison
+ * @desc    Obtener comparación por semanas del mes
+ * @access  Private (GERENTE, ADMIN)
+ * @note    Esta ruta debe estar ANTES de /:id para evitar conflicto
+ */
+router.get(
+  '/monthly-comparison',
+  requireRole('GERENTE', 'ADMIN'),
+  asyncHandler(saleController.getMonthlyComparison.bind(saleController))
+);
+
+/**
  * GET /api/sales/stats
  * @desc    Obtener estadísticas de ventas
  * @access  Private (GERENTE, ADMIN)
@@ -73,6 +97,18 @@ router.get(
   validateStatsQuery(),
   validate,
   asyncHandler(saleController.getStats.bind(saleController))
+);
+
+/**
+ * GET /api/sales/cashier-cut
+ * @desc    Obtener corte de caja del día actual
+ * @access  Private (CAJERO, GERENTE, ADMIN)
+ * @note    Esta ruta debe estar ANTES de /:id para evitar conflicto
+ */
+router.get(
+  '/cashier-cut',
+  requireRole('CAJERO', 'GERENTE', 'ADMIN'),
+  asyncHandler(saleController.getCashierCut.bind(saleController))
 );
 
 /**

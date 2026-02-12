@@ -339,6 +339,135 @@ class SaleService {
   }
 
   /**
+   * Obtener tendencia de ventas de la última semana (últimos 7 días)
+   * O filtrado por rango de fechas
+   */
+  async getWeeklyTrend(startDate?: Date, endDate?: Date): Promise<any[]> {
+    try {
+      let start: Date;
+      let end: Date;
+
+      if (startDate && endDate) {
+        start = new Date(startDate);
+        end = new Date(endDate);
+      } else {
+        // Por defecto: últimos 7 días
+        end = new Date();
+        start = new Date();
+        start.setDate(end.getDate() - 6);
+      }
+
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+
+      const sales = await prisma.sale.findMany({
+        where: {
+          status: SaleStatus.COMPLETED,
+          createdAt: {
+            gte: start,
+            lte: end,
+          },
+        },
+      });
+
+      // Agrupar por día
+      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      const dailyData: Record<string, { ventas: number; transacciones: number }> = {};
+
+      // Inicializar todos los días del rango
+      const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      for (let i = 0; i <= Math.min(diffDays, 6); i++) {
+        const date = new Date(start);
+        date.setDate(date.getDate() + i);
+        const dayName = dayNames[date.getDay()];
+        if (!dailyData[dayName]) {
+          dailyData[dayName] = { ventas: 0, transacciones: 0 };
+        }
+      }
+
+      // Sumar ventas por día
+      for (const sale of sales) {
+        const dayName = dayNames[sale.createdAt.getDay()];
+        if (dailyData[dayName]) {
+          dailyData[dayName].ventas += Number(sale.total);
+          dailyData[dayName].transacciones += 1;
+        }
+      }
+
+      // Convertir a array en orden correcto (Lun-Dom)
+      const orderedDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      return orderedDays.map((day) => ({
+        day,
+        ventas: Math.round(dailyData[day]?.ventas || 0),
+        transacciones: dailyData[day]?.transacciones || 0,
+      }));
+    } catch (error) {
+      logger.error('Error al obtener tendencia semanal', error);
+      throw new AppError('Error al obtener tendencia semanal', 500);
+    }
+  }
+
+  /**
+   * Obtener comparación por semanas del mes actual
+   * O filtrado por rango de fechas
+   */
+  async getMonthlyComparison(startDate?: Date, endDate?: Date): Promise<any[]> {
+    try {
+      let start: Date;
+      let end: Date;
+
+      if (startDate && endDate) {
+        start = new Date(startDate);
+        end = new Date(endDate);
+      } else {
+        // Por defecto: mes actual
+        const now = new Date();
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      }
+
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+
+      const sales = await prisma.sale.findMany({
+        where: {
+          status: SaleStatus.COMPLETED,
+          createdAt: {
+            gte: start,
+            lte: end,
+          },
+        },
+      });
+
+      // Agrupar por semana (semana 1-5)
+      const weeklyData: Record<string, number> = {
+        'Sem 1': 0,
+        'Sem 2': 0,
+        'Sem 3': 0,
+        'Sem 4': 0,
+        'Sem 5': 0,
+      };
+
+      for (const sale of sales) {
+        const day = sale.createdAt.getDate();
+        const weekNumber = Math.ceil(day / 7);
+        const weekKey = `Sem ${weekNumber}`;
+        if (weeklyData[weekKey] !== undefined) {
+          weeklyData[weekKey] += Number(sale.total);
+        }
+      }
+
+      return Object.entries(weeklyData).map(([periodo, ventas]) => ({
+        periodo,
+        ventas: Math.round(ventas),
+      }));
+    } catch (error) {
+      logger.error('Error al obtener comparación mensual', error);
+      throw new AppError('Error al obtener comparación mensual', 500);
+    }
+  }
+
+  /**
    * Cancelar una venta y restaurar stock
    */
   async cancelSale(saleId: number, userId: number): Promise<SaleResponse> {
@@ -519,6 +648,100 @@ class SaleService {
       mixtoSales,
       topProducts,
     };
+  }
+
+  /**
+   * Obtener corte de caja del día actual
+   * Desglose por método de pago y totales
+   */
+  async getCashierCut(userId?: number) {
+    try {
+      // Fecha de inicio y fin del día actual
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const whereClause: any = {
+        createdAt: {
+          gte: today,
+          lte: endOfDay,
+        },
+        status: 'COMPLETED',
+      };
+
+      // Si se proporciona userId, filtrar solo ese cajero
+      if (userId) {
+        whereClause.userId = userId;
+      }
+
+      // Obtener todas las ventas del día
+      const sales = await prisma.sale.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          total: true,
+          paymentMethod: true,
+          createdAt: true,
+          user: {
+            select: {
+              username: true,
+            },
+          },
+        },
+      });
+
+      // Agrupar por método de pago
+      const efectivoSales = sales.filter((s) => s.paymentMethod === 'EFECTIVO');
+      const tarjetaSales = sales.filter((s) => s.paymentMethod === 'TARJETA');
+      const mixtoSales = sales.filter((s) => s.paymentMethod === 'MIXTO');
+
+      const efectivoTotal = efectivoSales.reduce((sum, s) => sum + Number(s.total), 0);
+      const tarjetaTotal = tarjetaSales.reduce((sum, s) => sum + Number(s.total), 0);
+      const mixtoTotal = mixtoSales.reduce((sum, s) => sum + Number(s.total), 0);
+
+      const totalIngresos = efectivoTotal + tarjetaTotal + mixtoTotal;
+      const totalTransactions = sales.length;
+
+      // Primera y última venta del día
+      const firstSale = sales.length > 0 ? sales[0].createdAt : null;
+      const lastSale = sales.length > 0 ? sales[sales.length - 1].createdAt : null;
+
+      return {
+        date: today.toISOString(),
+        cashier: userId ? sales[0]?.user?.username || 'N/A' : 'Todos',
+        startTime: firstSale,
+        endTime: lastSale,
+        paymentMethods: {
+          efectivo: {
+            total: efectivoTotal,
+            transactions: efectivoSales.length,
+          },
+          tarjeta: {
+            total: tarjetaTotal,
+            transactions: tarjetaSales.length,
+          },
+          mixto: {
+            total: mixtoTotal,
+            transactions: mixtoSales.length,
+          },
+        },
+        summary: {
+          fondoInicial: 1000, // Este debería venir de una tabla de configuración
+          ingresosTurno: totalIngresos,
+          egresos: 0, // Este debería venir de una tabla de egresos
+          totalEnCaja: 1000 + totalIngresos,
+        },
+        totals: {
+          totalIngresos,
+          totalTransactions,
+          averageTicket: totalTransactions > 0 ? totalIngresos / totalTransactions : 0,
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting cashier cut:', error);
+      throw error;
+    }
   }
 }
 

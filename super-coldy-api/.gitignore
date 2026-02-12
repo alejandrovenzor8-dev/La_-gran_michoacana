@@ -17,6 +17,7 @@ out/
 .env
 .env.local
 .env.*.local
+.env.production
 .env.production.local
 
 # IDE & Editors
@@ -48,6 +49,13 @@ coverage/
 
 # Temporary files
 *.tmp
+
+# Database backups
+backup_*.sql
+backup_*.7z
+exports/
+*.dump
+*.backup
 temp/
 tmp/
 
