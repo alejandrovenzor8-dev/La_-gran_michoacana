@@ -12,6 +12,15 @@ import { saleService } from '@/lib/saleService';
 import { useAuthStore } from '@/stores/authStore';
 import { eventBus } from '@/lib/eventBus';
 
+// Type definition para window.api (Electron)
+declare global {
+  interface Window {
+    api?: {
+      printTicket: (ticketData: any) => Promise<{ success: boolean; error?: string }>;
+    }
+  }
+}
+
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -149,6 +158,47 @@ export function PaymentDialog({
 
       // Notificar que el carrito se limpió
       eventBus.emit('CART_CLEARED', {});
+
+      // Imprimir ticket
+      try {
+        const ticketData = {
+          saleId: String(sale.id || ''),
+          items: items.map(item => {
+            const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+            return {
+              name: item.name,
+              quantity: item.quantity,
+              price: price,
+              subtotal: price * item.quantity
+            };
+          }),
+          subtotal: total,
+          tax: 0, // Puedes calcular IVA si aplica: total * 0.16
+          total: total,
+          paymentMethod: paymentMethod,
+          amountReceived: paymentMethod === 'EFECTIVO' ? parseFloat(amountReceived) : total,
+          change: changeAmount,
+          cashier: user?.name || 'Cajero',
+          date: new Date().toLocaleString('es-MX'),
+          notes: notes || undefined
+        };
+
+        // Verificar si window.api existe (Electron)
+        if (window.api && window.api.printTicket) {
+          const result = await window.api.printTicket(ticketData);
+          if (!result.success) {
+            console.error('Error al imprimir:', result.error);
+            toast.error('Ticket guardado pero no se pudo imprimir');
+          } else {
+            toast.success('Ticket impreso correctamente');
+          }
+        } else {
+          console.warn('API de impresión no disponible (modo web)');
+        }
+      } catch (printError) {
+        console.error('Error en impresión:', printError);
+        // No bloquear el flujo si falla la impresión
+      }
 
       // Cerrar diálogo
       onClose();
