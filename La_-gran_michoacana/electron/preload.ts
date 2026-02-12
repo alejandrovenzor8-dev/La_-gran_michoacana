@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-// API segura expuesta al renderer
-contextBridge.exposeInMainWorld('electronAPI', {
+// API segura expuesta al renderer (usando 'api' como nombre global)
+contextBridge.exposeInMainWorld('api', {
   // Notificar login exitoso
   onLoginSuccess: () => {
     return ipcRenderer.invoke('login:success');
@@ -58,6 +58,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logout: () => {
     return ipcRenderer.invoke('logout');
   },
+
+  // Imprimir ticket POS
+  printTicket: async (ticketData: any) => {
+    return await ipcRenderer.invoke('print-ticket', ticketData);
+  },
 });
 
 // Type definitions para TypeScript
@@ -71,10 +76,11 @@ export interface ElectronAPI {
   removeCartListeners: () => void;
   clearSession: () => Promise<{ success: boolean }>;
   logout: () => Promise<{ success: boolean }>;
+  printTicket: (ticketData: any) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    api: ElectronAPI;
   }
 }

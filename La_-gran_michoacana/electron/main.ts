@@ -1,5 +1,6 @@
 import { app, BrowserWindow, screen, ipcMain, session } from 'electron';
 import path from 'path';
+import { printTicket, TicketData } from './printer';
 
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
@@ -230,6 +231,26 @@ ipcMain.handle('logout', async () => {
     return { success: false };
   }
 });
+
+// IPC Handler para imprimir ticket
+ipcMain.handle('print-ticket', async (event, ticketData: TicketData) => {
+  try {
+    const window = BrowserWindow.getFocusedWindow();
+    if (!window) {
+      throw new Error('No hay ventana activa');
+    }
+    await printTicket(window, ticketData);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error al imprimir ticket:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+console.log('✅ IPC handler "print-ticket" registrado');
 
 app.whenReady().then(() => {
   // Solo crear ventana de login al inicio
