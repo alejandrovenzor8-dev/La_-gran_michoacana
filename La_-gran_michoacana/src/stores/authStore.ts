@@ -59,12 +59,8 @@ export const useAuthStore = create<AuthStore>()(
           localStorage.setItem('refresh_token', refreshToken);
           apiClient.setToken(accessToken);
 
-          // Convertir ADMIN a admin para compatibilidad con PermissionsStore
-          const roleMap: Record<string, 'admin' | 'cajero' | 'gerente'> = {
-            ADMIN: 'admin',
-            CAJERO: 'cajero',
-            GERENTE: 'gerente',
-          };
+          // Normalizar rol (backend ya lo envía en minúsculas)
+          const normalizedRole = user.role.toLowerCase() as 'admin' | 'cajero' | 'gerente';
 
           set({
             user: { ...user, role: user.role as any },
@@ -77,7 +73,7 @@ export const useAuthStore = create<AuthStore>()(
           // Inicializar permisos del usuario
           usePermissionsStore.getState().initializeUserPermissions(
             username,
-            roleMap[user.role] || 'cajero'
+            normalizedRole
           );
 
           console.log(`✅ Login exitoso: ${username} (${user.role})`);
@@ -121,10 +117,21 @@ export const useAuthStore = create<AuthStore>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
       }),
-      onRehydrate: (state) => {
+      onRehydrateStorage: () => (state) => {
         // Restaurar token después de hidratar desde localStorage
-        if (state.accessToken) {
+        if (state?.accessToken) {
           apiClient.setToken(state.accessToken);
+          console.log('🔑 Token restaurado desde localStorage');
+          
+          // Reinicializar permisos si el usuario está logueado
+          if (state?.user) {
+            const normalizedRole = state.user.role.toLowerCase() as 'admin' | 'cajero' | 'gerente';
+            usePermissionsStore.getState().initializeUserPermissions(
+              state.user.username,
+              normalizedRole
+            );
+            console.log(`✅ Permisos inicializados para: ${state.user.username} (${normalizedRole})`);
+          }
         }
       },
     }

@@ -86,20 +86,25 @@ export const usePermissionsStore = create<PermissionsStore>()(
       initializeUserPermissions: (username: string, role: 'admin' | 'cajero' | 'gerente') => {
         const existingPermissions = get().userPermissions[username];
         
-        // Si ya existen permisos, no sobrescribir
-        if (existingPermissions) {
-          return;
-        }
-
-        // Asignar permisos predeterminados según el rol
-        const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[role];
+        // Verificar si los permisos están vacíos o todos son false
+        const arePermissionsEmpty = !existingPermissions || 
+          Object.values(existingPermissions).every(value => value === false);
         
-        set((state) => ({
-          userPermissions: {
-            ...state.userPermissions,
-            [username]: defaultPermissions,
-          },
-        }));
+        // Si no existen permisos o están vacíos, inicializar con valores por defecto
+        if (arePermissionsEmpty) {
+          const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[role];
+          
+          set((state) => ({
+            userPermissions: {
+              ...state.userPermissions,
+              [username]: defaultPermissions,
+            },
+          }));
+          
+          console.log(`✅ Permisos inicializados para ${username} (${role}):`, defaultPermissions);
+        } else {
+          console.log(`ℹ️ Permisos ya existen para ${username}:`, existingPermissions);
+        }
       },
     }),
     {
