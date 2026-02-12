@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-// API segura expuesta al renderer (usando 'api' como nombre global)
-contextBridge.exposeInMainWorld('api', {
+// API segura expuesta al renderer (usando 'electronAPI' como nombre global)
+contextBridge.exposeInMainWorld('electronAPI', {
   // Notificar login exitoso
   onLoginSuccess: () => {
     return ipcRenderer.invoke('login:success');
