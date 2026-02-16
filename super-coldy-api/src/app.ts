@@ -8,6 +8,7 @@ import { connectDatabase } from './config/database.js';
 import { logger } from './utils/logger.js';
 import { notFound, errorHandler } from './middlewares/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
 import productRoutes from './routes/product.routes.js';
 import saleRoutes from './routes/sale.routes.js';
 
@@ -48,6 +49,9 @@ app.get('/health', (req, res) => {
 
 // Rutas de autenticación
 app.use('/api/auth', authRoutes);
+
+// Rutas de usuarios
+app.use('/api/users', userRoutes);
 
 // Rutas de productos
 app.use('/api/products', productRoutes);

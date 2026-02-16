@@ -207,3 +207,6 @@ export const checkOwnership = (
     });
   }
 };
+
+// Alias para compatibilidad
+export const authMiddleware = authenticateToken;
