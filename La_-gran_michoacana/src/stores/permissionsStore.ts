@@ -100,10 +100,6 @@ export const usePermissionsStore = create<PermissionsStore>()(
               [username]: defaultPermissions,
             },
           }));
-          
-          console.log(`✅ Permisos inicializados para ${username} (${role}):`, defaultPermissions);
-        } else {
-          console.log(`ℹ️ Permisos ya existen para ${username}:`, existingPermissions);
         }
       },
     }),

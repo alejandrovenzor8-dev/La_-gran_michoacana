@@ -63,6 +63,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   printTicket: async (ticketData: any) => {
     return await ipcRenderer.invoke('print-ticket', ticketData);
   },
+
+  // Cerrar la aplicación completamente
+  closeApp: () => {
+    ipcRenderer.send('app:close');
+  },
 });
 
 // Type definitions para TypeScript
@@ -77,6 +82,7 @@ export interface ElectronAPI {
   clearSession: () => Promise<{ success: boolean }>;
   logout: () => Promise<{ success: boolean }>;
   printTicket: (ticketData: any) => Promise<{ success: boolean; error?: string }>;
+  closeApp: () => void;
 }
 
 declare global {

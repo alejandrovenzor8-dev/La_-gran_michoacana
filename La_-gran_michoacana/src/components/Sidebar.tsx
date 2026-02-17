@@ -82,11 +82,8 @@ export function Sidebar() {
     const isElectron = typeof window !== 'undefined' && window.electronAPI;
     if (isElectron) {
       try {
-        console.log('📱 Notificando logout a Electron...');
         await window.electronAPI.logout();
-        console.log('✅ Electron notificado de logout');
       } catch (err) {
-        console.error('❌ Error notificando logout a Electron:', err);
         navigate('/login');
       }
     } else {

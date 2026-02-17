@@ -62,6 +62,7 @@ model User {
   // Relaciones
   sales                 Sale[]
   inventoryMovements    InventoryMovement[]
+  permissions           Permission[]
 
   @@index([username])
   @@index([email])
@@ -150,4 +151,35 @@ model Config {
   key                   String                @unique
   value                 String
   updatedAt             DateTime              @updatedAt
+}
+
+model Module {
+  id                    Int                   @id @default(autoincrement())
+  key                   String                @unique // 'pos', 'inventory', 'users', etc.
+  name                  String                // 'Punto de Venta', 'Inventario', etc.
+  description           String?
+  icon                  String?               // Nombre del icono (lucide-react)
+  active                Boolean               @default(true)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  // Relaciones
+  permissions           Permission[]
+
+  @@index([key])
+}
+
+model Permission {
+  id                    Int                   @id @default(autoincrement())
+  userId                Int
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId              Int
+  module                Module                @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  granted               Boolean               @default(true)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@index([moduleId])
 }

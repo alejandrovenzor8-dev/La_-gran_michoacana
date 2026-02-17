@@ -3,8 +3,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function addTodaySales() {
-  console.log('🛒 Agregando ventas de hoy...');
-
   const today = new Date();
   
   // Obtener productos
@@ -12,7 +10,6 @@ async function addTodaySales() {
   const users = await prisma.user.findMany({ take: 2 });
 
   if (products.length === 0 || users.length === 0) {
-    console.error('❌ No hay productos o usuarios en la base de datos');
     return;
   }
 
@@ -82,8 +79,6 @@ async function addTodaySales() {
     }
   }
 
-  console.log(`✅ ${sales.length} ventas de hoy agregadas exitosamente`);
-  
   // Mostrar resumen
   const todaySales = await prisma.sale.findMany({
     where: {
@@ -94,10 +89,8 @@ async function addTodaySales() {
   });
   
   const totalRevenue = todaySales.reduce((sum, sale) => sum + Number(sale.total), 0);
-  console.log(`📊 Total ventas hoy: ${todaySales.length}`);
-  console.log(`💰 Ingresos hoy: $${totalRevenue}`);
 }
 
 addTodaySales()
-  .catch(console.error)
+  .catch(() => {})
   .finally(() => prisma.$disconnect());

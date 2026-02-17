@@ -52,7 +52,6 @@ export default function UsersPage() {
       const data = await userService.getUsers(100, 0); // Obtener hasta 100 usuarios
       setUsers(data);
     } catch (err: any) {
-      console.error('Error cargando usuarios:', err);
       setError(err.message || 'Error al cargar los usuarios. Intenta de nuevo.');
     } finally {
       setLoading(false);
@@ -164,7 +163,6 @@ export default function UsersPage() {
         setSuccess('');
       }, 2000);
     } catch (err: any) {
-      console.error('Error actualizando usuario:', err);
       setError(err.message || 'Error al actualizar el usuario. Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
@@ -249,7 +247,6 @@ export default function UsersPage() {
         setSuccess('');
       }, 2000);
     } catch (err: any) {
-      console.error('Error creando usuario:', err);
       setError(err.message || 'Error al crear el usuario. Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
@@ -264,7 +261,6 @@ export default function UsersPage() {
         setSuccess('Usuario eliminado exitosamente');
         setTimeout(() => setSuccess(''), 2000);
       } catch (err: any) {
-        console.error('Error eliminando usuario:', err);
         setError(err.message || 'Error al eliminar el usuario. Intenta de nuevo.');
         setTimeout(() => setError(''), 3000);
       }

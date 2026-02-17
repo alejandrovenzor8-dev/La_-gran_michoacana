@@ -44,7 +44,6 @@ export default function InventoryPage() {
         // Asegurarse de que data es siempre un array
         setProducts(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Error loading products:', err);
         setError('Error al cargar los productos');
         setProducts([]); // Establecer array vacío en caso de error
       } finally {
@@ -60,7 +59,8 @@ export default function InventoryPage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result as string, emoji: '' });
+        const imageData = reader.result as string;
+        setFormData((prev) => ({ ...prev, image: imageData, emoji: '' }));
       };
       reader.readAsDataURL(file);
     }
@@ -71,7 +71,9 @@ export default function InventoryPage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditFormData({ ...editFormData, image: reader.result as string, emoji: '' });
+        const imageData = reader.result as string;
+        // Usar setState funcional para evitar problemas de closure
+        setEditFormData((prev) => ({ ...prev, image: imageData, emoji: '' }));
         setEditImageChanged(true);  // Marcar que la imagen ha sido cambiada por el usuario
       };
       reader.readAsDataURL(file);
@@ -79,11 +81,11 @@ export default function InventoryPage() {
   };
 
   const removeImage = () => {
-    setFormData({ ...formData, image: '' });
+    setFormData((prev) => ({ ...prev, image: '' }));
   };
 
   const removeEditImage = () => {
-    setEditFormData({ ...editFormData, image: '' });
+    setEditFormData((prev) => ({ ...prev, image: '' }));
     setEditImageChanged(true);  // Marcar que la imagen ha sido modificada
   };
 
@@ -114,17 +116,11 @@ export default function InventoryPage() {
       
       // Preparar datos del producto
       const quantity = Number(formData.quantity) || 0;
-      console.log('📝 Preparando producto:', {
-        name: formData.name,
-        price: Number(formData.price),
-        quantity: quantity,
-        imageSize: formData.image ? formData.image.length : 0
-      });
       
-      // Limitar el tamaño de la imagen (máximo 100KB)
+      // Limitar el tamaño de la imagen (máximo 5MB)
       let imageToSend = formData.image;
-      if (imageToSend && imageToSend.length > 100000) {
-        console.warn('⚠️ Imagen demasiado grande, no se enviará');
+      if (imageToSend && imageToSend.length > 5000000) {
+        alert('⚠️ La imagen es muy grande (>5MB). Por favor usa una imagen más pequeña.');
         imageToSend = '';
       }
       
@@ -138,24 +134,14 @@ export default function InventoryPage() {
         image: imageToSend,
       });
 
-      console.log('✅ Producto creado (respuesta del servidor):', newProduct);
-      
       // Manejar diferentes estructuras de respuesta
       let product = newProduct;
       if ((newProduct as any).product) {
         product = (newProduct as any).product;
-        console.log('📦 Extrayendo producto de estructura anidada:', product);
       }
-      
-      console.log('📊 Estructura del producto:', { 
-        id: product?.id, 
-        name: product?.name,
-        keys: product ? Object.keys(product) : 'null'
-      });
       
       // Validar que el producto tenga datos mínimos
       if (!product || !product.name) {
-        console.error('Error: Producto creado sin datos válidos', product);
         alert('Error: El producto no tiene datos válidos. Por favor revisa la consola.');
         return;
       }
@@ -174,11 +160,8 @@ export default function InventoryPage() {
         image: product.image || '',
       };
       
-      console.log('✨ Producto normalizado:', normalizedProduct);
-      
       // Agregar el producto a la lista local
       const updatedProducts = [...(Array.isArray(products) ? products : []), normalizedProduct];
-      console.log('📝 Productos después de crear:', updatedProducts);
       setProducts(updatedProducts);
       
       // Resetear formulario
@@ -192,9 +175,7 @@ export default function InventoryPage() {
         category: ''
       });
 
-      console.log('✅ Producto creado exitosamente');
     } catch (err: any) {
-      console.error('Error creating product:', err);
       const errorMessage = err?.message || 'Error al crear el producto';
       
       if (errorMessage.includes('entity too large') || errorMessage.includes('413')) {
@@ -221,15 +202,6 @@ export default function InventoryPage() {
       // Preparar datos del producto
       const quantity = Number(editFormData.quantity) || 0;
       
-      console.log('📋 handleEditSubmit - Datos a editar:');
-      console.log('  Producto ID:', editingProduct.id);
-      console.log('  Nombre:', editFormData.name);
-      console.log('  Stock anterior:', editingProduct.quantity);
-      console.log('  Stock nuevo:', quantity);
-      console.log('  Precio:', Number(editFormData.price));
-      console.log('  Categoría:', editFormData.category);
-      console.log('  Imagen modificada:', editImageChanged);
-      
       // Construir payload - SOLO incluir imagen si fue modificada
       const payload: any = {
         name: editFormData.name,
@@ -239,37 +211,23 @@ export default function InventoryPage() {
         category: editFormData.category,
       };
       
-      console.log('📤 handleEditSubmit - Payload antes de completar:', JSON.stringify(payload, null, 2));
-      
       // Solo agregar imagen si el usuario la cambió
       if (editImageChanged) {
-        // Validar tamaño si fue modificada por el usuario
-        let imageToSend = editFormData.image;
-        if (imageToSend && imageToSend.length > 100000) {
-          console.warn('⚠️ Imagen demasiado grande, no se enviará');
+        let imageToSend = editFormData.image || '';
+        
+        // Validar tamaño - máximo 5MB para base64
+        if (imageToSend && imageToSend.length > 5000000) {
+          alert('⚠️ La imagen es muy grande (>5MB). Por favor usa una imagen más pequeña.');
           imageToSend = '';
         }
+        
         payload.image = imageToSend;
-        console.log('📤 Enviando imagen modificada:', imageToSend ? `${imageToSend.length} bytes` : 'sin imagen');
-      } else {
-        console.log('📤 No se envía imagen (no fue modificada)');
       }
 
       // Actualizar producto en el backend
       const updatedProduct = await productService.updateProduct(editingProduct.id, payload);
 
-      console.log('✅ Respuesta del servidor:', updatedProduct);
-      console.log('📋 Cambios solicitados:', { 
-        originalStock: editingProduct.quantity, 
-        nuevoStock: quantity,
-        cambio: quantity - (editingProduct.quantity || 0)
-      });
-      
       // VERIFICAR que el cambio se guardó realmente
-      if (updatedProduct.quantity !== quantity) {
-        console.warn('⚠️ ADVERTENCIA: El stock en la respuesta NO coincide con lo enviado');
-        console.warn('Enviado:', quantity, 'Recibido:', updatedProduct.quantity);
-      }
 
       // Actualizar la lista local
       setProducts((Array.isArray(products) ? products : []).map(p => 
@@ -292,29 +250,11 @@ export default function InventoryPage() {
       setEditImageChanged(false);
       setShowEditModal(false);  // Cerrar modal ÚLTIMO
       
-      // Mostrar mensaje de éxito SIN alert() que bloquea la interacción
-      console.log('✅ Producto actualizado exitosamente');
     } catch (err: any) {
-      console.error('❌ Error completo updating product:', {
-        message: err?.message,
-        status: err?.status,
-        response: err?.response,
-        fullError: err
-      });
       const errorMessage = err?.message || 'Error al actualizar el producto';
       
-      if (errorMessage.includes('entity too large') || errorMessage.includes('413')) {
-        console.warn('⚠️ Error: La imagen es demasiado grande.');
-      } else {
-        console.error(`❌ Error: ${errorMessage}`);
-      }
-      
-      // NO CERRAR EL MODAL SI HAY ERROR - para que el usuario pueda reintentar
-      console.log('📋 Estado actual de editFormData:', editFormData);
-      console.log('📋 Estado actual de editImageChanged:', editImageChanged);
     } finally {
       setIsSubmitting(false);
-      console.log('✅ Modal y estado limpiados');
       // Asegurar que el estado se limpia completamente
       if (!showEditModal) {
         setEditingProduct(null);
@@ -338,8 +278,6 @@ export default function InventoryPage() {
         // Eliminar del backend
         await productService.deleteProduct(id);
         
-        console.log('✅ Producto eliminado');
-        
         // Eliminar de la lista local
         setProducts((Array.isArray(products) ? products : []).filter(p => p.id !== id));
         
@@ -352,7 +290,6 @@ export default function InventoryPage() {
 
         alert('✅ Producto eliminado exitosamente');
       } catch (err) {
-        console.error('Error deleting product:', err);
         alert('Error al eliminar el producto');
       } finally {
         setIsSubmitting(false);

@@ -7,7 +7,8 @@ export interface Product {
   price: number;
   quantity: number;
   category?: string;
-  image?: string;
+  imageUrl?: string;
+  emoji?: string;
 }
 
 export interface ProductResponse {
@@ -37,11 +38,11 @@ class ProductService {
         ...p,
         quantity: p.stock || p.quantity || 0,
         image: p.imageUrl || p.image || '',
+        emoji: p.emoji || '',
       }));
       
       return products || [];
     } catch (error) {
-      console.error('Error fetching products:', error);
       // Retornar array vacío en caso de error para evitar errores de .map()
       return [];
     }
@@ -59,9 +60,9 @@ class ProductService {
         ...data,
         quantity: data.stock || data.quantity || 0,
         image: data.imageUrl || data.image || '',
+        emoji: data.emoji || '',
       };
     } catch (error) {
-      console.error('Error fetching product:', error);
       throw error;
     }
   }
@@ -83,7 +84,6 @@ class ProductService {
       
       return products || [];
     } catch (error) {
-      console.error('Error searching products:', error);
       throw error;
     }
   }
@@ -105,7 +105,6 @@ class ProductService {
       
       return products || [];
     } catch (error) {
-      console.error('Error fetching products by category:', error);
       throw error;
     }
   }
@@ -129,12 +128,9 @@ class ProductService {
         payload.imageUrl = product.image;
       }
       
-      console.log('📤 Enviando al backend:', payload);
-      
       const response = await apiClient.post<ProductDetailResponse>('/products', payload);
       // El servidor puede devolver {product: {...}} o directamente el Product
       const data = (response.data as any).product || response.data;
-      console.log('📦 createProduct response:', { original: response.data, extracted: data });
       
       // Mapear de vuelta los campos del backend al frontend
       return {
@@ -143,7 +139,6 @@ class ProductService {
         image: data.imageUrl || '',  // Mapear imageUrl → image
       };
     } catch (error) {
-      console.error('Error creating product:', error);
       throw error;
     }
   }
@@ -163,18 +158,9 @@ class ProductService {
       if (product.category !== undefined) payload.category = product.category;
       if ('image' in product && product.image !== undefined) payload.imageUrl = product.image;  // Mapear image → imageUrl
       
-      console.log('📤 updateProduct - ID:', id);
-      console.log('📤 updateProduct - Payload enviado:', JSON.stringify(payload, null, 2));
-      
       const response = await apiClient.put<ProductDetailResponse>(`/products/${id}`, payload);
       
-      console.log('📥 updateProduct - Respuesta completa del servidor:', response);
-      
       const data = (response.data as any).product || response.data;
-      
-      console.log('📥 updateProduct - Datos extraídos:', JSON.stringify(data, null, 2));
-      console.log('📥 updateProduct - Stock en respuesta:', data.stock);
-      console.log('📥 updateProduct - Nombre en respuesta:', data.name);
       
       // Mapear de vuelta los campos del backend al frontend
       const mapped = {
@@ -183,11 +169,8 @@ class ProductService {
         image: data.imageUrl || data.image || '',
       };
       
-      console.log('✅ updateProduct - Objeto mapeado final:', JSON.stringify(mapped, null, 2));
-      
       return mapped;
     } catch (error) {
-      console.error('❌ Error updating product:', error);
       throw error;
     }
   }
@@ -199,7 +182,6 @@ class ProductService {
     try {
       await apiClient.delete(`/products/${id}`);
     } catch (error) {
-      console.error('Error deleting product:', error);
       throw error;
     }
   }

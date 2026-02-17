@@ -67,7 +67,6 @@ class SaleService {
       const response = await apiClient.post<SaleResponse>('/sales', sale);
       return Array.isArray(response.data) ? response.data[0] : response.data;
     } catch (error) {
-      console.error('Error creating sale:', error);
       throw error;
     }
   }
@@ -80,7 +79,6 @@ class SaleService {
       const response = await apiClient.get<SaleResponse>(`/sales/${id}`);
       return Array.isArray(response.data) ? response.data[0] : response.data;
     } catch (error) {
-      console.error('Error fetching sale:', error);
       throw error;
     }
   }
@@ -104,7 +102,6 @@ class SaleService {
       const sales = Array.isArray(response.data) ? response.data : (response as any).data?.data ? [(response as any).data.data] : [response.data];
       return sales || [];
     } catch (error) {
-      console.error('Error fetching sales:', error);
       return [];
     }
   }
@@ -117,7 +114,6 @@ class SaleService {
       const response = await apiClient.get<DailyReportResponse>(`/sales/daily?date=${date}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching daily report:', error);
       throw error;
     }
   }
@@ -139,7 +135,6 @@ class SaleService {
       const response = await apiClient.get<SalesStatsResponse>(endpoint);
       return response.data;
     } catch (error) {
-      console.error('Error fetching sales stats:', error);
       throw error;
     }
   }
@@ -158,7 +153,6 @@ class SaleService {
       const response = await apiClient.get<{ success: boolean; data: any[] }>(endpoint);
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching weekly trend:', error);
       return [];
     }
   }
@@ -177,7 +171,6 @@ class SaleService {
       const response = await apiClient.get<{ success: boolean; data: any[] }>(endpoint);
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching monthly comparison:', error);
       return [];
     }
   }
@@ -190,7 +183,6 @@ class SaleService {
       const response = await apiClient.put<SaleResponse>(`/sales/${id}/cancel`, {});
       return Array.isArray(response.data) ? response.data[0] : response.data;
     } catch (error) {
-      console.error('Error canceling sale:', error);
       throw error;
     }
   }
@@ -208,7 +200,6 @@ class SaleService {
       const response = await apiClient.get<{ success: boolean; data: any }>(endpoint);
       return response.data;
     } catch (error) {
-      console.error('Error fetching cashier cut:', error);
       throw error;
     }
   }

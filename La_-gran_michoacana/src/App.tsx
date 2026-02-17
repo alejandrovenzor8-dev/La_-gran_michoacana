@@ -27,7 +27,6 @@ function App() {
     // Si hay un usuario autenticado, asegurarse de que tenga permisos inicializados
     if (user) {
       initializeUserPermissions(user.username, user.role);
-      console.log('🔐 Permisos inicializados para:', user.username);
     }
   }, [user, initializeUserPermissions]);
 

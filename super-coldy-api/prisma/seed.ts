@@ -4,14 +4,14 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Iniciando seed de datos...');
-
   // Limpiar datos existentes
   await prisma.saleItem.deleteMany();
   await prisma.sale.deleteMany();
   await prisma.inventoryMovement.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.permission.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.module.deleteMany();
   await prisma.config.deleteMany();
 
   // Crear usuarios
@@ -38,6 +38,94 @@ async function main() {
       active: true,
     },
   });
+
+  // Crear módulos del sistema
+  
+  const modules = await Promise.all([
+    prisma.module.create({
+      data: {
+        key: 'pos',
+        name: 'Punto de Venta',
+        description: 'Gestión de ventas y cobros',
+        icon: 'ShoppingCart',
+        active: true,
+      },
+    }),
+    prisma.module.create({
+      data: {
+        key: 'inventory',
+        name: 'Inventario',
+        description: 'Control de productos y stock',
+        icon: 'Package',
+        active: true,
+      },
+    }),
+    prisma.module.create({
+      data: {
+        key: 'users',
+        name: 'Gestión de Usuarios',
+        description: 'Administración de usuarios del sistema',
+        icon: 'Users',
+        active: true,
+      },
+    }),
+    prisma.module.create({
+      data: {
+        key: 'settings',
+        name: 'Configuración',
+        description: 'Ajustes generales del sistema',
+        icon: 'Settings',
+        active: true,
+      },
+    }),
+    prisma.module.create({
+      data: {
+        key: 'permissions',
+        name: 'Permisos y Seguridad',
+        description: 'Gestión de permisos de usuarios',
+        icon: 'Shield',
+        active: true,
+      },
+    }),
+    prisma.module.create({
+      data: {
+        key: 'reports',
+        name: 'Reportes',
+        description: 'Reportes de ventas y cortes de caja',
+        icon: 'BarChart',
+        active: true,
+      },
+    }),
+  ]);
+
+  // Asignar permisos a usuarios
+
+  // Admin: Todos los permisos
+  await Promise.all(
+    modules.map((module) =>
+      prisma.permission.create({
+        data: {
+          userId: adminUser.id,
+          moduleId: module.id,
+          granted: true,
+        },
+      })
+    )
+  );
+
+  // Cajera: Solo POS y Reportes
+  const cajeraModules = modules.filter((m) => ['pos', 'reports'].includes(m.key));
+  await Promise.all(
+    cajeraModules.map((module) =>
+      prisma.permission.create({
+        data: {
+          userId: cajeraUser.id,
+          moduleId: module.id,
+          granted: true,
+        },
+      })
+    )
+  );
 
   // Crear productos
   const products = await Promise.all([
@@ -102,7 +190,6 @@ async function main() {
   // ==========================================
   // 3. CREAR VENTAS DE EJEMPLO
   // ==========================================
-  console.log('🛒 Creando ventas de ejemplo...');
 
   // Venta 1: Admin compra 2 productos con efectivo
   const sale1Items = [
@@ -174,8 +261,6 @@ async function main() {
     });
   }
 
-  console.log(`✅ Venta 1 creada: ${sale1.id} (${sale1Items.length} items, Total: $${sale1Total})`);
-
   // Venta 2: Cajero vende con tarjeta
   const sale2Items = [
     {
@@ -236,8 +321,6 @@ async function main() {
     });
   }
 
-  console.log(`✅ Venta 2 creada: ${sale2.id} (${sale2Items.length} items, Total: $${sale2Total})`);
-  console.log('✅ Ventas de ejemplo creadas exitosamente');
   await prisma.config.create({
     data: {
       key: 'TAX_RATE',
@@ -251,15 +334,10 @@ async function main() {
       value: 'La Gran Michoacana - Super Coldy',
     },
   });
-
-  console.log('✅ Seed completado exitosamente');
-  console.log(`📊 ${products.length} productos creados`);
-  console.log(`👥 2 usuarios creados`);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error en seed:', e);
     process.exit(1);
   })
   .finally(async () => {

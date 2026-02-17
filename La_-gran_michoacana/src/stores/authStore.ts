@@ -76,7 +76,6 @@ export const useAuthStore = create<AuthStore>()(
             normalizedRole
           );
 
-          console.log(`✅ Login exitoso: ${username} (${user.role})`);
           return true;
         } catch (error: any) {
           const errorMessage = error.data?.message || error.message || 'Error en el login';
@@ -86,7 +85,6 @@ export const useAuthStore = create<AuthStore>()(
             user: null,
             isAuthenticated: false,
           });
-          console.error(`❌ Error en login:`, errorMessage);
           return false;
         }
       },
@@ -102,7 +100,6 @@ export const useAuthStore = create<AuthStore>()(
           refreshToken: null,
           error: null,
         });
-        console.log('🚪 Sesión cerrada');
       },
 
       clearError: () => {
@@ -121,7 +118,6 @@ export const useAuthStore = create<AuthStore>()(
         // Restaurar token después de hidratar desde localStorage
         if (state?.accessToken) {
           apiClient.setToken(state.accessToken);
-          console.log('🔑 Token restaurado desde localStorage');
           
           // Reinicializar permisos si el usuario está logueado
           if (state?.user) {
@@ -130,7 +126,6 @@ export const useAuthStore = create<AuthStore>()(
               state.user.username,
               normalizedRole
             );
-            console.log(`✅ Permisos inicializados para: ${state.user.username} (${normalizedRole})`);
           }
         }
       },

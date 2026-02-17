@@ -291,8 +291,27 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
                 className="flex items-center justify-between p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center text-5xl shadow-md">
-                    {item.emoji || '🍦'}
+                  <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center text-5xl shadow-md overflow-hidden">
+                    {item.imageUrl ? (
+                      <img 
+                        src={item.imageUrl} 
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Si la imagen falla al cargar, mostrar emoji
+                          e.currentTarget.style.display = 'none';
+                          if (e.currentTarget.nextSibling) {
+                            (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <span 
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ display: item.imageUrl ? 'none' : 'flex' }}
+                    >
+                      {item.emoji || '🍦'}
+                    </span>
                   </div>
                   <div>
                     <h3 className="text-4xl font-semibold text-gray-800">

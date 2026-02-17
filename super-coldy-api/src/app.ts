@@ -28,9 +28,9 @@ app.use(cors());
 // Logging
 app.use(morgan('dev'));
 
-// Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parser - aumentado a 10mb para soportar imágenes en base64
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================================
 // RUTAS
