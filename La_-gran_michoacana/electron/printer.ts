@@ -152,8 +152,6 @@ export async function printTicket(
   ticketData: TicketData
 ): Promise<void> {
   try {
-    console.log('[Printer] Iniciando impresión de ticket:', ticketData.saleId);
-
     const ticketHTML = generateTicketHTML(ticketData);
 
     const printData: any = [{
@@ -173,9 +171,7 @@ export async function printTicket(
     };
 
     await PosPrinter.print(printData, printOptions);
-    console.log('[Printer] Ticket impreso exitosamente:', ticketData.saleId);
   } catch (error) {
-    console.error('[Printer] Error al imprimir ticket:', error);
     throw new Error(`Error al imprimir ticket: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }

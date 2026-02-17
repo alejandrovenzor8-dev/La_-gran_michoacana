@@ -3,6 +3,7 @@ import authRoutes from './auth.routes.js';
 import userRoutes from './user.routes.js';
 import productRoutes from './product.routes.js';
 import saleRoutes from './sale.routes.js';
+import { permissionRoutes } from './permission.routes.js';
 
 const router = Router();
 
@@ -17,5 +18,8 @@ router.use('/products', productRoutes);
 
 // Rutas de ventas (protegidas)
 router.use('/sales', saleRoutes);
+
+// Rutas de permisos y módulos (protegidas)
+router.use('/permissions', permissionRoutes);
 
 export default router;

@@ -1,41 +1,80 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, Save, Users as UsersIcon, AlertCircle } from 'lucide-react';
+import { Shield, Save, Users as UsersIcon, AlertCircle, Loader2 } from 'lucide-react';
 import { usePermissionsStore } from '@/stores/permissionsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { AVAILABLE_MODULES } from '@/types/permissions';
 import type { UserPermissions } from '@/types/permissions';
-
-interface User {
-  username: string;
-  role: 'admin' | 'cajero' | 'gerente';
-}
-
-// Lista simulada de usuarios (en producción vendría de una API/DB)
-const USERS_LIST: User[] = [
-  { username: 'admin', role: 'admin' },
-  { username: 'cajero', role: 'cajero' },
-  { username: 'gerente', role: 'gerente' },
-];
+import { userService, type User } from '@/lib/userService';
+import { permissionService, type Module } from '@/lib/permissionService';
 
 export default function PermissionsPage() {
   const currentUser = useAuthStore((state) => state.user);
-  const { getUserPermissions, updateUserPermissions, hasPermission } = usePermissionsStore();
+  const { getUserPermissions, hasPermission } = usePermissionsStore();
   
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [modulesList, setModulesList] = useState<Module[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isLoadingModules, setIsLoadingModules] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [permissions, setPermissions] = useState<UserPermissions>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Verificar si el usuario actual tiene permisos para editar
   const canEdit = currentUser ? hasPermission(currentUser.username, 'permissions') : false;
 
+  // Cargar usuarios desde la base de datos
   useEffect(() => {
-    if (selectedUser) {
-      const userPerms = getUserPermissions(selectedUser);
-      setPermissions(userPerms);
-    }
-  }, [selectedUser, getUserPermissions]);
+    const loadUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        setLoadError(null);
+        const users = await userService.getUsers(100, 0); // Cargar hasta 100 usuarios
+        setUsersList(users.filter(u => u.active)); // Solo usuarios activos
+      } catch (error) {
+        setLoadError('No se pudieron cargar los usuarios. Por favor, intenta de nuevo.');
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  // Cargar módulos desde la base de datos
+  useEffect(() => {
+    const loadModules = async () => {
+      try {
+        setIsLoadingModules(true);
+        const modules = await permissionService.getModules();
+        setModulesList(modules.filter(m => m.active)); // Solo módulos activos
+      } catch (error) {
+        setLoadError('No se pudieron cargar los módulos. Por favor, intenta de nuevo.');
+      } finally {
+        setIsLoadingModules(false);
+      }
+    };
+
+    loadModules();
+  }, []);
+
+  // Cargar permisos del usuario seleccionado
+  useEffect(() => {
+    const loadUserPermissions = async () => {
+      if (selectedUser) {
+        try {
+          const userPerms = await permissionService.getUserPermissionsByUsername(selectedUser);
+          setPermissions(userPerms);
+        } catch (error) {
+          setPermissions({});
+        }
+      }
+    };
+
+    loadUserPermissions();
+  }, [selectedUser]);
 
   const handleUserSelect = (username: string) => {
     setSelectedUser(username);
@@ -50,18 +89,25 @@ export default function PermissionsPage() {
     setSaveSuccess(false);
   };
 
-  const handleSavePermissions = () => {
+  const handleSavePermissions = async () => {
     if (selectedUser && canEdit) {
-      updateUserPermissions(selectedUser, permissions);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      try {
+        setIsSaving(true);
+        await permissionService.updateUserPermissionsByUsername(selectedUser, permissions);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } catch (error) {
+        setLoadError('Error al guardar los permisos. Por favor, intenta de nuevo.');
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
-  const selectedUserData = USERS_LIST.find((u) => u.username === selectedUser);
+  const selectedUserData = usersList.find((u) => u.username === selectedUser);
 
-  // Filtrar módulos: excluir el login
-  const availableModules = AVAILABLE_MODULES;
+  // Usar módulos desde la base de datos
+  const availableModules = modulesList;
 
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">
@@ -104,30 +150,65 @@ export default function PermissionsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {USERS_LIST.map((user) => (
-                <button
-                  key={user.username}
-                  onClick={() => handleUserSelect(user.username)}
-                  className={`w-full p-3 rounded-lg text-left transition-all ${
-                    selectedUser === user.username
-                      ? 'bg-primary text-white shadow-md'
-                      : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
+            {isLoadingUsers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-2 text-gray-600">Cargando usuarios...</span>
+              </div>
+            ) : loadError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800">{loadError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => window.location.reload()}
                 >
-                  <div className="font-medium">{user.username}</div>
-                  <div
-                    className={`text-sm ${
+                  Reintentar
+                </Button>
+              </div>
+            ) : usersList.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <UsersIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>No hay usuarios disponibles</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {usersList.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => handleUserSelect(user.username)}
+                    className={`w-full p-3 rounded-lg text-left transition-all ${
                       selectedUser === user.username
-                        ? 'text-white/80'
-                        : 'text-gray-500'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'bg-gray-50 hover:bg-gray-100'
                     }`}
                   >
-                    Rol: {user.role}
-                  </div>
-                </button>
-              ))}
-            </div>
+                    <div className="font-medium">{user.username}</div>
+                    <div
+                      className={`text-sm ${
+                        selectedUser === user.username
+                          ? 'text-white/80'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      Rol: {user.role}
+                    </div>
+                    {user.fullName && (
+                      <div
+                        className={`text-xs ${
+                          selectedUser === user.username
+                            ? 'text-white/70'
+                            : 'text-gray-400'
+                        }`}
+                      >
+                        {user.fullName}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -145,9 +226,19 @@ export default function PermissionsPage() {
                   onClick={handleSavePermissions}
                   className="flex items-center gap-2"
                   size="sm"
+                  disabled={isSaving}
                 >
-                  <Save className="w-4 h-4" />
-                  Guardar Cambios
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Guardar Cambios
+                    </>
+                  )}
                 </Button>
               )}
             </CardTitle>
@@ -183,60 +274,89 @@ export default function PermissionsPage() {
 
                 {/* Lista de permisos */}
                 <div className="space-y-3">
-                  {availableModules.map((module) => (
-                    <div
-                      key={module.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">
-                            {module.label}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {module.description}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-600">
-                            {permissions[module.id] ? 'Permitido' : 'Denegado'}
-                          </span>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={permissions[module.id] || false}
-                              onChange={(e) =>
-                                handlePermissionChange(module.id, e.target.checked)
-                              }
-                              disabled={!canEdit}
-                              className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
-                          </label>
+                  {isLoadingModules ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                      <span className="ml-2 text-gray-600">Cargando módulos...</span>
+                    </div>
+                  ) : availableModules.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Shield className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>No hay módulos disponibles</p>
+                    </div>
+                  ) : (
+                    availableModules.map((module) => (
+                      <div
+                        key={module.id}
+                        className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">
+                              {module.name}
+                            </p>
+                            {module.description && (
+                              <p className="text-sm text-gray-500">
+                                {module.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-600">
+                              {permissions[module.key] ? 'Permitido' : 'Denegado'}
+                            </span>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={permissions[module.key] || false}
+                                onChange={(e) =>
+                                  handlePermissionChange(module.key, e.target.checked)
+                                }
+                                disabled={!canEdit}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+                            </label>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 {canEdit && (
                   <div className="flex justify-end gap-3">
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        const userPerms = getUserPermissions(selectedUser);
-                        setPermissions(userPerms);
-                        setSaveSuccess(false);
+                      onClick={async () => {
+                        try {
+                          const userPerms = await permissionService.getUserPermissionsByUsername(selectedUser);
+                          setPermissions(userPerms);
+                          setSaveSuccess(false);
+                        } catch (error) {
+                          // Error recargando permisos
+                        }
                       }}
+                      disabled={isSaving}
                     >
                       Cancelar
                     </Button>
                     <Button
                       onClick={handleSavePermissions}
                       className="flex items-center gap-2"
+                      disabled={isSaving}
                     >
-                      <Save className="w-4 h-4" />
-                      Guardar Cambios
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Guardando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Guardar Cambios
+                        </>
+                      )}
                     </Button>
                   </div>
                 )}

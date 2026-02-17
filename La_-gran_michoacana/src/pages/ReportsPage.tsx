@@ -103,7 +103,6 @@ export default function ReportsPage() {
         const stats = await saleService.getSalesStats(startStr, endStr);
         setStatsData(stats || null);
       } catch (error) {
-        console.error('Error loading stats:', error);
         setStatsData(null);
       } finally {
         setLoading(false);
@@ -124,7 +123,6 @@ export default function ReportsPage() {
         const trend = await saleService.getWeeklyTrend(startStr, endStr);
         setWeeklyTrendData(trend || []);
       } catch (error) {
-        console.error('Error loading weekly trend:', error);
         setWeeklyTrendData([]);
       }
     };
@@ -143,7 +141,6 @@ export default function ReportsPage() {
         const comparison = await saleService.getMonthlyComparison(startStr, endStr);
         setMonthlyComparisonData(comparison || []);
       } catch (error) {
-        console.error('Error loading monthly comparison:', error);
         setMonthlyComparisonData([]);
       }
     };
@@ -178,7 +175,6 @@ export default function ReportsPage() {
           end: end.toISOString() 
         });
       } catch (error) {
-        console.error('Error loading daily report:', error);
         setStatsData(null);
         setWeeklyTrendData([]);
         setMonthlyComparisonData([]);
@@ -200,7 +196,6 @@ export default function ReportsPage() {
         const data = await saleService.getCashierCut();
         setCashierCutData(data);
       } catch (error) {
-        console.error('Error loading cashier cut:', error);
         setCashierCutData(null);
       } finally {
         setLoading(false);
@@ -425,7 +420,6 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                     onClick={() => {
                       setSelectedPeriod(period.value as ReportPeriod);
                       setUseSpecificDate(false);
-                      console.log(`📊 Período cambiado a: ${period.label}`);
                     }}
                     disabled={loading}
                     className={`p-3 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -447,10 +441,10 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                   <input
                     type="date"
                     value={selectedDate}
+                    max={new Date().toISOString().split('T')[0]}
                     onChange={(e) => {
                       setSelectedDate(e.target.value);
                       setUseSpecificDate(true);
-                      console.log(`📅 Fecha específica seleccionada: ${e.target.value}`);
                     }}
                     disabled={loading}
                     className={`flex-1 md:flex-none md:w-auto px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
@@ -464,7 +458,6 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                       onClick={() => {
                         setUseSpecificDate(false);
                         setSelectedPeriod('day');
-                        console.log('🔄 Volviendo a períodos predefinidos');
                       }}
                       disabled={loading}
                       className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors disabled:opacity-50"

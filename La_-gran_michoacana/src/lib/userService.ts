@@ -86,7 +86,6 @@ class UserService {
       );
       return response.data.users;
     } catch (error) {
-      console.error('Error obteniendo usuarios:', error);
       throw error;
     }
   }
@@ -100,7 +99,6 @@ class UserService {
       const response = await apiClient.get<GetUserResponse>(`/users/${userId}`);
       return response.data.user;
     } catch (error) {
-      console.error('Error obteniendo usuario:', error);
       throw error;
     }
   }
@@ -114,7 +112,6 @@ class UserService {
       const response = await apiClient.post<CreateUserResponse>('/auth/register', data);
       return response.data.user;
     } catch (error) {
-      console.error('Error creando usuario:', error);
       throw error;
     }
   }
@@ -132,7 +129,6 @@ class UserService {
       );
       return response.data.user;
     } catch (error) {
-      console.error('Error actualizando usuario:', error);
       throw error;
     }
   }
@@ -145,7 +141,6 @@ class UserService {
     try {
       await apiClient.delete<DeleteUserResponse>(`/users/${userId}`);
     } catch (error) {
-      console.error('Error eliminando usuario:', error);
       throw error;
     }
   }

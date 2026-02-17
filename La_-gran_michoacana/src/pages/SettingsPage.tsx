@@ -52,7 +52,6 @@ export default function SettingsPage() {
                   className="w-full justify-start"
                   onClick={() => {
                     if (confirm('¿Deseas exportar los datos del carrito actual?')) {
-                      console.log('Exportando datos...');
                     }
                   }}
                 >

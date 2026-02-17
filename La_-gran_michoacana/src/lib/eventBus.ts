@@ -34,7 +34,7 @@ export const eventBus = {
         timestamp: Date.now()
       }));
     } catch (err) {
-      console.error('Error writing to localStorage:', err);
+      // Error writing to localStorage
     }
   },
 
@@ -52,7 +52,7 @@ window.addEventListener('storage', (e: StorageEvent) => {
       const value = JSON.parse(e.newValue || '{}');
       eventBus.emit(eventName, value.data);
     } catch (err) {
-      console.error('Error parsing event from storage:', err);
+      // Error parsing event from storage
     }
   }
 });

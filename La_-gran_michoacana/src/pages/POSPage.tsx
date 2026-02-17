@@ -28,7 +28,6 @@ export default function POSPage() {
       // Asegurarse de que data es siempre un array
       setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error loading products:', err);
       setError('Error al cargar los productos');
       setProducts([]); // Establecer array vacío en caso de error
     } finally {
@@ -77,7 +76,8 @@ export default function POSPage() {
       name: product.name,
       price: product.price,
       quantity: 1,
-      emoji: '🛒',
+      emoji: product.emoji || '🛒',
+      imageUrl: product.imageUrl,
       category: product.category,
     });
   };
@@ -97,8 +97,6 @@ export default function POSPage() {
   };
 
   const handlePaymentComplete = (sale: any) => {
-    console.log('✅ Venta completada:', sale);
-    
     // El PaymentDialog ya limpia el carrito
     // Aquí solo recargamos los productos para la siguiente venta
     loadProducts();
@@ -133,7 +131,6 @@ export default function POSPage() {
       };
 
       const createdSale = await saleService.createSale(sale);
-      console.log('✅ Venta registrada:', createdSale);
 
       clearCart();
       alert(`✅ Venta registrada exitosamente. ID: ${createdSale.id}`);
@@ -142,7 +139,6 @@ export default function POSPage() {
         window.electronAPI.onCheckoutComplete?.();
       }
     } catch (err) {
-      console.error('Error processing checkout:', err);
       alert('Error al procesar la venta');
     } finally {
       setIsProcessing(false);
@@ -191,7 +187,22 @@ export default function POSPage() {
                 onClick={() => handleAddProduct(product)}
               >
                 <CardContent className="p-6 text-center">
-                  <div className="text-6xl mb-3">🛍️</div>
+                  {product.imageUrl ? (
+                    <div className="w-full h-32 mb-3 flex items-center justify-center">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="max-h-full max-w-full object-contain rounded"
+                        onError={(e) => {
+                          // Fallback si la imagen falla al cargar
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = '<div class="text-6xl">🛍️</div>';
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-6xl mb-3">{product.emoji || '🛍️'}</div>
+                  )}
                   <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
                   <p className="text-sm text-gray-600 mb-3">{product.category}</p>
                   <p className="text-2xl font-bold text-primary">
@@ -231,7 +242,21 @@ export default function POSPage() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="text-3xl">{item.emoji}</div>
+                      {item.imageUrl ? (
+                        <div className="w-12 h-12 flex items-center justify-center">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="max-h-full max-w-full object-contain rounded"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement!.innerHTML = '<div class="text-3xl">🛒</div>';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-3xl">{item.emoji || '🛒'}</div>
+                      )}
                       <div>
                         <h4 className="font-semibold">{item.name}</h4>
                         <p className="text-sm text-gray-600">

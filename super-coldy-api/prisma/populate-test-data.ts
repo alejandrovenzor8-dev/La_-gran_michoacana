@@ -3,15 +3,12 @@ import { PrismaClient, PaymentMethod, SaleStatus, Source, InventoryMovementType 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Creando datos de prueba para diferentes períodos...');
-
   // Obtener usuario admin
   const admin = await prisma.user.findFirst({
     where: { username: 'admin' }
   });
 
   if (!admin) {
-    console.error('❌ Usuario admin no encontrado');
     return;
   }
 
@@ -21,7 +18,6 @@ async function main() {
   });
 
   if (products.length === 0) {
-    console.error('❌ No hay productos disponibles');
     return;
   }
 
@@ -79,8 +75,6 @@ async function main() {
     }
   }
 
-  console.log(`📦 Creando ${salesData.length} ventas de prueba...`);
-
   // Crear ventas
   let created = 0;
   for (const saleData of salesData) {
@@ -107,11 +101,9 @@ async function main() {
       });
       created++;
     } catch (error) {
-      console.error('Error creando venta:', error);
+      // Error creating sale
     }
   }
-
-  console.log(`✅ ${created} ventas creadas exitosamente`);
 
   // Mostrar resumen
   const totalSales = await prisma.sale.count({
@@ -122,10 +114,6 @@ async function main() {
     where: { status: SaleStatus.COMPLETED },
     _sum: { total: true }
   });
-
-  console.log('\n📊 Resumen de datos:');
-  console.log(`   Total de ventas: ${totalSales}`);
-  console.log(`   Ingresos totales: $${totalRevenue._sum.total || 0}`);
 }
 
 main()
@@ -133,7 +121,6 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error('❌ Error:', e);
     await prisma.$disconnect();
     process.exit(1);
   });

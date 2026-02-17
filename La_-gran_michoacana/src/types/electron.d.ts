@@ -10,6 +10,7 @@ export interface ElectronAPI {
   removeCartListeners: () => void;
   clearSession: () => Promise<{ success: boolean }>;
   logout: () => Promise<{ success: boolean }>;
+  closeApp: () => void;
 }
 
 declare global {

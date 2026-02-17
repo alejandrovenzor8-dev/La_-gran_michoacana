@@ -187,16 +187,12 @@ export function PaymentDialog({
         if (window.api && window.api.printTicket) {
           const result = await window.api.printTicket(ticketData);
           if (!result.success) {
-            console.error('Error al imprimir:', result.error);
             toast.error('Ticket guardado pero no se pudo imprimir');
           } else {
             toast.success('Ticket impreso correctamente');
           }
-        } else {
-          console.warn('API de impresión no disponible (modo web)');
         }
       } catch (printError) {
-        console.error('Error en impresión:', printError);
         // No bloquear el flujo si falla la impresión
       }
 
@@ -209,7 +205,6 @@ export function PaymentDialog({
       setNotes('');
       setError(null);
     } catch (err: any) {
-      console.error('Error al procesar pago:', err);
       const errorMessage = err.response?.data?.message || 'Error al procesar el pago. Intenta de nuevo.';
       toast.error('Error en el pago', {
         description: errorMessage

@@ -22,8 +22,6 @@ export default function LoginPage() {
     const success = await login(username, password);
     
     if (success) {
-      console.log('✅ Login exitoso');
-      
       // Navegar a la página POS
       navigate('/pos');
       
@@ -31,12 +29,9 @@ export default function LoginPage() {
       const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
       if (isElectron) {
         try {
-          console.log('📱 Notificando login a Electron...');
           (window as any).electronAPI.onLoginSuccess().catch((err: any) => {
-            console.error('❌ Error notificando login a Electron:', err);
           });
         } catch (err) {
-          console.error('❌ Error notificando login a Electron:', err);
         }
       }
     }
@@ -138,6 +133,23 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
+
+              {/* Botón Cerrar Aplicación */}
+              {typeof window !== 'undefined' && (window as any).electronAPI && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
+                    if (isElectron) {
+                      (window as any).electronAPI.closeApp();
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-red-300 to-red-400 hover:from-red-400 hover:to-red-500 disabled:from-gray-300 disabled:to-gray-400 text-red-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                >
+                  <span>Cerrar</span>
+                </button>
+              )}
             </form>
           </div>
 
@@ -155,7 +167,7 @@ export default function LoginPage() {
               </div>
               <div className="flex items-center gap-2 text-xs text-blue-50">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-300"></div>
-                <span className="font-mono font-medium">cajera</span>
+                <span className="font-mono font-medium">cajera1</span>
                 <span className="text-white/40">/</span>
                 <span className="font-mono font-medium">password123</span>
               </div>

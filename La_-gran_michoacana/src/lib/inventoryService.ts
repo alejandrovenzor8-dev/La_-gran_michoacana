@@ -38,7 +38,6 @@ class InventoryService {
       const movements = Array.isArray(response.data) ? response.data : (response as any).data?.data ? [(response as any).data.data] : [response.data];
       return movements || [];
     } catch (error) {
-      console.error('Error fetching inventory movements:', error);
       return [];
     }
   }
@@ -51,7 +50,6 @@ class InventoryService {
       const response = await apiClient.post<InventoryResponse>('/inventory', movement);
       return Array.isArray(response.data) ? response.data[0] : response.data;
     } catch (error) {
-      console.error('Error creating inventory movement:', error);
       throw error;
     }
   }
@@ -100,7 +98,6 @@ class InventoryService {
       const response = await apiClient.get<InventoryStatsResponse>('/inventory/stats');
       return response.data;
     } catch (error) {
-      console.error('Error fetching inventory stats:', error);
       throw error;
     }
   }
@@ -125,7 +122,6 @@ class InventoryService {
       const movements = Array.isArray(response.data) ? response.data : (response as any).data?.data ? [(response as any).data.data] : [response.data];
       return movements || [];
     } catch (error) {
-      console.error('Error fetching inventory movements:', error);
       return [];
     }
   }

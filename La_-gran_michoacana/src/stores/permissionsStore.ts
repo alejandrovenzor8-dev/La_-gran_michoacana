@@ -43,7 +43,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
   },
   cajero: {
     pos: true,
-    inventory: true,
+    inventory: false,
     users: false,
     settings: false,
     permissions: false,
@@ -100,10 +100,6 @@ export const usePermissionsStore = create<PermissionsStore>()(
               [username]: defaultPermissions,
             },
           }));
-          
-          console.log(`✅ Permisos inicializados para ${username} (${role}):`, defaultPermissions);
-        } else {
-          console.log(`ℹ️ Permisos ya existen para ${username}:`, existingPermissions);
         }
       },
     }),

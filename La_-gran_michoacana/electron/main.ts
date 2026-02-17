@@ -5,6 +5,7 @@ import { printTicket, TicketData } from './printer';
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
 let loginWindow: BrowserWindow | null = null;
+let isLoggingOut = false; // Bandera para evitar que app.quit() se ejecute durante logout
 
 const isDev = process.env.NODE_ENV !== 'production';
 const VITE_DEV_SERVER_URL = 'http://localhost:5173';
@@ -79,11 +80,6 @@ function createMainWindow() {
 function createCustomerDisplay() {
   const displays = screen.getAllDisplays();
   
-  console.log('🖥️ Displays detectados:', displays.length);
-  displays.forEach((display, index) => {
-    console.log(`Display ${index}:`, display.bounds);
-  });
-
   let displayBounds;
   
   // Buscar display externo (cualquiera que NO sea el primario)
@@ -93,10 +89,8 @@ function createCustomerDisplay() {
   });
 
   if (externalDisplay) {
-    console.log('✅ Segundo monitor detectado');
     displayBounds = externalDisplay.bounds;
   } else {
-    console.log('⚠️ Solo un monitor detectado, abriendo en posición alternativa');
     // Abrir en la misma pantalla pero desplazado
     const primaryDisplay = screen.getPrimaryDisplay();
     displayBounds = {
@@ -164,8 +158,6 @@ ipcMain.handle('cart:get', () => {
 
 // IPC Handler para login exitoso - abre las dos ventanas principales
 ipcMain.handle('login:success', () => {
-  console.log('🔓 Login exitoso detectado en main.ts');
-  
   // Cerrar ventana de login
   if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.close();
@@ -181,53 +173,52 @@ ipcMain.handle('login:success', () => {
 
 // IPC Handler para limpiar sesión
 ipcMain.handle('clear:session', async () => {
-  console.log('🔐 Limpiando sesión y localStorage...');
-  
   try {
     // Limpiar localStorage
     await session.defaultSession.clearStorageData({
       storages: ['localstorage'],
     });
-    console.log('✅ localStorage limpiado');
     return { success: true };
   } catch (error) {
-    console.error('❌ Error limpiando localStorage:', error);
     return { success: false };
   }
 });
 
 // IPC Handler para logout - cierra todas las ventanas y vuelve al login
 ipcMain.handle('logout', async () => {
-  console.log('🚪 Logout detectado - cerrando ventanas...');
-  
   try {
-    // Cerrar ventana del cliente
+    // Establecer bandera para evitar que app.quit() se ejecute
+    isLoggingOut = true;
+    
+    // PRIMERO: Crear ventana de login antes de cerrar las otras
+    createLoginWindow();
+    
+    // Esperar un momento para que la ventana de login se cree
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // SEGUNDO: Cerrar ventana del cliente
     if (customerWindow && !customerWindow.isDestroyed()) {
       customerWindow.close();
       customerWindow = null;
-      console.log('✅ Pantalla cliente cerrada');
     }
     
-    // Cerrar ventana principal
+    // TERCERO: Cerrar ventana principal
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.close();
       mainWindow = null;
-      console.log('✅ Ventana principal cerrada');
     }
     
     // Limpiar localStorage
     await session.defaultSession.clearStorageData({
       storages: ['localstorage'],
     });
-    console.log('✅ Sesión limpiada');
     
-    // Crear ventana de login
-    createLoginWindow();
-    console.log('✅ Ventana de login reabierta');
+    // Restablecer bandera
+    isLoggingOut = false;
     
     return { success: true };
   } catch (error) {
-    console.error('❌ Error en logout:', error);
+    isLoggingOut = false;
     return { success: false };
   }
 });
@@ -242,7 +233,6 @@ ipcMain.handle('print-ticket', async (event, ticketData: TicketData) => {
     await printTicket(window, ticketData);
     return { success: true };
   } catch (error) {
-    console.error('❌ Error al imprimir ticket:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
@@ -250,7 +240,10 @@ ipcMain.handle('print-ticket', async (event, ticketData: TicketData) => {
   }
 });
 
-console.log('✅ IPC handler "print-ticket" registrado');
+// IPC Handler para cerrar la aplicación completamente
+ipcMain.on('app:close', () => {
+  app.quit();
+});
 
 app.whenReady().then(() => {
   // Solo crear ventana de login al inicio
@@ -264,15 +257,17 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', async () => {
+  // Si estamos en proceso de logout, NO cerrar la aplicación
+  if (isLoggingOut) {
+    return;
+  }
+  
   // Limpiar sesión y localStorage antes de cerrar
-  console.log('🔐 Limpiando sesión al cerrar la aplicación...');
   try {
     await session.defaultSession.clearStorageData({
       storages: ['localstorage'],
     });
-    console.log('✅ Sesión limpiada al cerrar');
   } catch (error) {
-    console.error('❌ Error limpiando sesión:', error);
   }
 
   if (process.platform !== 'darwin') {
