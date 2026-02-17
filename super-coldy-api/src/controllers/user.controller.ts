@@ -55,12 +55,12 @@ class UserController {
    * @param id - ID del usuario
    */
   async getUserById(
-    req: Request<{ id: string }>,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const userId = parseInt(req.params.id);
+      const userId = parseInt(req.params.id as string);
 
       logger.debug('Obteniendo usuario por ID', { userId });
 
@@ -87,21 +87,12 @@ class UserController {
    * @body email, fullName, role, active
    */
   async updateUser(
-    req: Request<
-      { id: string },
-      {},
-      {
-        email?: string;
-        fullName?: string;
-        role?: UserRole;
-        active?: boolean;
-      }
-    >,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const userId = parseInt(req.params.id);
+      const userId = parseInt(req.params.id as string);
       const { email, fullName, role, active } = req.body;
 
       logger.info('Actualizando usuario', { userId, changedFields: Object.keys(req.body) });
@@ -134,12 +125,12 @@ class UserController {
    * @param id - ID del usuario a eliminar
    */
   async deleteUser(
-    req: Request<{ id: string }>,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const userId = parseInt(req.params.id);
+      const userId = parseInt(req.params.id as string);
 
       logger.info('Eliminando usuario', { userId });
 
