@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Trash2, Edit2, Loader } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, Loader, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/apiClient';
 
 interface User {
@@ -35,49 +35,25 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Cargar usuarios al montar el componente
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    try {
-      setLoading(true);
-      const response = await apiClient.get('/users');
-      if (response.data) {
-        setUsers(response.data.users || []);
-      }
-    } catch (err) {
-      console.error('Error al cargar usuarios:', err);
-      setError('Error al cargar usuarios');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cargar usuarios al montar el componente
-  useEffect(() => {
-    // Asegurar que el token esté establecido en el cliente HTTP
-    if (accessToken) {
-      apiClient.setToken(accessToken);
-      loadUsers();
-    } else {
-      setLoading(false);
-    }
-  }, [accessToken]);
-
   const loadUsers = async () => {
     try {
       setLoading(true);
       setError('');
-      const data = await userService.getUsers(100, 0); // Obtener hasta 100 usuarios
-      setUsers(data);
+      const response = await apiClient.get('/users');
+      if (response.data) {
+        setUsers(response.data.users || []);
+      }
     } catch (err: any) {
-      console.error('Error cargando usuarios:', err);
-      setError(err.message || 'Error al cargar los usuarios. Intenta de nuevo.');
+      console.error('Error al cargar usuarios:', err);
+      setError(err.message || 'Error al cargar usuarios');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
