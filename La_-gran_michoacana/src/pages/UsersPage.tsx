@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Trash2, Edit2, Loader2, X } from 'lucide-react';
-import { userService, User } from '@/lib/userService';
-import { useAuthStore } from '@/stores/authStore';
+import { Users, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/apiClient';
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName?: string;
+  role: 'ADMIN' | 'CAJERO' | 'GERENTE';
+  active: boolean;
+  createdAt: string;
+}
+
 export default function UsersPage() {
-  const { accessToken } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -21,42 +27,32 @@ export default function UsersPage() {
     password: '',
     confirmPassword: '',
     fullName: '',
-    role: 'cajero' as const,
-  });
-
-  const [editFormData, setEditFormData] = useState({
-    email: '',
-    fullName: '',
-    role: 'cajero' as const,
-    active: true,
+    role: 'CAJERO' as const,
   });
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Cargar usuarios al montar el componente
-  useEffect(() => {
-    // Asegurar que el token esté establecido en el cliente HTTP
-    if (accessToken) {
-      apiClient.setToken(accessToken);
-      loadUsers();
-    } else {
-      setLoading(false);
-    }
-  }, [accessToken]);
-
   const loadUsers = async () => {
     try {
       setLoading(true);
       setError('');
-      const data = await userService.getUsers(100, 0); // Obtener hasta 100 usuarios
-      setUsers(data);
+      const response = await apiClient.get('/users');
+      if (response.data) {
+        setUsers(response.data.users || []);
+      }
     } catch (err: any) {
       setError(err.message || 'Error al cargar los usuarios. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -195,6 +191,16 @@ export default function UsersPage() {
       return;
     }
 
+    if (!formData.email.trim()) {
+      setError('El email es requerido');
+      return;
+    }
+
+    if (!formData.email.includes('@')) {
+      setError('Ingresa un email válido');
+      return;
+    }
+
     if (!formData.password) {
       setError('La contraseña es requerida');
       return;
@@ -308,7 +314,7 @@ export default function UsersPage() {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -366,9 +372,9 @@ export default function UsersPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                       disabled={isSubmitting}
                     >
-                      <option value="cajero">Cajero</option>
-                      <option value="gerente">Gerente</option>
-                      <option value="admin">Administrador</option>
+                      <option value="CAJERO">Cajero</option>
+                      <option value="GERENTE">Gerente</option>
+                      <option value="ADMIN">Administrador</option>
                     </select>
                   </div>
 
@@ -581,7 +587,10 @@ export default function UsersPage() {
                       <p className="text-sm text-gray-500 mt-1">{user.email}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full capitalize">
-                          {user.role}
+                          {user.role.toLowerCase()}
+                        </span>
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${user.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {user.active ? 'Activo' : 'Inactivo'}
                         </span>
                         {!user.active && (
                           <span className="px-3 py-1 bg-red-100 text-red-600 text-sm font-semibold rounded-full">
