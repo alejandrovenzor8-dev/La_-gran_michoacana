@@ -3,8 +3,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
 import { userService, User } from '@/lib/userService';
+import { useAuthStore } from '@/stores/authStore';
+import { apiClient } from '@/lib/apiClient';
 
 export default function UsersPage() {
+  const { accessToken } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,8 +26,14 @@ export default function UsersPage() {
 
   // Cargar usuarios al montar el componente
   useEffect(() => {
-    loadUsers();
-  }, []);
+    // Asegurar que el token esté establecido en el cliente HTTP
+    if (accessToken) {
+      apiClient.setToken(accessToken);
+      loadUsers();
+    } else {
+      setLoading(false);
+    }
+  }, [accessToken]);
 
   const loadUsers = async () => {
     try {
