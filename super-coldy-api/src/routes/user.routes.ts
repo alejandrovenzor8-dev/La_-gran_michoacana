@@ -1,160 +1,114 @@
 import { Router } from 'express';
-import { param, body } from 'express-validator';
-import { validate } from '../middlewares/validation.middleware.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
-import { userController } from '../controllers/user.controller.js';
+import { authService } from '../services/auth.service.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
-// Aplicar autenticación a todas las rutas de usuarios
+// Middleware de autenticación para todas las rutas
 router.use(authenticateToken);
 
-/**
- * GET /api/users
- * Obtener lista de todos los usuarios
- * Requiere autenticación
- *
- * @query limit - Límite de resultados (default: 10)
- * @query offset - Offset para paginación (default: 0)
- *
- * @example
- * GET /api/users?limit=20&offset=0
- * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- *
- * @response 200
- * {
- *   "status": "success",
- *   "data": {
- *     "users": [...],
- *     "pagination": { "total": 100, "limit": 10, "offset": 0, "pages": 10 }
- *   }
- * }
- */
+// GET /api/users - Obtener todos los usuarios
 router.get(
   '/',
-  asyncHandler((req, res, next) => userController.getAllUsers(req, res, next))
+  asyncHandler(async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string || '10');
+      const offset = parseInt(req.query.offset as string || '0');
+
+      logger.debug('Obteniendo usuarios', { limit, offset });
+
+      const { users, total } = await authService.getAllUsers(limit, offset);
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          users,
+          pagination: {
+            total,
+            limit,
+            offset,
+            pages: Math.ceil(total / limit),
+          },
+        },
+      });
+    } catch (error) {
+      logger.error('Error obteniendo usuarios:', error);
+      throw error;
+    }
+  })
 );
 
-/**
- * GET /api/users/:id
- * Obtener usuario por ID
- * Requiere autenticación
- *
- * @param id - ID del usuario
- *
- * @example
- * GET /api/users/1
- * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- *
- * @response 200
- * {
- *   "status": "success",
- *   "data": {
- *     "user": { ... }
- *   }
- * }
- *
- * @error 404
- * {
- *   "status": "error",
- *   "message": "Usuario no encontrado"
- * }
- */
+// GET /api/users/:id - Obtener usuario por ID
 router.get(
   '/:id',
-  param('id').isInt().withMessage('ID debe ser un número entero'),
-  validate,
-  asyncHandler((req, res, next) => userController.getUserById(req, res, next))
+  asyncHandler(async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id as string);
+      logger.debug('Obteniendo usuario por ID', { userId });
+
+      const user = await authService.getUserById(userId);
+
+      res.status(200).json({
+        status: 'success',
+        data: { user },
+      });
+    } catch (error) {
+      logger.error('Error obteniendo usuario:', error);
+      throw error;
+    }
+  })
 );
 
-/**
- * PUT /api/users/:id
- * Actualizar usuario
- * Requiere autenticación (admin o el mismo usuario)
- *
- * @param id - ID del usuario a actualizar
- * @body
- * {
- *   "email": "nuevo@example.com",
- *   "fullName": "Nuevo Nombre",
- *   "role": "gerente",
- *   "active": true
- * }
- *
- * @example
- * PUT /api/users/1
- * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- * {
- *   "fullName": "Juan García García"
- * }
- *
- * @response 200
- * {
- *   "status": "success",
- *   "message": "Usuario actualizado exitosamente",
- *   "data": { "user": { ... } }
- * }
- */
+// PUT /api/users/:id - Actualizar usuario
 router.put(
   '/:id',
-  param('id').isInt().withMessage('ID debe ser un número entero'),
-  body('email')
-    .optional()
-    .isEmail()
-    .withMessage('Email inválido')
-    .normalizeEmail(),
-  body('fullName')
-    .optional()
-    .isLength({ max: 100 })
-    .withMessage('Nombre muy largo')
-    .trim(),
-  body('role')
-    .optional()
-    .isIn(['admin', 'cajero', 'gerente', 'ADMIN', 'CAJERO', 'GERENTE'])
-    .withMessage('Rol inválido'),
-  body('active')
-    .optional()
-    .isBoolean()
-    .withMessage('Active debe ser booleano'),
-  validate,
-  asyncHandler((req, res, next) => userController.updateUser(req, res, next))
+  asyncHandler(async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id as string);
+      const { email, fullName, role, active } = req.body;
+
+      logger.info('Actualizando usuario', { userId });
+
+      const updatedUser = await authService.updateUser(userId, {
+        ...(email && { email }),
+        ...(fullName && { fullName }),
+        ...(role && { role }),
+        ...(active !== undefined && { active }),
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Usuario actualizado exitosamente',
+        data: { user: updatedUser },
+      });
+    } catch (error) {
+      logger.error('Error actualizando usuario:', error);
+      throw error;
+    }
+  })
 );
 
-/**
- * DELETE /api/users/:id
- * Eliminar usuario
- * Requiere autenticación (admin)
- *
- * @param id - ID del usuario a eliminar
- *
- * @example
- * DELETE /api/users/1
- * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- *
- * @response 200
- * {
- *   "status": "success",
- *   "message": "Usuario eliminado exitosamente"
- * }
- *
- * @error 404
- * {
- *   "status": "error",
- *   "message": "Usuario no encontrado"
- * }
- *
- * @error 400
- * {
- *   "status": "error",
- *   "message": "No se puede eliminar el único administrador"
- * }
- */
+// DELETE /api/users/:id - Eliminar usuario
 router.delete(
   '/:id',
-  param('id').isInt().withMessage('ID debe ser un número entero'),
-  validate,
-  asyncHandler((req, res, next) => userController.deleteUser(req, res, next))
+  asyncHandler(async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id as string);
+      logger.info('Eliminando usuario', { userId });
+
+      await authService.deleteUser(userId);
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Usuario eliminado exitosamente',
+      });
+    } catch (error) {
+      logger.error('Error eliminando usuario:', error);
+      throw error;
+    }
+  })
 );
 
 export default router;
