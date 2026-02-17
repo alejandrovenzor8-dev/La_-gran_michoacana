@@ -7,9 +7,7 @@ import dotenv from 'dotenv';
 import { connectDatabase } from './config/database.js';
 import { logger } from './utils/logger.js';
 import { notFound, errorHandler } from './middlewares/errorHandler.js';
-import authRoutes from './routes/auth.routes.js';
-import productRoutes from './routes/product.routes.js';
-import saleRoutes from './routes/sale.routes.js';
+import routes from './routes/index.js';
 
 dotenv.config();
 
@@ -46,14 +44,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Rutas de autenticación
-app.use('/api/auth', authRoutes);
+// Todas las rutas
+app.use('/api', routes);
 
-// Rutas de productos
-app.use('/api/products', productRoutes);
-
-// Rutas de ventas
-app.use('/api/sales', saleRoutes);
+// Log de rutas registradas
+logger.info('✅ Rutas registradas:', {
+  '/api/auth': 'Login, registro, refresh token',
+  '/api/users': 'CRUD de usuarios (protegido)',
+  '/api/products': 'CRUD de productos (protegido)',
+  '/api/sales': 'CRUD de ventas (protegido)',
+});
 
 // ============================================================
 // MANEJO DE ERRORES
