@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
     "build": "npm run build:electron && vite build && electron-builder",
-    "build:win": "npm run build:electron && vite build && electron-builder --win",
-    "build:publish": "npm run build:electron && vite build && electron-builder --win --publish always",
+    "build:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win",
+    "build:publish": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --publish always",
     "preview": "vite preview",
     "build:vite": "vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
@@ -53,6 +53,7 @@
   "build": {
     "appId": "com.lagranmichoacana.pos",
     "productName": "La Gran Michoacana",
+    "forceCodeSigning": false,
     "directories": {
       "output": "release"
     },
@@ -68,8 +69,7 @@
             "x64"
           ]
         }
-      ],
-      "icon": "public/icon.ico"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -77,9 +77,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "La Gran Michoacana",
-      "installerIcon": "public/icon.ico",
-      "uninstallerIcon": "public/icon.ico",
-      "installerHeaderIcon": "public/icon.ico",
       "allowElevation": true,
       "perMachine": true
     },
