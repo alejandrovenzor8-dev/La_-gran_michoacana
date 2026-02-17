@@ -1,9 +1,13 @@
 import { Router } from 'express';
+import authRoutes from './auth.routes.js';
+import userRoutes from './user.routes.js';
 
 const router = Router();
 
-// Importar rutas aquí
-// router.use('/api/auth', authRoutes);
-// router.use('/api/users', userRoutes);
+// Rutas de autenticación (sin protección en algunas)
+router.use('/auth', authRoutes);
+
+// Rutas de usuarios (protegidas)
+router.use('/users', userRoutes);
 
 export default router;

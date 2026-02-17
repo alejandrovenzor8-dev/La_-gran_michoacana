@@ -437,6 +437,48 @@ class AuthService {
       throw error;
     }
   }
+
+  /**
+   * Eliminar usuario
+   * @param userId - ID del usuario a eliminar
+   * @throws AppError si usuario no existe
+   */
+  async deleteUser(userId: number): Promise<void> {
+    try {
+      // Validar que usuario exista
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new AppError('Usuario no encontrado', 404);
+      }
+
+      // No permitir eliminar al único admin
+      if (user.role === 'ADMIN') {
+        const adminCount = await prisma.user.count({
+          where: { role: 'ADMIN' },
+        });
+
+        if (adminCount === 1) {
+          throw new AppError('No se puede eliminar el único administrador', 400);
+        }
+      }
+
+      // Eliminar usuario
+      await prisma.user.delete({
+        where: { id: userId },
+      });
+
+      logger.info('Usuario eliminado', { userId });
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      logger.error('Error eliminando usuario:', error);
+      throw error;
+    }
+  }
 }
 
 // Exportar instancia singleton del servicio

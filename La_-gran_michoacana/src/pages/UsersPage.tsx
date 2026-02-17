@@ -1,43 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Trash2, Edit2 } from 'lucide-react';
-
-interface User {
-  id: string;
-  username: string;
-  role: 'admin' | 'cajero' | 'gerente';
-  createdAt: string;
-}
+import { Users, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
+import { userService, User } from '@/lib/userService';
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', username: 'admin', role: 'admin', createdAt: '2026-01-29' },
-    { id: '2', username: 'cajero', role: 'cajero', createdAt: '2026-01-29' },
-    { id: '3', username: 'gerente', role: 'gerente', createdAt: '2026-01-29' },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
+    email: '',
     password: '',
     confirmPassword: '',
+    fullName: '',
     role: 'cajero' as const,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await userService.getUsers(100, 0); // Obtener hasta 100 usuarios
+      setUsers(data);
+    } catch (err: any) {
+      console.error('Error cargando usuarios:', err);
+      setError(err.message || 'Error al cargar los usuarios. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
+    const target = e.target as HTMLInputElement | HTMLSelectElement;
+    const { name, value } = target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -49,7 +63,17 @@ export default function UsersPage() {
     }
 
     if (formData.username.length < 3) {
-      setError('El nombre de usuario debe tener al menos 3 caracteres');
+      setError('El nombre de usuario debe tener entre 3 y 20 caracteres');
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError('El email es requerido');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('El email no es válido');
       return;
     }
 
@@ -73,34 +97,59 @@ export default function UsersPage() {
       return;
     }
 
-    // Agregar usuario
-    const newUser: User = {
-      id: Date.now().toString(),
-      username: formData.username,
-      role: formData.role,
-      createdAt: new Date().toLocaleDateString('es-MX'),
-    };
+    if (users.some((u) => u.email === formData.email)) {
+      setError('El email ya está registrado');
+      return;
+    }
 
-    setUsers((prev) => [newUser, ...prev]);
-    setSuccess(`Usuario "${formData.username}" creado exitosamente`);
-    setFormData({
-      username: '',
-      password: '',
-      confirmPassword: '',
-      role: 'cajero',
-    });
+    // Crear usuario en el backend
+    try {
+      setIsSubmitting(true);
+      await userService.createUser({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName || undefined,
+        role: formData.role,
+      });
 
-    setTimeout(() => {
-      setShowForm(false);
-      setSuccess('');
-    }, 2000);
+      setSuccess(`Usuario "${formData.username}" creado exitosamente`);
+      setFormData({
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        fullName: '',
+        role: 'cajero',
+      });
+
+      // Recargar la lista de usuarios
+      await loadUsers();
+
+      setTimeout(() => {
+        setShowForm(false);
+        setSuccess('');
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error creando usuario:', err);
+      setError(err.message || 'Error al crear el usuario. Intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-      setUsers((prev) => prev.filter((u) => u.id !== id));
-      setSuccess('Usuario eliminado');
-      setTimeout(() => setSuccess(''), 2000);
+      try {
+        await userService.deleteUser(id);
+        setSuccess('Usuario eliminado exitosamente');
+        await loadUsers();
+        setTimeout(() => setSuccess(''), 2000);
+      } catch (err: any) {
+        console.error('Error eliminando usuario:', err);
+        setError(err.message || 'Error al eliminar el usuario. Intenta de nuevo.');
+        setTimeout(() => setError(''), 3000);
+      }
     }
   };
 
@@ -118,6 +167,7 @@ export default function UsersPage() {
           <Button
             onClick={() => setShowForm(!showForm)}
             className="gap-2 flex items-center"
+            disabled={loading}
           >
             <Plus className="w-4 h-4" />
             {showForm ? 'Cancelar' : 'Nuevo Usuario'}
@@ -148,7 +198,7 @@ export default function UsersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Nombre de Usuario
+                      Nombre de Usuario *
                     </label>
                     <input
                       type="text"
@@ -157,18 +207,50 @@ export default function UsersPage() {
                       onChange={handleInputChange}
                       placeholder="Ingresa el nombre de usuario"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Rol
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="usuario@example.com"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Nombre Completo
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      placeholder="Nombre completo (opcional)"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Rol *
                     </label>
                     <select
                       name="role"
                       value={formData.role}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
                     >
                       <option value="cajero">Cajero</option>
                       <option value="gerente">Gerente</option>
@@ -178,7 +260,7 @@ export default function UsersPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Contraseña
+                      Contraseña *
                     </label>
                     <input
                       type="password"
@@ -187,12 +269,13 @@ export default function UsersPage() {
                       onChange={handleInputChange}
                       placeholder="Ingresa una contraseña"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Confirmar Contraseña
+                      Confirmar Contraseña *
                     </label>
                     <input
                       type="password"
@@ -201,19 +284,26 @@ export default function UsersPage() {
                       onChange={handleInputChange}
                       placeholder="Confirma la contraseña"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <Button type="submit" className="flex-1">
-                    Crear Usuario
+                  <Button 
+                    type="submit" 
+                    className="flex-1 gap-2" 
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {isSubmitting ? 'Creando...' : 'Crear Usuario'}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setShowForm(false)}
                     className="flex-1"
+                    disabled={isSubmitting}
                   >
                     Cancelar
                   </Button>
@@ -225,9 +315,18 @@ export default function UsersPage() {
 
         {/* Lista de Usuarios */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-800">Usuarios Registrados</h2>
+          <h2 className="text-xl font-semibold text-gray-800">
+            Usuarios Registrados {!loading && `(${users.length})`}
+          </h2>
 
-          {users.length === 0 ? (
+          {loading ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin mb-3" />
+                <p className="text-gray-500">Cargando usuarios...</p>
+              </CardContent>
+            </Card>
+          ) : users.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <Users className="w-16 h-16 mx-auto text-gray-300 mb-3" />
@@ -243,15 +342,24 @@ export default function UsersPage() {
                       <h3 className="text-lg font-semibold text-gray-800">
                         {user.username}
                       </h3>
+                      {user.fullName && (
+                        <p className="text-sm text-gray-600">{user.fullName}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">{user.email}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full capitalize">
                           {user.role}
                         </span>
+                        {!user.active && (
+                          <span className="px-3 py-1 bg-red-100 text-red-600 text-sm font-semibold rounded-full">
+                            Inactivo
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-600 mb-4">
-                      Creado: {user.createdAt}
+                    <p className="text-xs text-gray-500 mb-4">
+                      Creado: {new Date(user.createdAt).toLocaleDateString('es-MX')}
                     </p>
 
                     <div className="flex gap-2">
@@ -269,6 +377,7 @@ export default function UsersPage() {
                         size="icon"
                         className="flex-1 gap-1 text-sm text-red-500 hover:text-red-700 hover:bg-red-50"
                         onClick={() => handleDelete(user.id)}
+                        disabled={loading}
                       >
                         <Trash2 className="w-4 h-4" />
                         Eliminar
