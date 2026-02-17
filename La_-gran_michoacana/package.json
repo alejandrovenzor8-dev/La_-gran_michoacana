@@ -1,9 +1,9 @@
 {
-  "name": "super-coldy-electron",
+  "name": "la-gran-michoacana-pos",
   "version": "1.0.0",
-  "description": "Sistema POS para Paletería Super Coldy con doble pantalla",
+  "description": "Sistema POS para La Gran Michoacana con doble pantalla",
   "main": "dist-electron/main.js",
-  "author": "Super Coldy",
+  "author": "La Gran Michoacana",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -51,8 +51,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.supercoldy.pos",
-    "productName": "Super Coldy POS",
+    "appId": "com.lagranmichoacana.pos",
+    "productName": "La Gran Michoacana",
     "directories": {
       "output": "release"
     },
@@ -69,15 +69,14 @@
           ]
         }
       ],
-      "icon": "public/icon.ico",
-      "publisherName": "Super Coldy"
+      "icon": "public/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Super Coldy POS",
+      "shortcutName": "La Gran Michoacana",
       "installerIcon": "public/icon.ico",
       "uninstallerIcon": "public/icon.ico",
       "installerHeaderIcon": "public/icon.ico",
