@@ -167,7 +167,7 @@ export default function LoginPage() {
               </div>
               <div className="flex items-center gap-2 text-xs text-blue-50">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-300"></div>
-                <span className="font-mono font-medium">cajera</span>
+                <span className="font-mono font-medium">cajera1</span>
                 <span className="text-white/40">/</span>
                 <span className="font-mono font-medium">password123</span>
               </div>

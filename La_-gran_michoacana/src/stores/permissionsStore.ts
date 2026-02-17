@@ -43,7 +43,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
   },
   cajero: {
     pos: true,
-    inventory: true,
+    inventory: false,
     users: false,
     settings: false,
     permissions: false,
