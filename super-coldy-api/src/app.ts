@@ -47,6 +47,14 @@ app.get('/health', (req, res) => {
 // Todas las rutas
 app.use('/api', routes);
 
+// Log de rutas registradas
+logger.info('✅ Rutas registradas:', {
+  '/api/auth': 'Login, registro, refresh token',
+  '/api/users': 'CRUD de usuarios (protegido)',
+  '/api/products': 'CRUD de productos (protegido)',
+  '/api/sales': 'CRUD de ventas (protegido)',
+});
+
 // ============================================================
 // MANEJO DE ERRORES
 // ============================================================
