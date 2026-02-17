@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, Loader2, X } from 'lucide-react';
 import { userService, User } from '@/lib/userService';
 import { useAuthStore } from '@/stores/authStore';
 import { apiClient } from '@/lib/apiClient';
@@ -13,6 +13,8 @@ export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -21,6 +23,14 @@ export default function UsersPage() {
     fullName: '',
     role: 'cajero' as const,
   });
+
+  const [editFormData, setEditFormData] = useState({
+    email: '',
+    fullName: '',
+    role: 'cajero' as const,
+    active: true,
+  });
+
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -58,6 +68,107 @@ export default function UsersPage() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleEditInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const target = e.target as HTMLInputElement | HTMLSelectElement;
+    const { name, value, type } = target;
+    
+    if (type === 'checkbox') {
+      const checked = (target as HTMLInputElement).checked;
+      setEditFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
+    } else {
+      setEditFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  const handleEdit = (user: User) => {
+    setEditingId(user.id);
+    setEditFormData({
+      email: user.email,
+      fullName: user.fullName || '',
+      role: user.role,
+      active: user.active,
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditFormData({
+      email: '',
+      fullName: '',
+      role: 'cajero',
+      active: true,
+    });
+    setError('');
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!editingId) return;
+
+    // Validaciones
+    if (!editFormData.email.trim()) {
+      setError('El email es requerido');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editFormData.email)) {
+      setError('El email no es válido');
+      return;
+    }
+
+    // Verificar que el email no esté en uso por otro usuario
+    if (users.some((u) => u.id !== editingId && u.email === editFormData.email)) {
+      setError('El email ya está registrado por otro usuario');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const updatedUser = await userService.updateUser(editingId, {
+        email: editFormData.email,
+        fullName: editFormData.fullName || undefined,
+        role: editFormData.role,
+        active: editFormData.active,
+      });
+
+      // Actualizar el usuario en la lista
+      setUsers((prev) =>
+        prev.map((u) => (u.id === editingId ? updatedUser : u))
+      );
+
+      setSuccess('Usuario actualizado exitosamente');
+      setEditingId(null);
+      setEditFormData({
+        email: '',
+        fullName: '',
+        role: 'cajero',
+        active: true,
+      });
+
+      setTimeout(() => {
+        setSuccess('');
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error actualizando usuario:', err);
+      setError(err.message || 'Error al actualizar el usuario. Intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,7 +225,7 @@ export default function UsersPage() {
     // Crear usuario en el backend
     try {
       setIsSubmitting(true);
-      await userService.createUser({
+      const newUser = await userService.createUser({
         username: formData.username,
         email: formData.email,
         password: formData.password,
@@ -122,6 +233,7 @@ export default function UsersPage() {
         role: formData.role,
       });
 
+      setUsers((prev) => [...prev, newUser]);
       setSuccess(`Usuario "${formData.username}" creado exitosamente`);
       setFormData({
         username: '',
@@ -131,9 +243,6 @@ export default function UsersPage() {
         fullName: '',
         role: 'cajero',
       });
-
-      // Recargar la lista de usuarios
-      await loadUsers();
 
       setTimeout(() => {
         setShowForm(false);
@@ -151,8 +260,8 @@ export default function UsersPage() {
     if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
       try {
         await userService.deleteUser(id);
+        setUsers((prev) => prev.filter((u) => u.id !== id));
         setSuccess('Usuario eliminado exitosamente');
-        await loadUsers();
         setTimeout(() => setSuccess(''), 2000);
       } catch (err: any) {
         console.error('Error eliminando usuario:', err);
@@ -176,15 +285,15 @@ export default function UsersPage() {
           <Button
             onClick={() => setShowForm(!showForm)}
             className="gap-2 flex items-center"
-            disabled={loading}
+            disabled={loading || editingId !== null}
           >
             <Plus className="w-4 h-4" />
             {showForm ? 'Cancelar' : 'Nuevo Usuario'}
           </Button>
         </div>
 
-        {/* Formulario */}
-        {showForm && (
+        {/* Formulario de Creación */}
+        {showForm && editingId === null && (
           <Card className="mb-8 border-primary/20 bg-blue-50/50">
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
@@ -322,6 +431,125 @@ export default function UsersPage() {
           </Card>
         )}
 
+        {/* Formulario de Edición */}
+        {editingId !== null && (
+          <Card className="mb-8 border-amber-200 bg-amber-50/50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Editar Usuario
+                </h2>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-gray-500 hover:text-gray-700"
+                  disabled={isSubmitting}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="mb-4 p-4 bg-green-100 border border-green-300 text-green-700 rounded-lg">
+                  {success}
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateUser} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={editFormData.email}
+                      onChange={handleEditInputChange}
+                      placeholder="usuario@example.com"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Nombre Completo
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={editFormData.fullName}
+                      onChange={handleEditInputChange}
+                      placeholder="Nombre completo"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Rol *
+                    </label>
+                    <select
+                      name="role"
+                      value={editFormData.role}
+                      onChange={handleEditInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
+                    >
+                      <option value="cajero">Cajero</option>
+                      <option value="gerente">Gerente</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center pt-8">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="active"
+                        checked={editFormData.active}
+                        onChange={handleEditInputChange}
+                        className="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary/20"
+                        disabled={isSubmitting}
+                      />
+                      <span className="font-semibold text-gray-700">
+                        Usuario Activo
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    type="submit" 
+                    className="flex-1 gap-2 bg-amber-600 hover:bg-amber-700" 
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    className="flex-1"
+                    disabled={isSubmitting}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Lista de Usuarios */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-800">
@@ -345,7 +573,7 @@ export default function UsersPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {users.map((user) => (
-                <Card key={user.id} className="hover:shadow-lg transition-shadow">
+                <Card key={user.id} className={`hover:shadow-lg transition-shadow ${editingId === user.id ? 'border-amber-300 bg-amber-50' : ''}`}>
                   <CardContent className="p-6">
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-800">
@@ -376,7 +604,8 @@ export default function UsersPage() {
                         variant="outline"
                         size="icon"
                         className="flex-1 gap-1 text-sm"
-                        disabled
+                        onClick={() => handleEdit(user)}
+                        disabled={loading || editingId !== null}
                       >
                         <Edit2 className="w-4 h-4" />
                         Editar
@@ -386,7 +615,7 @@ export default function UsersPage() {
                         size="icon"
                         className="flex-1 gap-1 text-sm text-red-500 hover:text-red-700 hover:bg-red-50"
                         onClick={() => handleDelete(user.id)}
-                        disabled={loading}
+                        disabled={loading || editingId !== null}
                       >
                         <Trash2 className="w-4 h-4" />
                         Eliminar
