@@ -78,7 +78,7 @@ class SaleService {
           changeAmount = data.amountReceived - total;
         }
 
-        // Crear la venta
+        // Crear la venta (la fecha se asigna automáticamente por el servidor)
         const newSale = await tx.sale.create({
           data: {
             userId,

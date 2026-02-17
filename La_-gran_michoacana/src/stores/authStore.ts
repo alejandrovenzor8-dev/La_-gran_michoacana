@@ -9,6 +9,7 @@ interface User {
   email: string;
   fullName?: string;
   role: 'ADMIN' | 'CAJERO' | 'GERENTE';
+  timezone?: string;
 }
 
 interface AuthResponse {

@@ -30,6 +30,7 @@ interface LoginResponse {
     email: string;
     fullName: string | null;
     role: string; // Convertido a minúsculas
+    timezone: string;
   };
   accessToken: string;
   refreshToken: string;
@@ -85,6 +86,9 @@ class AuthService {
       // Hashear contraseña
       const passwordHash = await hashPassword(password);
 
+      // Convertir role a uppercase para Prisma (enum values)
+      const roleUppercase = (role.toUpperCase() as UserRole) || 'CAJERO';
+
       // Crear usuario
       const user = await prisma.user.create({
         data: {
@@ -92,7 +96,7 @@ class AuthService {
           email,
           passwordHash,
           fullName: fullName || null,
-          role,
+          role: roleUppercase,
           active: true,
         },
         select: {
@@ -102,6 +106,7 @@ class AuthService {
           fullName: true,
           role: true,
           active: true,
+          timezone: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -176,6 +181,7 @@ class AuthService {
           email: user.email,
           fullName: user.fullName,
           role: user.role.toLowerCase(), // Convertir a minúsculas
+          timezone: user.timezone || 'America/Mexico_City', // Zona horaria del usuario
         },
         accessToken,
         refreshToken,
@@ -245,6 +251,7 @@ class AuthService {
           fullName: true,
           role: true,
           active: true,
+          timezone: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -291,6 +298,7 @@ class AuthService {
             fullName: true,
             role: true,
             active: true,
+            timezone: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -330,6 +338,7 @@ class AuthService {
       fullName?: string;
       role?: UserRole;
       active?: boolean;
+      timezone?: string;
     }
   ): Promise<UserWithoutPassword> {
     try {
@@ -353,10 +362,16 @@ class AuthService {
         }
       }
 
+      // Convertir role a uppercase para Prisma (enum values)
+      const updateData = {
+        ...data,
+        ...(data.role && { role: data.role.toUpperCase() as UserRole }),
+      };
+
       // Actualizar usuario
       const updatedUser = await prisma.user.update({
         where: { id: userId },
-        data,
+        data: updateData,
         select: {
           id: true,
           username: true,
@@ -364,12 +379,13 @@ class AuthService {
           fullName: true,
           role: true,
           active: true,
+          timezone: true,
           createdAt: true,
           updatedAt: true,
         },
       });
 
-      logger.info('Usuario actualizado', { userId });
+      logger.info('Usuario actualizado', { userId, timezone: data.timezone });
 
       return {
         ...updatedUser,

@@ -67,15 +67,16 @@ router.put(
   asyncHandler(async (req, res) => {
     try {
       const userId = parseInt(req.params.id as string);
-      const { email, fullName, role, active } = req.body;
+      const { email, fullName, role, active, timezone } = req.body;
 
-      logger.info('Actualizando usuario', { userId });
+      logger.info('Actualizando usuario', { userId, timezone });
 
       const updatedUser = await authService.updateUser(userId, {
         ...(email && { email }),
         ...(fullName && { fullName }),
         ...(role && { role }),
         ...(active !== undefined && { active }),
+        ...(timezone && { timezone }),
       });
 
       res.status(200).json({

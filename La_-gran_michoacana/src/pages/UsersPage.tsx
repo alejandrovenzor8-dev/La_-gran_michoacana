@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
-import { apiClient } from '@/lib/apiClient';
+import { Users, Plus, Trash2, Edit2, Loader2, X } from 'lucide-react';
+import { formatDate, MEXICO_TIMEZONES, getConfiguredTimezone } from '@/lib/utils';
+import { userService, type User as ServiceUser } from '@/lib/userService';
 
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  fullName?: string;
+// Extender el tipo User del servicio para la UI
+interface User extends Omit<ServiceUser, 'role'> {
   role: 'ADMIN' | 'CAJERO' | 'GERENTE';
-  active: boolean;
-  createdAt: string;
 }
 
 export default function UsersPage() {
@@ -28,21 +24,33 @@ export default function UsersPage() {
     confirmPassword: '',
     fullName: '',
     role: 'CAJERO' as const,
+    timezone: getConfiguredTimezone(),
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    email: '',
+    fullName: '',
+    role: 'CAJERO' as 'ADMIN' | 'CAJERO' | 'GERENTE',
+    active: true,
+    timezone: getConfiguredTimezone(),
   });
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cargar usuarios al montar el componente
   const loadUsers = async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await apiClient.get('/users');
-      if (response.data) {
-        setUsers(response.data.users || []);
-      }
+      const usersData = await userService.getUsers(100, 0);
+      // Convertir roles de minúsculas a mayúsculas para la UI
+      const usersUI: User[] = usersData.map(u => ({
+        ...u,
+        role: u.role.toUpperCase() as 'ADMIN' | 'CAJERO' | 'GERENTE'
+      }));
+      setUsers(usersUI);
     } catch (err: any) {
       setError(err.message || 'Error al cargar los usuarios. Intenta de nuevo.');
     } finally {
@@ -92,6 +100,7 @@ export default function UsersPage() {
       fullName: user.fullName || '',
       role: user.role,
       active: user.active,
+      timezone: user.timezone || getConfiguredTimezone(),
     });
     setError('');
     setSuccess('');
@@ -102,8 +111,9 @@ export default function UsersPage() {
     setEditFormData({
       email: '',
       fullName: '',
-      role: 'cajero',
+      role: 'CAJERO',
       active: true,
+      timezone: getConfiguredTimezone(),
     });
     setError('');
   };
@@ -137,13 +147,19 @@ export default function UsersPage() {
       const updatedUser = await userService.updateUser(editingId, {
         email: editFormData.email,
         fullName: editFormData.fullName || undefined,
-        role: editFormData.role,
+        role: editFormData.role.toLowerCase() as 'admin' | 'cajero' | 'gerente',
         active: editFormData.active,
+        timezone: editFormData.timezone,
       });
 
-      // Actualizar el usuario en la lista
+      // Actualizar el usuario en la lista (convertir rol a mayúsculas)
+      const userUI: User = {
+        ...updatedUser,
+        role: updatedUser.role.toUpperCase() as 'ADMIN' | 'CAJERO' | 'GERENTE'
+      };
+      
       setUsers((prev) =>
-        prev.map((u) => (u.id === editingId ? updatedUser : u))
+        prev.map((u) => (u.id === editingId ? userUI : u))
       );
 
       setSuccess('Usuario actualizado exitosamente');
@@ -151,8 +167,9 @@ export default function UsersPage() {
       setEditFormData({
         email: '',
         fullName: '',
-        role: 'cajero',
+        role: 'CAJERO',
         active: true,
+        timezone: getConfiguredTimezone(),
       });
 
       setTimeout(() => {
@@ -234,10 +251,23 @@ export default function UsersPage() {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName || undefined,
-        role: formData.role,
+        role: formData.role.toLowerCase() as 'admin' | 'cajero' | 'gerente',
       });
+      
+      // Actualizar timezone del usuario recién creado
+      if (formData.timezone) {
+        await userService.updateUser(newUser.id, {
+          timezone: formData.timezone,
+        });
+      }
 
-      setUsers((prev) => [...prev, newUser]);
+      // Agregar usuario a la lista (convertir rol a mayúsculas)
+      const userUI: User = {
+        ...newUser,
+        role: newUser.role.toUpperCase() as 'ADMIN' | 'CAJERO' | 'GERENTE'
+      };
+      
+      setUsers((prev) => [...prev, userUI]);
       setSuccess(`Usuario "${formData.username}" creado exitosamente`);
       setFormData({
         username: '',
@@ -245,7 +275,8 @@ export default function UsersPage() {
         password: '',
         confirmPassword: '',
         fullName: '',
-        role: 'cajero',
+        role: 'CAJERO',
+        timezone: getConfiguredTimezone(),
       });
 
       setTimeout(() => {
@@ -380,6 +411,25 @@ export default function UsersPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Zona Horaria *
+                    </label>
+                    <select
+                      name="timezone"
+                      value={formData.timezone}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm"
+                      disabled={isSubmitting}
+                    >
+                      {MEXICO_TIMEZONES.map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Contraseña *
                     </label>
                     <input
@@ -505,9 +555,28 @@ export default function UsersPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                       disabled={isSubmitting}
                     >
-                      <option value="cajero">Cajero</option>
-                      <option value="gerente">Gerente</option>
-                      <option value="admin">Administrador</option>
+                      <option value="CAJERO">Cajero</option>
+                      <option value="GERENTE">Gerente</option>
+                      <option value="ADMIN">Administrador</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Zona Horaria *
+                    </label>
+                    <select
+                      name="timezone"
+                      value={editFormData.timezone}
+                      onChange={handleEditInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm"
+                      disabled={isSubmitting}
+                    >
+                      {MEXICO_TIMEZONES.map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -601,7 +670,7 @@ export default function UsersPage() {
                     </div>
 
                     <p className="text-xs text-gray-500 mb-4">
-                      Creado: {new Date(user.createdAt).toLocaleDateString('es-MX')}
+                      Creado: {formatDate(user.createdAt, false)}
                     </p>
 
                     <div className="flex gap-2">

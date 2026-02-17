@@ -4,6 +4,7 @@ import userRoutes from './user.routes.js';
 import productRoutes from './product.routes.js';
 import saleRoutes from './sale.routes.js';
 import { permissionRoutes } from './permission.routes.js';
+import settingsRoutes from './settings.routes.js';
 
 const router = Router();
 
@@ -21,5 +22,8 @@ router.use('/sales', saleRoutes);
 
 // Rutas de permisos y módulos (protegidas)
 router.use('/permissions', permissionRoutes);
+
+// Rutas de configuración del sistema (protegidas, solo admin)
+router.use('/settings', settingsRoutes);
 
 export default router;

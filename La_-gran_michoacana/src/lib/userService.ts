@@ -7,6 +7,7 @@ export interface User {
   fullName: string | null;
   role: 'admin' | 'cajero' | 'gerente';
   active: boolean;
+  timezone: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +25,7 @@ export interface UpdateUserData {
   fullName?: string;
   role?: 'admin' | 'cajero' | 'gerente';
   active?: boolean;
+  timezone?: string;
 }
 
 interface GetUsersResponse {

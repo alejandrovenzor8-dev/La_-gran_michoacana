@@ -18,6 +18,7 @@ interface UpdateUserInput {
   fullName?: string;
   role?: UserRole;
   active?: boolean;
+  timezone?: string;
 }
 
 interface UserFilters {
@@ -196,6 +197,7 @@ class UserService {
         ...(data.fullName !== undefined && { fullName: data.fullName }),
         ...(data.role && { role: data.role }),
         ...(data.active !== undefined && { active: data.active }),
+        ...(data.timezone && { timezone: data.timezone }),
       },
       select: {
         id: true,
@@ -204,6 +206,7 @@ class UserService {
         fullName: true,
         role: true,
         active: true,
+        timezone: true,
         createdAt: true,
         updatedAt: true,
       },
