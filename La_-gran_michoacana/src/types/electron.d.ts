@@ -11,10 +11,20 @@ export interface ElectronAPI {
   clearSession: () => Promise<{ success: boolean }>;
   logout: () => Promise<{ success: boolean }>;
   closeApp: () => void;
+  
+  // Auto-actualización
+  checkForUpdates: () => void;
+  downloadUpdate: () => void;
+  installUpdate: () => void;
+  onUpdateStatus: (callback: (status: string, data?: any) => void) => () => void;
+  onUpdateAvailable: (callback: (info: any) => void) => () => void;
+  onDownloadProgress: (callback: (progress: any) => void) => () => void;
+  onUpdateDownloaded: (callback: (info: any) => void) => () => void;
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    electronAPI?: ElectronAPI;
+    api?: ElectronAPI;
   }
 }

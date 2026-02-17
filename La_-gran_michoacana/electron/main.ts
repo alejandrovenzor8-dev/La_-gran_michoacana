@@ -1,6 +1,12 @@
 import { app, BrowserWindow, screen, ipcMain, session } from 'electron';
 import path from 'path';
 import { printTicket, TicketData } from './printer';
+import { autoUpdater } from 'electron-updater';
+import log from 'electron-log';
+
+// Configurar logging para actualizaciones
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
 
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
@@ -15,6 +21,123 @@ let cartState = {
   items: [],
   total: 0,
 };
+
+// ============================================================
+// SISTEMA DE AUTO-ACTUALIZACIÓN
+// ============================================================
+
+/**
+ * Configura el sistema de auto-actualización
+ */
+function setupAutoUpdater() {
+  // No verificar actualizaciones en desarrollo
+  if (isDev) {
+    log.info('Modo desarrollo: auto-actualización deshabilitada');
+    return;
+  }
+
+  // Configurar auto-updater
+  autoUpdater.autoDownload = false; // No descargar automáticamente
+  autoUpdater.autoInstallOnAppQuit = true; // Instalar al cerrar la app
+  
+  // Verificar actualizaciones al iniciar (después de 3 segundos)
+  setTimeout(() => {
+    log.info('Verificando actualizaciones...');
+    autoUpdater.checkForUpdates();
+  }, 3000);
+
+  // Verificar actualizaciones cada 4 horas
+  setInterval(() => {
+    log.info('Verificación periódica de actualizaciones');
+    autoUpdater.checkForUpdates();
+  }, 4 * 60 * 60 * 1000);
+
+  // Eventos del auto-updater
+  autoUpdater.on('checking-for-update', () => {
+    log.info('Buscando actualizaciones...');
+    sendUpdateStatusToWindows('checking');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    log.info('Actualización disponible:', info.version);
+    sendUpdateStatusToWindows('available', info);
+    
+    // Preguntar al usuario si quiere actualizar
+    if (mainWindow) {
+      mainWindow.webContents.send('update-available', {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    log.info('Sistema actualizado:', info.version);
+    sendUpdateStatusToWindows('not-available', info);
+  });
+
+  autoUpdater.on('error', (err) => {
+    log.error('Error en actualización:', err);
+    sendUpdateStatusToWindows('error', { message: err.message });
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    const message = `Velocidad: ${progressObj.bytesPerSecond} - Descargado: ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
+    log.info(message);
+    sendUpdateStatusToWindows('downloading', progressObj);
+    
+    if (mainWindow) {
+      mainWindow.webContents.send('download-progress', progressObj);
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    log.info('Actualización descargada:', info.version);
+    sendUpdateStatusToWindows('downloaded', info);
+    
+    // Notificar al usuario que puede reiniciar
+    if (mainWindow) {
+      mainWindow.webContents.send('update-downloaded', {
+        version: info.version,
+      });
+    }
+  });
+}
+
+/**
+ * Envía el estado de actualización a todas las ventanas abiertas
+ */
+function sendUpdateStatusToWindows(status: string, data?: any) {
+  const windows = [mainWindow, customerWindow, loginWindow];
+  windows.forEach(win => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('update-status', { status, data });
+    }
+  });
+}
+
+// IPC Handlers para auto-actualización
+ipcMain.on('check-for-updates', () => {
+  if (!isDev) {
+    autoUpdater.checkForUpdates();
+  }
+});
+
+ipcMain.on('download-update', () => {
+  if (!isDev) {
+    autoUpdater.downloadUpdate();
+  }
+});
+
+ipcMain.on('install-update', () => {
+  if (!isDev) {
+    autoUpdater.quitAndInstall(false, true);
+  }
+});
+
+// ============================================================
+// VENTANAS DE LA APLICACIÓN
+// ============================================================
 
 function createLoginWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -246,6 +369,9 @@ ipcMain.on('app:close', () => {
 });
 
 app.whenReady().then(() => {
+  // Configurar sistema de auto-actualización
+  setupAutoUpdater();
+  
   // Solo crear ventana de login al inicio
   createLoginWindow();
 

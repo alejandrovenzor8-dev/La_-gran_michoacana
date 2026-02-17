@@ -13,6 +13,7 @@ import { MainLayout } from './components/MainLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 import { usePermissionsStore } from './stores/permissionsStore';
+import UpdateNotification from './components/UpdateNotification';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -26,7 +27,7 @@ function App() {
     
     // Si hay un usuario autenticado, asegurarse de que tenga permisos inicializados
     if (user) {
-      initializeUserPermissions(user.username, user.role);
+      initializeUserPermissions(user.username, user.role.toLowerCase() as 'admin' | 'cajero' | 'gerente');
     }
   }, [user, initializeUserPermissions]);
 
@@ -116,6 +117,7 @@ function App() {
         expand={false}
         duration={4000}
       />
+      <UpdateNotification />
     </HashRouter>
   );
 }

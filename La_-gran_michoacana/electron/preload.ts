@@ -68,6 +68,58 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeApp: () => {
     ipcRenderer.send('app:close');
   },
+
+  // ============================================================
+  // SISTEMA DE AUTO-ACTUALIZACIÓN
+  // ============================================================
+  
+  // Verificar si hay actualizaciones disponibles
+  checkForUpdates: () => {
+    ipcRenderer.send('check-for-updates');
+  },
+  
+  // Descargar actualización
+  downloadUpdate: () => {
+    ipcRenderer.send('download-update');
+  },
+  
+  // Instalar actualización y reiniciar
+  installUpdate: () => {
+    ipcRenderer.send('install-update');
+  },
+  
+  // Escuchar estado de actualización
+  onUpdateStatus: (callback: (status: string, data?: any) => void) => {
+    const listener = (event: any, info: { status: string; data?: any }) => {
+      callback(info.status, info.data);
+    };
+    ipcRenderer.on('update-status', listener);
+    
+    return () => {
+      ipcRenderer.removeListener('update-status', listener);
+    };
+  },
+  
+  // Escuchar cuando hay actualización disponible
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    const listener = (event: any, info: any) => callback(info);
+    ipcRenderer.on('update-available', listener);
+    return () => ipcRenderer.removeListener('update-available', listener);
+  },
+  
+  // Escuchar progreso de descarga
+  onDownloadProgress: (callback: (progress: any) => void) => {
+    const listener = (event: any, progress: any) => callback(progress);
+    ipcRenderer.on('download-progress', listener);
+    return () => ipcRenderer.removeListener('download-progress', listener);
+  },
+  
+  // Escuchar cuando la actualización fue descargada
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    const listener = (event: any, info: any) => callback(info);
+    ipcRenderer.on('update-downloaded', listener);
+    return () => ipcRenderer.removeListener('update-downloaded', listener);
+  },
 });
 
 // Type definitions para TypeScript
@@ -83,6 +135,15 @@ export interface ElectronAPI {
   logout: () => Promise<{ success: boolean }>;
   printTicket: (ticketData: any) => Promise<{ success: boolean; error?: string }>;
   closeApp: () => void;
+  
+  // Auto-actualización
+  checkForUpdates: () => void;
+  downloadUpdate: () => void;
+  installUpdate: () => void;
+  onUpdateStatus: (callback: (status: string, data?: any) => void) => () => void;
+  onUpdateAvailable: (callback: (info: any) => void) => () => void;
+  onDownloadProgress: (callback: (progress: any) => void) => () => void;
+  onUpdateDownloaded: (callback: (info: any) => void) => () => void;
 }
 
 declare global {
