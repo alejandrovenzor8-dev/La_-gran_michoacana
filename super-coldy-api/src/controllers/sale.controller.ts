@@ -174,6 +174,35 @@ class SaleController {
   }
 
   /**
+   * GET /api/sales/stats/daily
+   * Obtener solo las estadísticas de ventas del día
+   * @access Private (CAJERO, GERENTE, ADMIN)
+   * @query date (opcional, formato YYYY-MM-DD)
+   */
+  async getDailyStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { date } = req.query;
+
+      let targetDate: Date | undefined;
+      if (date) {
+        targetDate = new Date(String(date));
+        if (isNaN(targetDate.getTime())) {
+          throw new AppError('Formato de fecha inválido. Use YYYY-MM-DD', 400);
+        }
+      }
+
+      const result = await saleService.getDailySales(targetDate);
+
+      res.status(200).json({
+        success: true,
+        data: result.stats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/sales/stats
    * Obtener estadísticas de ventas
    * @access Private (GERENTE, ADMIN)

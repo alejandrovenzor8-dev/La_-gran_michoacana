@@ -3,6 +3,7 @@ import authRoutes from './auth.routes.js';
 import userRoutes from './user.routes.js';
 import productRoutes from './product.routes.js';
 import saleRoutes from './sale.routes.js';
+import inventoryRoutes from './inventory.routes.js';
 import { permissionRoutes } from './permission.routes.js';
 import settingsRoutes from './settings.routes.js';
 
@@ -19,6 +20,9 @@ router.use('/products', productRoutes);
 
 // Rutas de ventas (protegidas)
 router.use('/sales', saleRoutes);
+
+// Rutas de inventario (protegidas)
+router.use('/inventory', inventoryRoutes);
 
 // Rutas de permisos y módulos (protegidas)
 router.use('/permissions', permissionRoutes);

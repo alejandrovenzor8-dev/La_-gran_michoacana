@@ -58,7 +58,7 @@ function setupAutoUpdater() {
     sendUpdateStatusToWindows('checking');
   });
 
-  autoUpdater.on('update-available', (info) => {
+  autoUpdater.on('update-available', (info: any) => {
     log.info('Actualización disponible:', info.version);
     sendUpdateStatusToWindows('available', info);
     
@@ -71,17 +71,17 @@ function setupAutoUpdater() {
     }
   });
 
-  autoUpdater.on('update-not-available', (info) => {
+  autoUpdater.on('update-not-available', (info: any) => {
     log.info('Sistema actualizado:', info.version);
     sendUpdateStatusToWindows('not-available', info);
   });
 
-  autoUpdater.on('error', (err) => {
+  autoUpdater.on('error', (err: Error) => {
     log.error('Error en actualización:', err);
     sendUpdateStatusToWindows('error', { message: err.message });
   });
 
-  autoUpdater.on('download-progress', (progressObj) => {
+  autoUpdater.on('download-progress', (progressObj: any) => {
     const message = `Velocidad: ${progressObj.bytesPerSecond} - Descargado: ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
     log.info(message);
     sendUpdateStatusToWindows('downloading', progressObj);
@@ -91,7 +91,7 @@ function setupAutoUpdater() {
     }
   });
 
-  autoUpdater.on('update-downloaded', (info) => {
+  autoUpdater.on('update-downloaded', (info: any) => {
     log.info('Actualización descargada:', info.version);
     sendUpdateStatusToWindows('downloaded', info);
     

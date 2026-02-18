@@ -315,6 +315,42 @@ class AuthController {
       next(error);
     }
   }
+
+  /**
+   * Verificar que el token sea válido
+   * GET /api/auth/verify
+   * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   */
+  async verifyToken(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // Verificar que el usuario esté autenticado
+      if (!req.user) {
+        res.status(401).json({
+          status: 'error',
+          message: 'Token inválido o expirado',
+        });
+        return;
+      }
+
+      logger.debug('Verificando token', { userId: req.user.userId });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Token válido',
+        data: {
+          userId: req.user.userId,
+          role: req.user.role,
+        },
+      });
+    } catch (error) {
+      logger.error('Error verificando token:', error);
+      next(error);
+    }
+  }
 }
 
 // Exportar instancia singleton del controlador

@@ -193,5 +193,36 @@ router.get(
   asyncHandler((req, res, next) => authController.getCurrentUser(req, res, next))
 );
 
+/**
+ * GET /api/auth/verify
+ * Verificar que el token sea válido
+ * Requiere autenticación con access token válido
+ *
+ * @example
+ * GET /api/auth/verify
+ * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *
+ * @response 200
+ * {
+ *   "status": "success",
+ *   "message": "Token válido",
+ *   "data": {
+ *     "userId": 1,
+ *     "role": "ADMIN"
+ *   }
+ * }
+ *
+ * @error 401
+ * {
+ *   "status": "error",
+ *   "message": "Token inválido o expirado"
+ * }
+ */
+router.get(
+  '/verify',
+  authenticateToken,
+  asyncHandler((req, res, next) => authController.verifyToken(req, res, next))
+);
+
 export default router;
 

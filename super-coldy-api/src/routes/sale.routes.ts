@@ -100,6 +100,18 @@ router.get(
 );
 
 /**
+ * GET /api/sales/stats/daily
+ * @desc    Obtener estadísticas de ventas del día
+ * @access  Private (CAJERO, GERENTE, ADMIN)
+ * @note    Esta ruta debe estar DESPUÉS de /stats para que coincida correctamente
+ */
+router.get(
+  '/stats/daily',
+  requireRole('CAJERO', 'GERENTE', 'ADMIN'),
+  asyncHandler(saleController.getDailyStats.bind(saleController))
+);
+
+/**
  * GET /api/sales/cashier-cut
  * @desc    Obtener corte de caja del día actual
  * @access  Private (CAJERO, GERENTE, ADMIN)
