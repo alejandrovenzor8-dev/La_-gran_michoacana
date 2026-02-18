@@ -16,57 +16,37 @@ import {
   Button,
   Divider,
   ActivityIndicator,
+  useTheme,
 } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
-import { apiClient } from '../../api/client';
-import type { DailySalesStats, UserStats } from '../../types';
+import { saleService } from '../../api/saleService';
+import { inventoryService } from '../../api/inventoryService';
+import type { DailySalesStats } from '../../types';
+
+const ICON_SIZE = 28;
 
 export default function DashboardScreen() {
-  const { user, logout } = useAuthStore();
+  const theme = useTheme();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [salesStats, setSalesStats] = useState<DailySalesStats | null>(null);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [inventorySummary, setInventorySummary] = useState<any>(null);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      
-      // Cargar estadísticas reales del backend
-      try {
-        const salesResponse = await apiClient.get<{ success: boolean; data: { sales: any[]; stats: DailySalesStats } }>('/sales/daily');
-        console.log('📊 Sales data loaded:', salesResponse.data.stats);
-        setSalesStats(salesResponse.data.stats);
-      } catch (salesError) {
-        console.error('Error loading sales stats:', salesError);
-        // Set null para mostrar "Sin datos"
-        setSalesStats(null);
-      }
-      
-      try {
-        const userResponse = await apiClient.get<any>('/users');
-        console.log('👥 User stats response:', userResponse);
-        
-        // La respuesta tiene estructura { data: { users, pagination }, status }
-        const userData = userResponse?.data || userResponse;
-        const users = userData?.users || userResponse?.users || [];
-        
-        if (Array.isArray(users) && users.length > 0) {
-          const stats: UserStats = {
-            total: userData?.pagination?.total || users.length,
-            active: users.filter((u: any) => u.active === true).length,
-            inactive: users.filter((u: any) => u.active === false).length,
-            byRole: [],
-          };
-          console.log('👥 Calculated stats:', stats);
-          setUserStats(stats);
-        } else {
-          setUserStats(null);
-        }
-      } catch (userError) {
-        console.error('Error loading user stats:', userError);
-        setUserStats(null);
-      }
+
+      const [salesData, inventoryData] = await Promise.all([
+        saleService.getDailySales(),
+        inventoryService.getInventorySummary(),
+      ]);
+
+      setSalesStats(salesData.stats);
+      setInventorySummary(inventoryData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -88,7 +68,7 @@ export default function DashboardScreen() {
     await logout();
   };
 
-  if (isLoading) {
+  if (isLoading && !refreshing) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" />
@@ -105,124 +85,206 @@ export default function DashboardScreen() {
       }
     >
       {/* Header con info del usuario */}
-      <Card style={styles.card}>
+      <Card style={[styles.card, { backgroundColor: theme.colors.primary + '10' }]}>
         <Card.Content>
-          <Text variant="titleLarge">¡Hola, {user?.fullName || user?.username}! 👋</Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
-            Rol: {user?.role} • {new Date().toLocaleDateString('es-MX', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </Text>
+          <View style={styles.headerContent}>
+            <View>
+              <Text variant="titleLarge" style={styles.greeting}>
+                ¡Hola, {user?.fullName || user?.username}! 👋
+              </Text>
+              <Text variant="bodyMedium" style={styles.subtitle}>
+                {user?.role === 'ADMIN' && '👤 Administrador • '}
+                {user?.role === 'GERENTE' && '📊 Gerente • '}
+                {user?.role === 'CAJERO' && '💳 Cajero • '}
+                {new Date().toLocaleDateString('es-ES', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name="wave"
+              size={40}
+              color={theme.colors.primary}
+            />
+          </View>
         </Card.Content>
       </Card>
 
       {/* Ventas del día */}
-      <Card style={styles.card}>
-        <Card.Title title="📊 Ventas del Día" />
-        <Card.Content>
-          {!salesStats ? (
-            <Text variant="bodyMedium" style={styles.noData}>
-              Sin datos disponibles
-            </Text>
-          ) : (
+      {salesStats && (
+        <Card style={styles.card}>
+          <Card.Title
+            title="📊 Ventas de Hoy"
+            subtitle={new Date().toLocaleDateString('es-ES')}
+            left={(props) => <MaterialCommunityIcons name="chart-bar" size={24} color={theme.colors.primary} />}
+          />
+          <Card.Content>
             <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  {salesStats?.totalSales || 0}
+              <View style={[styles.statBox, { backgroundColor: theme.colors.primary + '20' }]}>
+                <MaterialCommunityIcons
+                  name="cash-multiple"
+                  size={ICON_SIZE}
+                  color={theme.colors.primary}
+                />
+                <Text variant="labelSmall" style={styles.statBoxLabel}>
+                  INGRESOS
                 </Text>
-                <Text variant="bodySmall" style={styles.statLabel}>
-                  Ventas
-                </Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  ${typeof salesStats?.totalAmount === 'number' ? salesStats.totalAmount.toFixed(2) : '0.00'}
-                </Text>
-                <Text variant="bodySmall" style={styles.statLabel}>
-                  Ingresos
+                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.primary }]}>
+                  ${salesStats.totalAmount.toFixed(2)}
                 </Text>
               </View>
-              <View style={styles.statItem}>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  ${typeof salesStats?.averageTicket === 'number' ? salesStats.averageTicket.toFixed(2) : '0.00'}
+
+              <View style={[styles.statBox, { backgroundColor: theme.colors.secondary + '20' }]}>
+                <MaterialCommunityIcons
+                  name="credit-card"
+                  size={ICON_SIZE}
+                  color={theme.colors.secondary}
+                />
+                <Text variant="labelSmall" style={styles.statBoxLabel}>
+                  VENTAS
                 </Text>
-                <Text variant="bodySmall" style={styles.statLabel}>
-                  Ticket Promedio
+                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.secondary }]}>
+                  {salesStats.totalSales}
+                </Text>
+              </View>
+
+              <View style={[styles.statBox, { backgroundColor: theme.colors.tertiary + '20' }]}>
+                <MaterialCommunityIcons
+                  name="percent"
+                  size={ICON_SIZE}
+                  color={theme.colors.tertiary}
+                />
+                <Text variant="labelSmall" style={styles.statBoxLabel}>
+                  PROMEDIO
+                </Text>
+                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.tertiary }]}>
+                  ${salesStats.averageTicket.toFixed(2)}
                 </Text>
               </View>
             </View>
-          )}
-        </Card.Content>
-      </Card>
+          </Card.Content>
+        </Card>
+      )}
 
       {/* Métodos de pago */}
-      <Card style={styles.card}>
-        <Card.Title title="💳 Métodos de Pago" />
-        <Card.Content>
-          {!salesStats?.salesByPaymentMethod || Object.keys(salesStats.salesByPaymentMethod).length === 0 ? (
-            <Text variant="bodyMedium" style={styles.noData}>
-              Sin transacciones registradas
-            </Text>
-          ) : (
-            <>
-              <View style={styles.paymentRow}>
-                <Text>💵 Efectivo:</Text>
-                <Text style={styles.bold}>
-                  {salesStats?.salesByPaymentMethod?.EFECTIVO || 0} ventas
+      {salesStats && (
+        <Card style={styles.card}>
+          <Card.Title
+            title="💳 Métodos de Pago"
+            left={(props) => <MaterialCommunityIcons name="wallet" size={24} color="#ef4444" />}
+          />
+          <Card.Content>
+            <View style={styles.paymentRow}>
+              <View style={styles.paymentLeft}>
+                <MaterialCommunityIcons
+                  name="cash"
+                  size={24}
+                  color={theme.colors.primary}
+                />
+                <Text variant="bodyMedium" style={styles.paymentLabel}>
+                  Efectivo
                 </Text>
               </View>
-              <Divider style={styles.divider} />
-              <View style={styles.paymentRow}>
-                <Text>💳 Tarjeta:</Text>
-                <Text style={styles.bold}>
-                  {salesStats?.salesByPaymentMethod?.TARJETA || 0} ventas
-                </Text>
-              </View>
-              <Divider style={styles.divider} />
-              <View style={styles.paymentRow}>
-                <Text>🔀 Mixto:</Text>
-                <Text style={styles.bold}>
-                  {salesStats?.salesByPaymentMethod?.MIXTO || 0} ventas
-                </Text>
-              </View>
-            </>
-          )}
-        </Card.Content>
-      </Card>
+              <Text variant="titleMedium" style={styles.paymentAmount}>
+                ${salesStats.salesByPaymentMethod.EFECTIVO.toFixed(2)}
+              </Text>
+            </View>
 
-      {/* Usuarios */}
-      <Card style={styles.card}>
-        <Card.Title title="👥 Usuarios" />
-        <Card.Content>
-          {!userStats ? (
-            <Text variant="bodyMedium" style={styles.noData}>
-              Sin datos disponibles
-            </Text>
-          ) : (
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  {userStats?.active || 0}
-                </Text>
-                <Text variant="bodySmall" style={styles.statLabel}>
-                  Activos
+            <Divider style={styles.divider} />
+
+            <View style={styles.paymentRow}>
+              <View style={styles.paymentLeft}>
+                <MaterialCommunityIcons
+                  name="credit-card"
+                  size={24}
+                  color={theme.colors.secondary}
+                />
+                <Text variant="bodyMedium" style={styles.paymentLabel}>
+                  Tarjeta
                 </Text>
               </View>
-              <View style={styles.statItem}>
-                <Text variant="headlineMedium" style={styles.statValue}>
-                  {userStats?.total || 0}
+              <Text variant="titleMedium" style={styles.paymentAmount}>
+                ${salesStats.salesByPaymentMethod.TARJETA.toFixed(2)}
+              </Text>
+            </View>
+
+            <Divider style={styles.divider} />
+
+            <View style={styles.paymentRow}>
+              <View style={styles.paymentLeft}>
+                <MaterialCommunityIcons
+                  name="swap-horizontal"
+                  size={24}
+                  color={theme.colors.tertiary}
+                />
+                <Text variant="bodyMedium" style={styles.paymentLabel}>
+                  Mixto
                 </Text>
-                <Text variant="bodySmall" style={styles.statLabel}>
-                  Total
+              </View>
+              <Text variant="titleMedium" style={styles.paymentAmount}>
+                ${salesStats.salesByPaymentMethod.MIXTO.toFixed(2)}
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
+      {/* Inventario */}
+      {inventorySummary && (
+        <Card style={styles.card}>
+          <Card.Title
+            title="📦 Estado del Inventario"
+            left={(props) => <MaterialCommunityIcons name="package-multiple" size={24} color="#10b981" />}
+          />
+          <Card.Content>
+            <View style={styles.inventoryGrid}>
+              <View style={[styles.inventoryBox, { backgroundColor: '#f0f9ff' }]}>
+                <MaterialCommunityIcons
+                  name="package-multiple"
+                  size={ICON_SIZE}
+                  color="#0284c7"
+                />
+                <Text variant="labelSmall" style={styles.inventoryLabel}>
+                  TOTAL
+                </Text>
+                <Text variant="headlineSmall" style={styles.inventoryValue}>
+                  {inventorySummary.totalProducts}
+                </Text>
+              </View>
+
+              <View style={[styles.inventoryBox, { backgroundColor: '#fef3c7' }]}>
+                <MaterialCommunityIcons
+                  name="alert-circle"
+                  size={ICON_SIZE}
+                  color="#f59e0b"
+                />
+                <Text variant="labelSmall" style={styles.inventoryLabel}>
+                  BAJO STOCK
+                </Text>
+                <Text variant="headlineSmall" style={styles.inventoryValue}>
+                  {inventorySummary.lowStockCount}
+                </Text>
+              </View>
+
+              <View style={[styles.inventoryBox, { backgroundColor: '#fee2e2' }]}>
+                <MaterialCommunityIcons
+                  name="close-circle"
+                  size={ICON_SIZE}
+                  color="#ef4444"
+                />
+                <Text variant="labelSmall" style={styles.inventoryLabel}>
+                  AGOTADO
+                </Text>
+                <Text variant="headlineSmall" style={styles.inventoryValue}>
+                  {inventorySummary.outOfStockCount}
                 </Text>
               </View>
             </View>
-          )}
-        </Card.Content>
-      </Card>
+          </Card.Content>
+        </Card>
+      )}
 
       {/* Botón de logout */}
       <Button
@@ -254,48 +316,93 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   card: {
-    margin: 16,
-    marginBottom: 8,
-    elevation: 2,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    marginTop: 8,
+    elevation: 1,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  greeting: {
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   subtitle: {
-    marginTop: 4,
     color: '#6b7280',
   },
   statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 8,
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 12,
   },
-  statItem: {
+  statBox: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  statValue: {
-    fontWeight: 'bold',
-    color: '#2563eb',
-  },
-  statLabel: {
-    marginTop: 4,
+  statBoxLabel: {
+    marginTop: 8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
     color: '#6b7280',
+    fontSize: 10,
   },
-  noData: {
-    color: '#9ca3af',
-    textAlign: 'center',
-    paddingVertical: 16,
+  statBoxValue: {
+    marginTop: 4,
+    fontWeight: 'bold',
   },
   paymentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    alignItems: 'center',
+    paddingVertical: 12,
   },
-  bold: {
+  paymentLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  paymentLabel: {
+    fontWeight: '500',
+  },
+  paymentAmount: {
     fontWeight: 'bold',
   },
   divider: {
     marginVertical: 4,
   },
+  inventoryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 12,
+  },
+  inventoryBox: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inventoryLabel: {
+    marginTop: 8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+    color: '#6b7280',
+    fontSize: 10,
+  },
+  inventoryValue: {
+    marginTop: 4,
+    fontWeight: 'bold',
+  },
   logoutButton: {
-    margin: 16,
+    marginHorizontal: 16,
     marginTop: 24,
   },
   spacer: {
