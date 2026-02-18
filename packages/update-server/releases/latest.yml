@@ -1,8 +1,8 @@
-version: 1.0.0
+version: 1.0.1
 files:
-  - url: La Gran Michoacana Setup 1.0.0.exe
-    sha512: rlIv/D/EqAOuuxpmy/YdyA8KMMHLHmZQQ9kril10yO2ciWxBkAOBGxUnE+05YxrFPO14ApzmXQOZtaV5GTCiww==
-    size: 102145678
-path: La Gran Michoacana Setup 1.0.0.exe
-sha512: rlIv/D/EqAOuuxpmy/YdyA8KMMHLHmZQQ9kril10yO2ciWxBkAOBGxUnE+05YxrFPO14ApzmXQOZtaV5GTCiww==
-releaseDate: '2026-02-18T05:20:19.270Z'
+  - url: La Gran Michoacana Setup 1.0.1.exe
+    sha512: Hu+fSUmjY3FTs3Oncyq9N7VbIyJ5u6nKerV4Q6RNWpSm7UBlP9Pif3bTXYqqJzfY/xi8X2vkDrVyaErbzIJR0A==
+    size: 102145679
+path: La Gran Michoacana Setup 1.0.1.exe
+sha512: Hu+fSUmjY3FTs3Oncyq9N7VbIyJ5u6nKerV4Q6RNWpSm7UBlP9Pif3bTXYqqJzfY/xi8X2vkDrVyaErbzIJR0A==
+releaseDate: '2026-02-18T07:27:24.109Z'
