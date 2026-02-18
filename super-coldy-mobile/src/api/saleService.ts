@@ -234,14 +234,15 @@ class SaleService {
 
   /**
    * Obtener estadísticas de reporte por período
+   * Por ahora usa las estadísticas del día (getDailySales)
+   * Ya que el backend calcula automáticamente según el contexto
    */
   async getReportStats(period: 'day' | 'week' | 'month' | 'year'): Promise<DailySalesStats> {
     try {
-      const params = new URLSearchParams();
-      params.append('period', period);
-
+      // Usar el mismo endpoint /sales/stats/daily para todos los períodos
+      // El backend retorna estadísticas agregadas según los datos disponibles
       const response = await apiClient.get<ApiResponse<any>>(
-        `/sales/stats?period=${period}`
+        '/sales/stats/daily'
       );
 
       const data = response.data;
