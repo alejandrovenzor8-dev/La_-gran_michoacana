@@ -82,7 +82,7 @@
     },
     "publish": {
       "provider": "generic",
-      "url": "https://supercoldy-updates.railway.app/"
+      "url": "https://update-server-production-7900.up.railway.app/"
     },
     "mac": {
       "target": [

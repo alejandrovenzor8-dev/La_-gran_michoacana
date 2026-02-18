@@ -38,13 +38,10 @@ export default function UpdateNotification() {
           duration: 10000,
         });
       } else if (status === 'error') {
-        toast.error('Error al buscar actualizaciones', {
-          description: data?.message,
-        });
+        // No mostrar errores de actualización al usuario final
+        console.warn('Error de auto-actualización:', data?.message);
       } else if (status === 'not-available') {
-        toast.success('Sistema actualizado', {
-          description: 'Tienes la última versión',
-        });
+        // No mostrar toast cuando no hay actualizaciones (es el caso normal)
       }
     });
 

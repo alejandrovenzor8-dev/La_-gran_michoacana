@@ -13,7 +13,9 @@ let customerWindow: BrowserWindow | null = null;
 let loginWindow: BrowserWindow | null = null;
 let isLoggingOut = false; // Bandera para evitar que app.quit() se ejecute durante logout
 
-const isDev = process.env.NODE_ENV !== 'production';
+// app.isPackaged es true SOLO cuando corre desde el instalador/build de producción
+// process.env.NODE_ENV puede ser undefined en producción y causar pantalla en blanco
+const isDev = !app.isPackaged;
 const VITE_DEV_SERVER_URL = 'http://localhost:5173';
 
 // Estado del carrito compartido
@@ -78,6 +80,11 @@ function setupAutoUpdater() {
 
   autoUpdater.on('error', (err: Error) => {
     log.error('Error en actualización:', err);
+    // Si es 404, el servidor no tiene releases aún → tratar como no disponible
+    if (err.message.includes('404') || err.message.includes('ERR_CONNECTION_REFUSED')) {
+      log.info('Servidor de actualizaciones no disponible (404), omitiendo...');
+      return;
+    }
     sendUpdateStatusToWindows('error', { message: err.message });
   });
 
