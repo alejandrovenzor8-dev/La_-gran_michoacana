@@ -71,10 +71,10 @@ function generateTicketHTML(data: TicketData): string {
       </head>
       <body style="margin: 0; padding: 10px;">
         <div style="${headerStyles}">
-          🍦 Super Coldy
+          🍦 La Michoacana
         </div>
         <div style="${centerStyles}">
-          Michoacana
+          La Gran Michoacana
         </div>
         
         <div style="${centerStyles}">

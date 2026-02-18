@@ -55,7 +55,7 @@ function AdminTabs() {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: '🍦 Super Coldy' }}
+        options={{ title: '🍦 La Michoacana' }}
       />
       <Tab.Screen
         name="Reports"

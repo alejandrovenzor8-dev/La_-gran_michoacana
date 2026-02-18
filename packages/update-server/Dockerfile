@@ -1,4 +1,4 @@
-# Servidor de Actualizaciones - Super Coldy POS
+# Servidor de Actualizaciones - La Michoacana POS
 # Archivo Dockerfile para desplegar en Railway
 
 FROM nginx:alpine

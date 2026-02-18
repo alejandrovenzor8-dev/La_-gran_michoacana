@@ -331,7 +331,7 @@ async function main() {
   await prisma.config.create({
     data: {
       key: 'BUSINESS_NAME',
-      value: 'La Gran Michoacana - Super Coldy',
+      value: 'La Gran Michoacana',
     },
   });
 }

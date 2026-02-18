@@ -2,7 +2,7 @@
 # Los archivos .exe se copiarán aquí antes del deploy
 
 Este directorio almacenará:
-- Super Coldy POS Setup X.Y.Z.exe
+- La Michoacana POS Setup X.Y.Z.exe
 - latest.yml
 
 Copiar desde La_-gran_michoacana/release/ después de cada build.

@@ -57,7 +57,7 @@ export default function LoginScreen() {
               🍦
             </Text>
             <Text variant="headlineLarge" style={styles.title}>
-              Super Coldy
+              La Michoacana
             </Text>
             <Text variant="bodyLarge" style={styles.subtitle}>
               Panel de Administración

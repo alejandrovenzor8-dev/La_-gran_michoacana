@@ -2,7 +2,7 @@
   "name": "super-coldy-api",
   "version": "1.0.0",
   "type": "module",
-  "description": "Backend API REST para Super Coldy POS",
+  "description": "Backend API REST para La Michoacana POS",
   "main": "dist/src/server.js",
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
@@ -20,7 +20,7 @@
     "node": ">=18.0.0"
   },
   "keywords": ["pos", "api", "express", "typescript"],
-  "author": "Super Coldy Team",
+  "author": "La Michoacana Team",
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "5.22.0",

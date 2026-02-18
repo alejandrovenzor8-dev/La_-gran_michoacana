@@ -147,7 +147,7 @@ function createLoginWindow() {
     y: primaryDisplay.bounds.y,
     width: primaryDisplay.bounds.width,
     height: primaryDisplay.bounds.height,
-    title: 'Super Coldy POS - Login',
+    title: 'La Michoacana POS - Login',
     resizable: true,
     fullscreen: true,
     webPreferences: {

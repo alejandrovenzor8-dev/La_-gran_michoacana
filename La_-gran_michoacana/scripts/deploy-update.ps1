@@ -1,5 +1,5 @@
 # Script de Deploy de Actualización a Railway
-# Super Coldy POS - La Gran Michoacana
+# La Michoacana POS - La Gran Michoacana
 
 param(
     [Parameter(Mandatory=$true)]
@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 Write-Host ""
 Write-Host "🚀 =================================================" -ForegroundColor Cyan
 Write-Host "   Deploy de Actualización v$Version" -ForegroundColor Cyan
-Write-Host "   Super Coldy POS - La Gran Michoacana" -ForegroundColor Cyan
+Write-Host "   La Michoacana POS - La Gran Michoacana" -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 Write-Host ""
 
