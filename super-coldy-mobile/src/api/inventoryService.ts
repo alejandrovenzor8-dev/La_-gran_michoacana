@@ -111,9 +111,18 @@ class InventoryService {
   async getLowStockProducts(): Promise<Product[]> {
     try {
       const response = await apiClient.get<ApiResponse<{ products: Product[] }>>(
-        '/inventory/low-stock'
+        '/products/low-stock'
       );
-      return response.data.products || [];
+      
+      const products = (response.data.products || []).map(p => ({
+        ...p,
+        price: p.price ?? 0,
+        cost: p.cost ?? 0,
+        stock: p.stock ?? 0,
+        minStock: p.minStock ?? 0,
+      }));
+      
+      return products;
     } catch (error) {
       console.error('Error fetching low stock products:', error);
       return [];

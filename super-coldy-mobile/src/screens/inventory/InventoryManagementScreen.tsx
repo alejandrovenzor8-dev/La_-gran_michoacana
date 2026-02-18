@@ -25,6 +25,12 @@ import { productService } from '../../api/productService';
 import { inventoryService } from '../../api/inventoryService';
 import type { Product } from '../../types';
 
+// Helper function para formatear precios de forma segura
+const formatPrice = (value: any): string => {
+  const num = Number(value);
+  return isNaN(num) ? '0.00' : num.toFixed(2);
+};
+
 export default function InventoryManagementScreen() {
   const theme = useTheme();
   const [isLoading, setIsLoading] = useState(true);
@@ -133,7 +139,7 @@ export default function InventoryManagementScreen() {
                 PRECIO
               </Text>
               <Text variant="titleSmall" style={styles.price}>
-                ${item.price.toFixed(2)}
+                ${formatPrice(item.price)}
               </Text>
             </View>
           </View>
@@ -220,7 +226,7 @@ export default function InventoryManagementScreen() {
             mode={selectedTab === 'all' ? 'contained' : 'outlined'}
             onPress={() => setSelectedTab('all')}
             style={styles.tab}
-            icon="package-multiple"
+            icon="package-variant"
           >
             Todos ({products.length})
           </Button>

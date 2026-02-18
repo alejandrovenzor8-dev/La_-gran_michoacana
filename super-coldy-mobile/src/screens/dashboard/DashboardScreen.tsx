@@ -17,17 +17,22 @@ import {
   Divider,
   ActivityIndicator,
   useTheme,
+  IconButton,
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../stores/authStore';
 import { saleService } from '../../api/saleService';
 import { inventoryService } from '../../api/inventoryService';
+import { productService } from '../../api/productService';
+import { userService } from '../../api/userService';
 import type { DailySalesStats } from '../../types';
 
 const ICON_SIZE = 28;
 
 export default function DashboardScreen() {
   const theme = useTheme();
+  const navigation = useNavigation<any>();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   
@@ -35,18 +40,24 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [salesStats, setSalesStats] = useState<DailySalesStats | null>(null);
   const [inventorySummary, setInventorySummary] = useState<any>(null);
+  const [productStats, setProductStats] = useState<any>(null);
+  const [userStats, setUserStats] = useState<any>(null);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
 
-      const [salesData, inventoryData] = await Promise.all([
+      const [salesData, inventoryData, prodStats, userStatsData] = await Promise.all([
         saleService.getDailySales(),
         inventoryService.getInventorySummary(),
+        productService.getProductStats(),
+        userService.getUserStats(),
       ]);
 
       setSalesStats(salesData.stats);
       setInventorySummary(inventoryData);
+      setProductStats(prodStats);
+      setUserStats(userStatsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -236,13 +247,13 @@ export default function DashboardScreen() {
         <Card style={styles.card}>
           <Card.Title
             title="📦 Estado del Inventario"
-            left={(props) => <MaterialCommunityIcons name="package-multiple" size={24} color="#10b981" />}
+            left={(props) => <MaterialCommunityIcons name="package-variant" size={24} color="#10b981" />}
           />
           <Card.Content>
             <View style={styles.inventoryGrid}>
               <View style={[styles.inventoryBox, { backgroundColor: '#f0f9ff' }]}>
                 <MaterialCommunityIcons
-                  name="package-multiple"
+                  name="package-variant"
                   size={ICON_SIZE}
                   color="#0284c7"
                 />
@@ -285,6 +296,88 @@ export default function DashboardScreen() {
           </Card.Content>
         </Card>
       )}
+
+      {/* Acciones Rápidas */}
+      <Card style={styles.card}>
+        <Card.Title title="⚡ Acciones Rápidas" />
+        <Card.Content>
+          <View style={styles.quickActionsGrid}>
+            {/* Inventario */}
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Inventory')}
+              contentStyle={styles.actionButtonContent}
+              icon="package-variant"
+              style={styles.actionButton}
+            >
+              Inventario
+            </Button>
+
+            {/* Usuarios */}
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Users')}
+              contentStyle={styles.actionButtonContent}
+              icon="account-multiple"
+              style={styles.actionButton}
+            >
+              Usuarios
+            </Button>
+
+            {/* Reportes */}
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Reports')}
+              contentStyle={styles.actionButtonContent}
+              icon="chart-line"
+              style={styles.actionButton}
+            >
+              Reportes
+            </Button>
+
+            {/* Sincronizar */}
+            <Button
+              mode="outlined"
+              onPress={onRefresh}
+              contentStyle={styles.actionButtonContent}
+              icon="refresh"
+              style={styles.actionButton}
+            >
+              Actualizar
+            </Button>
+          </View>
+        </Card.Content>
+      </Card>
+
+      {/* Estadísticas Rápidas */}
+      <Card style={styles.card}>
+        <Card.Title title="📊 Resumen General" />
+        <Card.Content>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <MaterialCommunityIcons name="package-variant" size={24} color={theme.colors.primary} />
+              <Text variant="labelSmall" style={styles.summaryLabel}>Productos</Text>
+              <Text variant="labelLarge" style={styles.summaryValue}>{productStats?.total || 0}</Text>
+            </View>
+
+            <Divider style={styles.verticalDivider} />
+
+            <View style={styles.summaryItem}>
+              <MaterialCommunityIcons name="account-multiple" size={24} color={theme.colors.secondary} />
+              <Text variant="labelSmall" style={styles.summaryLabel}>Usuarios</Text>
+              <Text variant="labelLarge" style={styles.summaryValue}>{userStats?.total || 0}</Text>
+            </View>
+
+            <Divider style={styles.verticalDivider} />
+
+            <View style={styles.summaryItem}>
+              <MaterialCommunityIcons name="check-circle" size={24} color="#10b981" />
+              <Text variant="labelSmall" style={styles.summaryLabel}>Activos</Text>
+              <Text variant="labelLarge" style={styles.summaryValue}>{userStats?.active || 0}</Text>
+            </View>
+          </View>
+        </Card.Content>
+      </Card>
 
       {/* Botón de logout */}
       <Button
@@ -400,6 +493,45 @@ const styles = StyleSheet.create({
   inventoryValue: {
     marginTop: 4,
     fontWeight: 'bold',
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  actionButton: {
+    width: '48%',
+    marginBottom: 8,
+  },
+  actionButtonContent: {
+    flexDirection: 'column-reverse',
+    paddingVertical: 8,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  summaryItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryLabel: {
+    marginTop: 6,
+    color: '#6b7280',
+    fontSize: 10,
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 40,
+    marginHorizontal: 12,
   },
   logoutButton: {
     marginHorizontal: 16,
