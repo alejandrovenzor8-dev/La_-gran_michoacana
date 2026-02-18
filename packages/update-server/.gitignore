@@ -1,0 +1,4 @@
+# Allow release files to be included in git/railway builds
+# (overrides root .gitignore which matches "release")
+!releases/
+!releases/**
