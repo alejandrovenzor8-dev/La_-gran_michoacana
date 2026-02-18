@@ -20,11 +20,15 @@ import {
   useTheme,
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { useAuthStore } from '../../stores/authStore';
 import { saleService } from '../../api/saleService';
 import type { DailySalesStats } from '../../types';
 
 type ReportPeriod = 'day' | 'week' | 'month' | 'year';
+
+const screenWidth = Dimensions.get('window').width;
+const chartWidth = screenWidth - 32;
 
 export default function ReportsScreen() {
   const theme = useTheme();
@@ -34,6 +38,8 @@ export default function ReportsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statsData, setStatsData] = useState<DailySalesStats | null>(null);
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
 
   const loadStats = async () => {
     try {
@@ -51,6 +57,17 @@ export default function ReportsScreen() {
       }
       
       setStatsData(salesData.stats);
+
+      // Cargar datos para gráficas
+      if (selectedPeriod === 'week' || selectedPeriod === 'month') {
+        const weeklyTrend = await saleService.getWeeklyTrend();
+        setWeeklyData(weeklyTrend);
+      }
+
+      if (selectedPeriod === 'month' || selectedPeriod === 'year') {
+        const monthlyComparison = await saleService.getMonthlyComparison();
+        setMonthlyData(monthlyComparison);
+      }
     } catch (error) {
       console.error('Error loading stats:', error);
       setStatsData(null);
@@ -74,6 +91,87 @@ export default function ReportsScreen() {
     week: 'Esta Semana',
     month: 'Este Mes',
     year: 'Este Año',
+  };
+
+  // Preparar datos para gráfica de línea (tendencia semanal)
+  const prepareLineChartData = () => {
+    if (!weeklyData || weeklyData.length === 0) {
+      return {
+        labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'],
+        datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }],
+      };
+    }
+
+    const labels = weeklyData.map((item: any) => item.day?.substring(0, 3) || '');
+    const data = weeklyData.map((item: any) => parseFloat(item.totalSales || item.sales || '0'));
+
+    return {
+      labels: labels.length > 0 ? labels : ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'],
+      datasets: [{ data: data.length > 0 ? data : [0, 0, 0, 0, 0, 0, 0] }],
+    };
+  };
+
+  // Preparar datos para gráfica de barras (comparación mensual)
+  const prepareBarChartData = () => {
+    if (!monthlyData || monthlyData.length === 0) {
+      return {
+        labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+        datasets: [{ data: [0, 0, 0, 0] }],
+      };
+    }
+
+    const labels = monthlyData.map((item: any) => item.week || `Sem ${item.weekNumber || ''}`);
+    const data = monthlyData.map((item: any) => parseFloat(item.totalSales || item.sales || '0'));
+
+    return {
+      labels: labels.length > 0 ? labels : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+      datasets: [{ data: data.length > 0 ? data : [0, 0, 0, 0] }],
+    };
+  };
+
+  // Preparar datos para gráfica de pastel (métodos de pago)
+  const preparePieChartData = () => {
+    if (!statsData) {
+      return [
+        { name: 'Efectivo', population: 0, color: '#1976D2', legendFontColor: '#666' },
+        { name: 'Tarjeta', population: 0, color: '#9C27B0', legendFontColor: '#666' },
+        { name: 'Mixto', population: 0, color: '#00BCD4', legendFontColor: '#666' },
+      ];
+    }
+
+    const total =
+      (statsData.salesByPaymentMethod?.EFECTIVO || 0) +
+      (statsData.salesByPaymentMethod?.TARJETA || 0) +
+      (statsData.salesByPaymentMethod?.MIXTO || 0);
+
+    if (total === 0) {
+      return [
+        { name: 'Efectivo', population: 0, color: '#1976D2', legendFontColor: '#666' },
+        { name: 'Tarjeta', population: 0, color: '#9C27B0', legendFontColor: '#666' },
+        { name: 'Mixto', population: 0, color: '#00BCD4', legendFontColor: '#666' },
+      ];
+    }
+
+    return [
+      {
+        name: 'Efectivo',
+        population: statsData.salesByPaymentMethod?.EFECTIVO || 0,
+        color: '#1976D2',
+        legendFontColor: '#666',
+      },
+      {
+        name: 'Tarjeta',
+        population: statsData.salesByPaymentMethod?.TARJETA || 0,
+        color: '#9C27B0',
+        legendFontColor: '#666',
+      },
+      {
+        name: 'Mixto',
+        population: statsData.salesByPaymentMethod?.MIXTO || 0,
+        color: '#00BCD4',
+        legendFontColor: '#666',
+      },
+    ];
   };
 
   return (
@@ -196,9 +294,90 @@ export default function ReportsScreen() {
             </Card>
           </View>
 
-          {/* Métodos de Pago */}
+          {/* Gráfica de pastel - Métodos de Pago */}
           <Card style={styles.card}>
-            <Card.Title title="💳 Métodos de Pago" />
+            <Card.Title title="💳 Distribución de Métodos de Pago" />
+            <Card.Content style={styles.chartContainer}>
+              <PieChart
+                data={preparePieChartData()}
+                width={chartWidth}
+                height={200}
+                chartConfig={{
+                  color: (opacity?: number) => `rgba(26, 255, 146, ${opacity ?? 1})`,
+                }}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="15"
+              />
+            </Card.Content>
+          </Card>
+
+          {/* Gráfica de línea - Tendencia Semanal */}
+          {(selectedPeriod === 'week' || selectedPeriod === 'month') && weeklyData.length > 0 && (
+            <Card style={styles.card}>
+              <Card.Title title="📈 Tendencia de Ventas" />
+              <Card.Content style={styles.chartContainer}>
+                <LineChart
+                  data={prepareLineChartData()}
+                  width={chartWidth}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: '#ffffff',
+                    backgroundGradientFrom: '#ffffff',
+                    backgroundGradientTo: '#ffffff',
+                    decimalPlaces: 0,
+                    color: (opacity?: number) => `rgba(25, 118, 210, ${opacity ?? 1})`,
+                    labelColor: (opacity?: number) => `rgba(102, 102, 102, ${opacity ?? 1})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    propsForDots: {
+                      r: '6',
+                      strokeWidth: '2',
+                      stroke: '#1976D2',
+                    },
+                  }}
+                  bezier
+                  style={styles.chart}
+                />
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* Gráfica de barras - Comparación Mensual */}
+          {(selectedPeriod === 'month' || selectedPeriod === 'year') && monthlyData.length > 0 && (
+            <Card style={styles.card}>
+              <Card.Title title="📊 Comparación por Semanas" />
+              <Card.Content style={styles.chartContainer}>
+                <BarChart
+                  data={prepareBarChartData()}
+                  width={chartWidth}
+                  height={220}
+                  yAxisLabel=""
+                  yAxisSuffix=""
+                  chartConfig={{
+                    backgroundColor: '#ffffff',
+                    backgroundGradientFrom: '#ffffff',
+                    backgroundGradientTo: '#ffffff',
+                    decimalPlaces: 0,
+                    color: (opacity?: number) => `rgba(156, 39, 176, ${opacity ?? 1})`,
+                    labelColor: (opacity?: number) => `rgba(102, 102, 102, ${opacity ?? 1})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '0',
+                    },
+                  }}
+                  style={styles.chart}
+                />
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* Métodos de Pago - Detalle */}
+          <Card style={styles.card}>
+            <Card.Title title="💵 Métodos de Pago - Detalle" />
             <Card.Content>
               <View style={styles.paymentRow}>
                 <MaterialCommunityIcons
@@ -372,6 +551,14 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontWeight: '700',
+  },
+  chartContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
   },
   paymentRow: {
     flexDirection: 'row',
