@@ -1,0 +1,21 @@
+server {
+    listen ${PORT};
+    root /usr/share/nginx/html;
+    autoindex on;
+    autoindex_exact_size off;
+    autoindex_localtime on;
+
+    location / {
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type" always;
+        expires 1h;
+        add_header Cache-Control "public";
+    }
+
+    location = /latest.yml {
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        expires 0;
+    }
+}
