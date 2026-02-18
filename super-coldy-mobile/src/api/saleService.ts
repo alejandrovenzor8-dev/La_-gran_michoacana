@@ -26,12 +26,25 @@ class SaleService {
    */
   async getDailySales(): Promise<{ stats: DailySalesStats }> {
     try {
-      const response = await apiClient.get<ApiResponse<DailySalesStats>>(
+      const response = await apiClient.get<ApiResponse<any>>(
         '/sales/stats/daily'
       );
 
+      const data = response.data;
+      
       return {
-        stats: response.data,
+        stats: {
+          date: new Date().toISOString().split('T')[0],
+          totalSales: data.totalSales || 0,
+          totalAmount: data.totalRevenue || 0,
+          averageTicket: data.averageTicket || 0,
+          salesByPaymentMethod: {
+            EFECTIVO: data.effectivoSales || 0,
+            TARJETA: data.tarjetaSales || 0,
+            MIXTO: data.mixtoSales || 0,
+          },
+          topProducts: data.topProducts || [],
+        },
       };
     } catch (error) {
       console.error('Error fetching daily sales stats:', error);
