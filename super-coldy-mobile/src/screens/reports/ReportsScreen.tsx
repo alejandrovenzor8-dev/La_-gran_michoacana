@@ -58,9 +58,27 @@ export default function ReportsScreen() {
       
       setStatsData(salesData.stats);
 
+      // Calcular fechas según el período
+      let startDate = new Date();
+      let endDate = new Date();
+
+      switch (selectedPeriod) {
+        case 'day':
+          break;
+        case 'week':
+          startDate.setDate(endDate.getDate() - 6);
+          break;
+        case 'month':
+          startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+          break;
+        case 'year':
+          startDate = new Date(endDate.getFullYear(), 0, 1);
+          break;
+      }
+
       // Siempre cargar datos para gráficas
       try {
-        const weeklyTrend = await saleService.getWeeklyTrend();
+        const weeklyTrend = await saleService.getWeeklyTrend(startDate, endDate);
         console.log('Weekly trend data:', weeklyTrend);
         setWeeklyData(weeklyTrend || []);
       } catch (error) {
@@ -69,7 +87,7 @@ export default function ReportsScreen() {
       }
 
       try {
-        const monthlyComparison = await saleService.getMonthlyComparison();
+        const monthlyComparison = await saleService.getMonthlyComparison(startDate, endDate);
         console.log('Monthly comparison data:', monthlyComparison);
         setMonthlyData(monthlyComparison || []);
       } catch (error) {

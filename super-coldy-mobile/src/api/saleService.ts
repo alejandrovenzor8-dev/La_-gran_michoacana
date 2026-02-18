@@ -234,19 +234,46 @@ class SaleService {
 
   /**
    * Obtener estadísticas de reporte por período
-   * Por ahora usa las estadísticas del día (getDailySales)
-   * Ya que el backend calcula automáticamente según el contexto
    */
   async getReportStats(period: 'day' | 'week' | 'month' | 'year'): Promise<DailySalesStats> {
     try {
-      // Usar el mismo endpoint /sales/stats/daily para todos los períodos
-      // El backend retorna estadísticas agregadas según los datos disponibles
+      let startDate = new Date();
+      let endDate = new Date();
+
+      // Calcular fechas según el período
+      switch (period) {
+        case 'day':
+          // Hoy solamente
+          break;
+        case 'week':
+          // Últimos 7 días
+          startDate.setDate(endDate.getDate() - 6);
+          break;
+        case 'month':
+          // Este mes
+          startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+          break;
+        case 'year':
+          // Este año
+          startDate = new Date(endDate.getFullYear(), 0, 1);
+          break;
+      }
+
+      // Configurar horas
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+
+      // Usar el endpoint /sales/stats que acepta rango de fechas
+      const params = new URLSearchParams();
+      params.append('startDate', startDate.toISOString());
+      params.append('endDate', endDate.toISOString());
+
       const response = await apiClient.get<ApiResponse<any>>(
-        '/sales/stats/daily'
+        `/sales/stats?${params.toString()}`
       );
 
       const data = response.data;
-      
+
       return {
         date: new Date().toISOString().split('T')[0],
         totalSales: data.totalSales || 0,
