@@ -40,7 +40,7 @@ class InventoryController {
       
       // Calcular valor del inventario
       const inventoryValue = products.reduce(
-        (sum, p) => sum + p.stock * (p.cost || p.price),
+        (sum, p) => sum + p.stock * (Number(p.cost) || Number(p.price)),
         0
       );
 
@@ -56,7 +56,7 @@ class InventoryController {
           }
           acc[p.category].count += 1;
           acc[p.category].units += p.stock;
-          acc[p.category].value += p.stock * (p.cost || p.price);
+          acc[p.category].value += p.stock * (Number(p.cost) || Number(p.price));
           return acc;
         },
         {} as Record<
