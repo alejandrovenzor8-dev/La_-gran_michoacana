@@ -1,0 +1,12 @@
+{
+  "name": "update-server",
+  "version": "1.0.0",
+  "description": "Servidor de actualizaciones para La Gran Michoacana POS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
