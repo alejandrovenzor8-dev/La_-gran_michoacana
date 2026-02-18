@@ -58,15 +58,23 @@ export default function ReportsScreen() {
       
       setStatsData(salesData.stats);
 
-      // Cargar datos para gráficas
-      if (selectedPeriod === 'week' || selectedPeriod === 'month') {
+      // Siempre cargar datos para gráficas
+      try {
         const weeklyTrend = await saleService.getWeeklyTrend();
-        setWeeklyData(weeklyTrend);
+        console.log('Weekly trend data:', weeklyTrend);
+        setWeeklyData(weeklyTrend || []);
+      } catch (error) {
+        console.error('Error fetching weekly trend:', error);
+        setWeeklyData([]);
       }
 
-      if (selectedPeriod === 'month' || selectedPeriod === 'year') {
+      try {
         const monthlyComparison = await saleService.getMonthlyComparison();
-        setMonthlyData(monthlyComparison);
+        console.log('Monthly comparison data:', monthlyComparison);
+        setMonthlyData(monthlyComparison || []);
+      } catch (error) {
+        console.error('Error fetching monthly comparison:', error);
+        setMonthlyData([]);
       }
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -102,8 +110,9 @@ export default function ReportsScreen() {
       };
     }
 
-    const labels = weeklyData.map((item: any) => item.day?.substring(0, 3) || '');
-    const data = weeklyData.map((item: any) => parseFloat(item.totalSales || item.sales || '0'));
+    // El backend retorna array con propiedades: day, ventas, transacciones
+    const labels = weeklyData.map((item: any) => item.day || '');
+    const data = weeklyData.map((item: any) => parseFloat(item.ventas || '0'));
 
     return {
       labels: labels.length > 0 ? labels : ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'],
@@ -120,8 +129,9 @@ export default function ReportsScreen() {
       };
     }
 
-    const labels = monthlyData.map((item: any) => item.week || `Sem ${item.weekNumber || ''}`);
-    const data = monthlyData.map((item: any) => parseFloat(item.totalSales || item.sales || '0'));
+    // El backend retorna array con propiedades: periodo, ventas
+    const labels = monthlyData.map((item: any) => item.periodo || '');
+    const data = monthlyData.map((item: any) => parseFloat(item.ventas || '0'));
 
     return {
       labels: labels.length > 0 ? labels : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
@@ -313,7 +323,7 @@ export default function ReportsScreen() {
           </Card>
 
           {/* Gráfica de línea - Tendencia Semanal */}
-          {(selectedPeriod === 'week' || selectedPeriod === 'month') && weeklyData.length > 0 && (
+          {weeklyData && weeklyData.length > 0 && (
             <Card style={styles.card}>
               <Card.Title title="📈 Tendencia de Ventas" />
               <Card.Content style={styles.chartContainer}>
@@ -345,7 +355,7 @@ export default function ReportsScreen() {
           )}
 
           {/* Gráfica de barras - Comparación Mensual */}
-          {(selectedPeriod === 'month' || selectedPeriod === 'year') && monthlyData.length > 0 && (
+          {monthlyData && monthlyData.length > 0 && (
             <Card style={styles.card}>
               <Card.Title title="📊 Comparación por Semanas" />
               <Card.Content style={styles.chartContainer}>
