@@ -128,17 +128,21 @@ class InventoryService {
     totalValue: number;
     lowStockCount: number;
     outOfStockCount: number;
+    totalUnits: number;
   } | null> {
     try {
       const response = await apiClient.get<
-        ApiResponse<{
-          totalProducts: number;
-          totalValue: number;
-          lowStockCount: number;
-          outOfStockCount: number;
-        }>
+        ApiResponse<any>
       >('/inventory/summary');
-      return response.data;
+      
+      const data = response.data;
+      return {
+        totalProducts: data.totalProducts || 0,
+        totalValue: data.inventoryValue || 0,
+        lowStockCount: data.lowStockCount || 0,
+        outOfStockCount: data.outOfStockCount || 0,
+        totalUnits: data.totalUnits || 0,
+      };
     } catch (error) {
       console.error('Error fetching inventory summary:', error);
       return null;

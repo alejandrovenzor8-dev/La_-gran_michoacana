@@ -132,7 +132,7 @@ export default function DashboardScreen() {
                   INGRESOS
                 </Text>
                 <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.primary }]}>
-                  ${salesStats.totalAmount.toFixed(2)}
+                  ${(salesStats?.totalAmount || 0).toFixed(2)}
                 </Text>
               </View>
 
@@ -146,7 +146,7 @@ export default function DashboardScreen() {
                   VENTAS
                 </Text>
                 <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.secondary }]}>
-                  {salesStats.totalSales}
+                  {salesStats?.totalSales || 0}
                 </Text>
               </View>
 
@@ -160,7 +160,7 @@ export default function DashboardScreen() {
                   PROMEDIO
                 </Text>
                 <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.tertiary }]}>
-                  ${salesStats.averageTicket.toFixed(2)}
+                  ${(salesStats?.averageTicket || 0).toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -188,7 +188,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <Text variant="titleMedium" style={styles.paymentAmount}>
-                ${salesStats.salesByPaymentMethod.EFECTIVO.toFixed(2)}
+                ${(salesStats?.salesByPaymentMethod?.EFECTIVO || 0).toFixed(2)}
               </Text>
             </View>
 
@@ -206,7 +206,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <Text variant="titleMedium" style={styles.paymentAmount}>
-                ${salesStats.salesByPaymentMethod.TARJETA.toFixed(2)}
+                ${(salesStats?.salesByPaymentMethod?.TARJETA || 0).toFixed(2)}
               </Text>
             </View>
 
@@ -224,7 +224,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <Text variant="titleMedium" style={styles.paymentAmount}>
-                ${salesStats.salesByPaymentMethod.MIXTO.toFixed(2)}
+                ${(salesStats?.salesByPaymentMethod?.MIXTO || 0).toFixed(2)}
               </Text>
             </View>
           </Card.Content>
