@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiClient } from '../api/client';
+import { authService } from '../api/authService';
 import { storage } from '../utils/storage';
 import type { User, AuthResponse } from '../types';
 
@@ -20,8 +21,10 @@ interface AuthStore {
   // Actions
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  refreshAccessToken: () => Promise<boolean>;
   clearError: () => void;
   initialize: () => Promise<void>;
+  updateProfile: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -41,11 +44,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiClient.post<AuthResponse>('/auth/login', {
-            username,
-            password,
-          });
-
+          const response = await authService.login(username, password);
           const { user, accessToken, refreshToken } = response.data;
 
           // Guardar token en el cliente
@@ -76,9 +75,47 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       /**
+       * Refrescar token de acceso
+       */
+      refreshAccessToken: async () => {
+        const state = get();
+        if (!state.refreshToken) {
+          console.warn('⚠️ No refresh token available');
+          return false;
+        }
+
+        try {
+          const { accessToken, refreshToken } = await authService.refreshToken(state.refreshToken);
+          await apiClient.setToken(accessToken);
+
+          set({
+            accessToken,
+            refreshToken,
+            error: null,
+          });
+
+          console.log('✅ Token refrescado exitosamente');
+          return true;
+        } catch (error: any) {
+          console.error('❌ Error refrescando token:', error);
+          // Si falla el refresh, hacer logout
+          await get().logout();
+          return false;
+        }
+      },
+
+      /**
        * Logout
        */
       logout: async () => {
+        try {
+          // Intentar logout en el servidor
+          await authService.logout();
+        } catch (error) {
+          console.error('Error en logout en servidor:', error);
+          // Continuar con logout local igualmente
+        }
+
         await apiClient.clearToken();
         set({
           user: null,
@@ -98,13 +135,30 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       /**
+       * Actualizar perfil del usuario
+       */
+      updateProfile: (user: User) => {
+        set({ user });
+      },
+
+      /**
        * Inicializar (restaurar token)
        */
       initialize: async () => {
         const state = get();
         if (state.accessToken) {
           await apiClient.setToken(state.accessToken);
-          console.log('🔑 Token restaurado desde AsyncStorage');
+          // Verificar si el token sigue siendo válido
+          const isValid = await authService.verifyToken();
+          if (!isValid && state.refreshToken) {
+            console.log('🔄 Token expirado, intentando refrescar...');
+            await get().refreshAccessToken();
+          } else if (!isValid) {
+            console.log('❌ Token inválido y no hay refresh token');
+            await get().logout();
+          } else {
+            console.log('🔑 Token restaurado y validado desde AsyncStorage');
+          }
         }
       },
     }),
