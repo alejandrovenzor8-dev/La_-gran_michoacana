@@ -172,6 +172,108 @@ class SaleService {
       throw error;
     }
   }
+
+  /**
+   * Obtener tendencia semanal de ventas
+   */
+  async getWeeklyTrend(startDate?: Date, endDate?: Date): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+
+      const queryString = params.toString();
+      const endpoint = `/sales/weekly-trend${queryString ? `?${queryString}` : ''}`;
+
+      const response = await apiClient.get<ApiResponse<any[]>>(endpoint);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching weekly trend:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtener comparación mensual de ventas
+   */
+  async getMonthlyComparison(startDate?: Date, endDate?: Date): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+
+      const queryString = params.toString();
+      const endpoint = `/sales/monthly-comparison${queryString ? `?${queryString}` : ''}`;
+
+      const response = await apiClient.get<ApiResponse<any[]>>(endpoint);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching monthly comparison:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtener corte de caja
+   */
+  async getCashierCut(userId?: number): Promise<any> {
+    try {
+      const params = new URLSearchParams();
+      if (userId) params.append('userId', String(userId));
+
+      const queryString = params.toString();
+      const endpoint = `/sales/cashier-cut${queryString ? `?${queryString}` : ''}`;
+
+      const response = await apiClient.get<ApiResponse<any>>(endpoint);
+      return response.data || null;
+    } catch (error) {
+      console.error('Error fetching cashier cut:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener estadísticas de reporte por período
+   */
+  async getReportStats(period: 'day' | 'week' | 'month' | 'year'): Promise<DailySalesStats> {
+    try {
+      const params = new URLSearchParams();
+      params.append('period', period);
+
+      const response = await apiClient.get<ApiResponse<any>>(
+        `/sales/stats?period=${period}`
+      );
+
+      const data = response.data;
+      
+      return {
+        date: new Date().toISOString().split('T')[0],
+        totalSales: data.totalSales || 0,
+        totalAmount: data.totalRevenue || 0,
+        averageTicket: data.averageTicket || 0,
+        salesByPaymentMethod: {
+          EFECTIVO: data.effectivoSales || 0,
+          TARJETA: data.tarjetaSales || 0,
+          MIXTO: data.mixtoSales || 0,
+        },
+        topProducts: data.topProducts || [],
+      };
+    } catch (error) {
+      console.error('Error fetching report stats:', error);
+      return {
+        date: new Date().toISOString().split('T')[0],
+        totalSales: 0,
+        totalAmount: 0,
+        averageTicket: 0,
+        salesByPaymentMethod: {
+          EFECTIVO: 0,
+          TARJETA: 0,
+          MIXTO: 0,
+        },
+        topProducts: [],
+      };
+    }
+  }
 }
 
 export const saleService = new SaleService();
