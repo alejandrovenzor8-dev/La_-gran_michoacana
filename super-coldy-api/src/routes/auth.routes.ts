@@ -224,5 +224,32 @@ router.get(
   asyncHandler((req, res, next) => authController.verifyToken(req, res, next))
 );
 
+/**
+ * POST /api/auth/logout
+ * Cerrar sesión del usuario
+ * Requiere autenticación
+ *
+ * @example
+ * POST /api/auth/logout
+ * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *
+ * @response 200
+ * {
+ *   "status": "success",
+ *   "message": "Logout exitoso"
+ * }
+ *
+ * @error 401
+ * {
+ *   "status": "error",
+ *   "message": "No autorizado"
+ * }
+ */
+router.post(
+  '/logout',
+  authenticateToken,
+  asyncHandler((req, res, next) => authController.logout(req, res, next))
+);
+
 export default router;
 

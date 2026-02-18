@@ -4,12 +4,11 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database.js';
 import { AppError } from '../middlewares/errorHandler.js';
+import { logger } from '../utils/logger.js';
 
 class InventoryController {
-  private prisma = new PrismaClient();
-
   /**
    * GET /api/inventory/summary
    * Obtener resumen del inventario
@@ -17,8 +16,10 @@ class InventoryController {
    */
   async getSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      logger.debug('Obteniendo resumen de inventario');
+
       // Obtener todos los productos activos
-      const products = await this.prisma.product.findMany({
+      const products = await prisma.product.findMany({
         where: { active: true },
         select: {
           id: true,
@@ -64,6 +65,8 @@ class InventoryController {
         >
       );
 
+      logger.debug('Resumen de inventario obtenido exitosamente');
+
       res.status(200).json({
         success: true,
         data: {
@@ -87,9 +90,8 @@ class InventoryController {
         },
       });
     } catch (error) {
+      logger.error('Error obteniendo resumen de inventario:', error);
       next(error);
-    } finally {
-      await this.prisma.$disconnect();
     }
   }
 }
