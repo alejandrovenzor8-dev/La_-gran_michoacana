@@ -201,12 +201,22 @@ class SaleService {
       if (filters.startDate || filters.endDate) {
         where.createdAt = {};
         if (filters.startDate) {
-          where.createdAt.gte = new Date(filters.startDate);
+          const startDate = new Date(filters.startDate);
+          where.createdAt.gte = new Date(Date.UTC(
+            startDate.getUTCFullYear(),
+            startDate.getUTCMonth(),
+            startDate.getUTCDate(),
+            0, 0, 0, 0
+          ));
         }
         if (filters.endDate) {
           const endDate = new Date(filters.endDate);
-          endDate.setHours(23, 59, 59, 999);
-          where.createdAt.lte = endDate;
+          where.createdAt.lte = new Date(Date.UTC(
+            endDate.getUTCFullYear(),
+            endDate.getUTCMonth(),
+            endDate.getUTCDate(),
+            23, 59, 59, 999
+          ));
         }
       }
 
@@ -263,11 +273,15 @@ class SaleService {
   async getDailySales(date?: Date): Promise<{ sales: SaleResponse[]; stats: DailySalesStats }> {
     try {
       const targetDate = date ? new Date(date) : new Date();
-      const startOfDay = new Date(targetDate);
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const endOfDay = new Date(targetDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      
+      // Trabajar SIEMPRE en UTC
+      // Crear rango de fechas en UTC
+      const yearUTC = targetDate.getUTCFullYear();
+      const monthUTC = targetDate.getUTCMonth();
+      const dateUTC = targetDate.getUTCDate();
+      
+      const startOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 0, 0, 0, 0));
+      const endOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 23, 59, 59, 999));
 
       // Obtener ventas completadas del día
       const sales = await prisma.sale.findMany({
@@ -315,15 +329,24 @@ class SaleService {
         start.setDate(start.getDate() - 30);
       }
 
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+      // Trabajar SIEMPRE en UTC
+      const startYearUTC = start.getUTCFullYear();
+      const startMonthUTC = start.getUTCMonth();
+      const startDateUTC = start.getUTCDate();
+      
+      const endYearUTC = end.getUTCFullYear();
+      const endMonthUTC = end.getUTCMonth();
+      const endDateUTC = end.getUTCDate();
+
+      const startUTC = new Date(Date.UTC(startYearUTC, startMonthUTC, startDateUTC, 0, 0, 0, 0));
+      const endUTC = new Date(Date.UTC(endYearUTC, endMonthUTC, endDateUTC, 23, 59, 59, 999));
 
       const sales = await prisma.sale.findMany({
         where: {
           status: SaleStatus.COMPLETED,
           createdAt: {
-            gte: start,
-            lte: end,
+            gte: startUTC,
+            lte: endUTC,
           },
         },
         include: {
@@ -348,8 +371,8 @@ class SaleService {
       let end: Date;
 
       if (startDate && endDate) {
-        start = new Date(startDate);
-        end = new Date(endDate);
+        start = startDate instanceof Date ? startDate : new Date(startDate);
+        end = endDate instanceof Date ? endDate : new Date(endDate);
       } else {
         // Por defecto: últimos 7 días
         end = new Date();
@@ -357,15 +380,24 @@ class SaleService {
         start.setDate(end.getDate() - 6);
       }
 
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+      // Trabajar SIEMPRE en UTC
+      const startYearUTC = start.getUTCFullYear();
+      const startMonthUTC = start.getUTCMonth();
+      const startDateUTC = start.getUTCDate();
+      
+      const endYearUTC = end.getUTCFullYear();
+      const endMonthUTC = end.getUTCMonth();
+      const endDateUTC = end.getUTCDate();
+
+      const startUTC = new Date(Date.UTC(startYearUTC, startMonthUTC, startDateUTC, 0, 0, 0, 0));
+      const endUTC = new Date(Date.UTC(endYearUTC, endMonthUTC, endDateUTC, 23, 59, 59, 999));
 
       const sales = await prisma.sale.findMany({
         where: {
           status: SaleStatus.COMPLETED,
           createdAt: {
-            gte: start,
-            lte: end,
+            gte: startUTC,
+            lte: endUTC,
           },
         },
       });
@@ -374,12 +406,12 @@ class SaleService {
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       const dailyData: Record<string, { ventas: number; transacciones: number }> = {};
 
-      // Inicializar todos los días del rango
-      const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      // Inicializar todos los días del rango usando fechas UTC
+      const diffDays = Math.ceil((endUTC.getTime() - startUTC.getTime()) / (1000 * 60 * 60 * 24));
       for (let i = 0; i <= Math.min(diffDays, 6); i++) {
-        const date = new Date(start);
-        date.setDate(date.getDate() + i);
-        const dayName = dayNames[date.getDay()];
+        const date = new Date(startUTC);
+        date.setUTCDate(date.getUTCDate() + i);
+        const dayName = dayNames[date.getUTCDay()];
         if (!dailyData[dayName]) {
           dailyData[dayName] = { ventas: 0, transacciones: 0 };
         }
@@ -387,7 +419,7 @@ class SaleService {
 
       // Sumar ventas por día
       for (const sale of sales) {
-        const dayName = dayNames[sale.createdAt.getDay()];
+        const dayName = dayNames[sale.createdAt.getUTCDay()];
         if (dailyData[dayName]) {
           dailyData[dayName].ventas += Number(sale.total);
           dailyData[dayName].transacciones += 1;
@@ -417,8 +449,8 @@ class SaleService {
       let end: Date;
 
       if (startDate && endDate) {
-        start = new Date(startDate);
-        end = new Date(endDate);
+        start = startDate instanceof Date ? startDate : new Date(startDate);
+        end = endDate instanceof Date ? endDate : new Date(endDate);
       } else {
         // Por defecto: mes actual
         const now = new Date();
@@ -426,15 +458,24 @@ class SaleService {
         end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       }
 
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+      // Trabajar SIEMPRE en UTC
+      const startYearUTC = start.getUTCFullYear();
+      const startMonthUTC = start.getUTCMonth();
+      const startDateUTC = start.getUTCDate();
+      
+      const endYearUTC = end.getUTCFullYear();
+      const endMonthUTC = end.getUTCMonth();
+      const endDateUTC = end.getUTCDate();
+
+      const startUTC = new Date(Date.UTC(startYearUTC, startMonthUTC, startDateUTC, 0, 0, 0, 0));
+      const endUTC = new Date(Date.UTC(endYearUTC, endMonthUTC, endDateUTC, 23, 59, 59, 999));
 
       const sales = await prisma.sale.findMany({
         where: {
           status: SaleStatus.COMPLETED,
           createdAt: {
-            gte: start,
-            lte: end,
+            gte: startUTC,
+            lte: endUTC,
           },
         },
       });
@@ -656,16 +697,19 @@ class SaleService {
    */
   async getCashierCut(userId?: number) {
     try {
-      // Fecha de inicio y fin del día actual
+      // Trabajar SIEMPRE en UTC
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(today);
-      endOfDay.setHours(23, 59, 59, 999);
+      const yearUTC = today.getUTCFullYear();
+      const monthUTC = today.getUTCMonth();
+      const dateUTC = today.getUTCDate();
+
+      const todayStart = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 0, 0, 0, 0));
+      const todayEnd = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 23, 59, 59, 999));
 
       const whereClause: any = {
         createdAt: {
-          gte: today,
-          lte: endOfDay,
+          gte: todayStart,
+          lte: todayEnd,
         },
         status: 'COMPLETED',
       };
