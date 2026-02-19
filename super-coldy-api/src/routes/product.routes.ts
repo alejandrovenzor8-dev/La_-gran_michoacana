@@ -64,9 +64,11 @@ router.post(
  * - active: true/false (default: true)
  * - category: nombre de categoría
  * - minStock: true para mostrar solo productos con stock bajo
+ * Requiere: autenticación (para filtrar por sucursal del usuario)
  */
 router.get(
   '/',
+  authenticateToken,
   asyncHandler((req, res, next) => productController.getAllProducts(req, res, next))
 );
 
