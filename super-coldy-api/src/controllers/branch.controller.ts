@@ -165,4 +165,5 @@ class BranchController {
   }
 }
 
+// Exportar instancia única del controlador
 export const branchController = new BranchController();
