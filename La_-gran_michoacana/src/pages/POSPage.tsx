@@ -167,9 +167,16 @@ export default function POSPage() {
           </h1>
           <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
           {user && (
-            <p className="text-sm text-gray-500 mt-2">
-              Conectado como: <span className="font-semibold">{user.username}</span> ({user.role})
-            </p>
+            <div className="mt-3 space-y-1">
+              <p className="text-sm text-gray-500">
+                Conectado como: <span className="font-semibold">{user.username}</span> ({user.role})
+              </p>
+              {user.branch && (
+                <p className="text-sm text-gray-500">
+                  Sucursal: <span className="font-semibold">{user.branch.name}</span>
+                </p>
+              )}
+            </div>
           )}
         </div>
 

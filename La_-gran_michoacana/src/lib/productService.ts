@@ -7,7 +7,7 @@ export interface Product {
   price: number;
   quantity: number;
   category?: string;
-  imageUrl?: string;
+  image?: string;  // Cambiado de imageUrl a image para consistencia en el frontend
   emoji?: string;
 }
 
@@ -27,9 +27,10 @@ class ProductService {
   /**
    * Obtener todos los productos
    */
-  async getAllProducts(): Promise<Product[]> {
+  async getAllProducts(queryParams: string = ''): Promise<Product[]> {
     try {
-      const response = await apiClient.get<ProductResponse>('/products');
+      const url = `/products${queryParams}`;
+      const response = await apiClient.get<ProductResponse>(url);
       // Asegurarse de que la respuesta tiene un array en data
       let products = Array.isArray(response.data) ? response.data : (response as any).data?.products || (response as any).data?.data || [];
       

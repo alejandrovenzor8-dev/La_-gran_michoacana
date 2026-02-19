@@ -100,6 +100,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
     };
   },
   
+  // ============================================================
+  // GESTIÓN DE IMÁGENES LOCALES
+  // ============================================================
+  
+  // Guardar imagen en el sistema de archivos local
+  saveImage: async (base64Data: string) => {
+    return await ipcRenderer.invoke('image:save', base64Data);
+  },
+  
+  // Obtener ruta absoluta de una imagen
+  getImagePath: async (relativePath: string) => {
+    return await ipcRenderer.invoke('image:getPath', relativePath);
+  },
+  
+  // Eliminar imagen del sistema de archivos
+  deleteImage: async (relativePath: string) => {
+    return await ipcRenderer.invoke('image:delete', relativePath);
+  },
+  
   // Escuchar cuando hay actualización disponible
   onUpdateAvailable: (callback: (info: any) => void) => {
     const listener = (event: any, info: any) => callback(info);

@@ -1,5 +1,7 @@
 import { app, BrowserWindow, screen, ipcMain, session } from 'electron';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 import { printTicket, TicketData } from './printer';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
@@ -363,6 +365,132 @@ ipcMain.handle('print-ticket', async (event, ticketData: TicketData) => {
     await printTicket(window, ticketData);
     return { success: true };
   } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+// ============================================================
+// GESTIÓN DE IMÁGENES LOCALES
+// ============================================================
+
+/**
+ * Guarda una imagen en el sistema de archivos local
+ * @param base64Data - Imagen en formato Base64 (data:image/...)
+ * @returns Ruta relativa de la imagen guardada
+ */
+ipcMain.handle('image:save', async (event, base64Data: string) => {
+  try {
+    // Obtener el directorio de datos de la aplicación
+    const userDataPath = app.getPath('userData');
+    const uploadsDir = path.join(userDataPath, 'uploads', 'products');
+    
+    // Crear directorio si no existe
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      log.info('Directorio de imágenes creado:', uploadsDir);
+    }
+    
+    // Verificar que sea una imagen válida
+    if (!base64Data.startsWith('data:image/')) {
+      throw new Error('Formato de imagen inválido');
+    }
+    
+    // Extraer tipo de imagen y datos Base64
+    const matches = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!matches) {
+      throw new Error('No se pudo parsear la imagen');
+    }
+    
+    const imageType = matches[1]; // png, jpg, jpeg, webp, etc.
+    const imageBuffer = Buffer.from(matches[2], 'base64');
+    
+    // Generar nombre único para el archivo
+    const timestamp = Date.now();
+    const randomHash = crypto.randomBytes(8).toString('hex');
+    const filename = `product-${timestamp}-${randomHash}.${imageType}`;
+    const filePath = path.join(uploadsDir, filename);
+    
+    // Guardar archivo
+    fs.writeFileSync(filePath, imageBuffer);
+    
+    // Retornar ruta relativa (para guardar en BD)
+    const relativePath = `uploads/products/${filename}`;
+    
+    log.info('Imagen guardada:', relativePath);
+    
+    return {
+      success: true,
+      path: relativePath,
+      fullPath: filePath,
+    };
+  } catch (error) {
+    log.error('Error guardando imagen:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+/**
+ * Obtiene la ruta absoluta de una imagen
+ * @param relativePath - Ruta relativa (ej: uploads/products/imagen.jpg)
+ * @returns Ruta absoluta del archivo
+ */
+ipcMain.handle('image:getPath', async (event, relativePath: string) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const fullPath = path.join(userDataPath, relativePath);
+    
+    // Verificar si el archivo existe
+    if (!fs.existsSync(fullPath)) {
+      log.warn('Imagen no encontrada:', fullPath);
+      return {
+        success: false,
+        error: 'Imagen no encontrada',
+      };
+    }
+    
+    // Convertir a file:// URL para que pueda ser usado en <img src=...
+    const fileUrl = `file://${fullPath.replace(/\\/g, '/')}`;
+    
+    return {
+      success: true,
+      path: fileUrl,
+      fullPath: fullPath,
+    };
+  } catch (error) {
+    log.error('Error obteniendo ruta de imagen:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+/**
+ * Elimina una imagen del sistema de archivos
+ * @param relativePath - Ruta relativa de la imagen
+ */
+ipcMain.handle('image:delete', async (event, relativePath: string) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const fullPath = path.join(userDataPath, relativePath);
+    
+    // Verificar si el archivo existe
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      log.info('Imagen eliminada:', relativePath);
+      return { success: true };
+    } else {
+      log.warn('Imagen no encontrada para eliminar:', relativePath);
+      return { success: true }; // No es error si ya no existe
+    }
+  } catch (error) {
+    log.error('Error eliminando imagen:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',

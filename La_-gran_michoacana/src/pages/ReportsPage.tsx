@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { saleService } from '@/lib/saleService';
+import { branchService } from '@/lib/branchService';
+import type { Branch } from '@/types/branch';
 import {
   LineChart,
   Line,
@@ -50,6 +52,8 @@ export default function ReportsPage() {
     start: '',
     end: '',
   });
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
 
   // Calcular rango de fechas según el período seleccionado
   const calculateDateRange = (period: ReportPeriod): { start: Date; end: Date } => {
@@ -86,7 +90,22 @@ export default function ReportsPage() {
     return { start, end };
   };
 
-  // Cargar estadísticas del backend cuando cambia el período
+  // Cargar sucursales si el usuario es admin
+  useEffect(() => {
+    const loadBranches = async () => {
+      if (user?.role === 'ADMIN') {
+        try {
+          const fetchedBranches = await branchService.getBranches();
+          setBranches(fetchedBranches);
+        } catch (error) {
+          console.error('Error loading branches:', error);
+        }
+      }
+    };
+    loadBranches();
+  }, [user]);
+
+  // Cargar estadísticas del backend cuando cambia el período o la sucursal
   useEffect(() => {
     const loadStats = async () => {
       try {
@@ -100,7 +119,8 @@ export default function ReportsPage() {
           end: endStr,
         });
 
-        const stats = await saleService.getSalesStats(startStr, endStr);
+        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const stats = await saleService.getSalesStats(startStr, endStr, queryParams);
         setStatsData(stats || null);
       } catch (error) {
         setStatsData(null);
@@ -110,9 +130,9 @@ export default function ReportsPage() {
     };
 
     loadStats();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedBranchId]);
 
-  // Cargar tendencia semanal cuando cambia el período
+  // Cargar tendencia semanal cuando cambia el período o la sucursal
   useEffect(() => {
     const loadWeeklyTrend = async () => {
       try {
@@ -120,7 +140,8 @@ export default function ReportsPage() {
         const startStr = range.start.toISOString();
         const endStr = range.end.toISOString();
         
-        const trend = await saleService.getWeeklyTrend(startStr, endStr);
+        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const trend = await saleService.getWeeklyTrend(startStr, endStr, queryParams);
         setWeeklyTrendData(trend || []);
       } catch (error) {
         setWeeklyTrendData([]);
@@ -128,9 +149,9 @@ export default function ReportsPage() {
     };
 
     loadWeeklyTrend();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedBranchId]);
 
-  // Cargar comparación mensual cuando cambia el período
+  // Cargar comparación mensual cuando cambia el período o la sucursal
   useEffect(() => {
     const loadMonthlyComparison = async () => {
       try {
@@ -138,7 +159,8 @@ export default function ReportsPage() {
         const startStr = range.start.toISOString();
         const endStr = range.end.toISOString();
         
-        const comparison = await saleService.getMonthlyComparison(startStr, endStr);
+        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const comparison = await saleService.getMonthlyComparison(startStr, endStr, queryParams);
         setMonthlyComparisonData(comparison || []);
       } catch (error) {
         setMonthlyComparisonData([]);
@@ -146,9 +168,9 @@ export default function ReportsPage() {
     };
 
     loadMonthlyComparison();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedBranchId]);
 
-  // Cargar reporte diario cuando cambia la fecha específica
+  // Cargar reporte diario cuando cambia la fecha específica o la sucursal
   useEffect(() => {
     const loadDailyReport = async () => {
       try {
@@ -160,11 +182,13 @@ export default function ReportsPage() {
         const end = new Date(selectedDate);
         end.setHours(23, 59, 59, 999);
         
+        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        
         // Cargar datos con el rango de ese día
         const [stats, weeklyTrend, monthlyComparison] = await Promise.all([
-          saleService.getSalesStats(start.toISOString(), end.toISOString()),
-          saleService.getWeeklyTrend(start.toISOString(), end.toISOString()),
-          saleService.getMonthlyComparison(start.toISOString(), end.toISOString()),
+          saleService.getSalesStats(start.toISOString(), end.toISOString(), queryParams),
+          saleService.getWeeklyTrend(start.toISOString(), end.toISOString(), queryParams),
+          saleService.getMonthlyComparison(start.toISOString(), end.toISOString(), queryParams),
         ]);
         
         setStatsData(stats);
@@ -186,14 +210,15 @@ export default function ReportsPage() {
     if (selectedDate && useSpecificDate) {
       loadDailyReport();
     }
-  }, [selectedDate, useSpecificDate]);
+  }, [selectedDate, useSpecificDate, selectedBranchId]);
 
-  // Cargar corte de caja cuando se activa esa pestaña
+  // Cargar corte de caja cuando se activa esa pestaña o cambia la sucursal
   useEffect(() => {
     const loadCashierCut = async () => {
       try {
         setLoading(true);
-        const data = await saleService.getCashierCut();
+        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const data = await saleService.getCashierCut(queryParams);
         setCashierCutData(data);
       } catch (error) {
         setCashierCutData(null);
@@ -205,7 +230,7 @@ export default function ReportsPage() {
     if (activeTab === 'cashier-cut') {
       loadCashierCut();
     }
-  }, [activeTab]);
+  }, [activeTab, selectedBranchId]);
 
   // Datos para gráfico circular (productos más vendidos)
   const topProductsData =
@@ -359,6 +384,32 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
           <p className="font-medium">{user?.username}</p>
         </div>
       </div>
+
+      {/* Selector de sucursal para admin */}
+      {user?.role === 'ADMIN' && branches.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <label htmlFor="branch-select" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                Filtrar por sucursal:
+              </label>
+              <select
+                id="branch-select"
+                value={selectedBranchId || ''}
+                onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : undefined)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Todas las sucursales</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b">

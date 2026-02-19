@@ -80,6 +80,18 @@ export class ApiClient {
   }
 
   /**
+   * Método genérico PATCH
+   */
+  public async patch<T>(endpoint: string, data: unknown): Promise<T> {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<T>(response);
+  }
+
+  /**
    * Método genérico DELETE
    */
   public async delete<T>(endpoint: string): Promise<T> {

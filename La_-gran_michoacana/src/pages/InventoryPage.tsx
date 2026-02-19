@@ -3,15 +3,22 @@ import { ChevronLeft, ChevronRight, Package, Edit, Trash2, Upload, X, Loader } f
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { productService, Product } from '@/lib/productService';
+import { branchService } from '@/lib/branchService';
+import { localImageService } from '@/lib/localImageService';
+import { LocalImage } from '@/components/LocalImage';
+import { useAuthStore } from '@/stores/authStore';
+import type { Branch } from '@/types/branch';
 
 export default function InventoryPage() {
+  const user = useAuthStore((state) => state.user);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editImageChanged, setEditImageChanged] = useState(false);  // Rastrear si la imagen fue cambiada
   const [products, setProducts] = useState<Product[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const itemsPerPage = 3;
 
@@ -39,12 +46,12 @@ export default function InventoryPage() {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        setError(null);
-        const data = await productService.getAllProducts();
+        const branchIdParam = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const data = await productService.getAllProducts(branchIdParam);
         // Asegurarse de que data es siempre un array
         setProducts(Array.isArray(data) ? data : []);
       } catch (err) {
-        setError('Error al cargar los productos');
+        console.error('Error al cargar los productos:', err);
         setProducts([]); // Establecer array vacío en caso de error
       } finally {
         setLoading(false);
@@ -52,31 +59,76 @@ export default function InventoryPage() {
     };
 
     loadProducts();
-  }, []);
+  }, [selectedBranchId]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Cargar sucursales si es admin
+  useEffect(() => {
+    const loadBranches = async () => {
+      if (user?.role === 'ADMIN') {
+        try {
+          const data = await branchService.getBranches({ active: true });
+          setBranches(data);
+        } catch (err) {
+          console.error('Error al cargar sucursales:', err);
+        }
+      }
+    };
+
+    loadBranches();
+  }, [user]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const imageData = reader.result as string;
-        setFormData((prev) => ({ ...prev, image: imageData, emoji: '' }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Convertir a Base64 temporalmente para guardarlo
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const imageData = reader.result as string;
+          
+          // Guardar imagen localmente y obtener la ruta
+          const result = await localImageService.saveImage(imageData);
+          
+          if (result.success && result.path) {
+            // Guardar solo la ruta relativa en el formulario
+            setFormData((prev) => ({ ...prev, image: result.path, emoji: '' }));
+          } else {
+            alert('Error al guardar la imagen: ' + (result.error || 'Error desconocido'));
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error procesando imagen:', error);
+        alert('Error al procesar la imagen');
+      }
     }
   };
 
-  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const imageData = reader.result as string;
-        // Usar setState funcional para evitar problemas de closure
-        setEditFormData((prev) => ({ ...prev, image: imageData, emoji: '' }));
-        setEditImageChanged(true);  // Marcar que la imagen ha sido cambiada por el usuario
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Convertir a Base64 temporalmente para guardarlo
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const imageData = reader.result as string;
+          
+          // Guardar imagen localmente y obtener la ruta
+          const result = await localImageService.saveImage(imageData);
+          
+          if (result.success && result.path) {
+            // Guardar solo la ruta relativa en el formulario
+            setEditFormData((prev) => ({ ...prev, image: result.path, emoji: '' }));
+            setEditImageChanged(true);  // Marcar que la imagen ha sido cambiada por el usuario
+          } else {
+            alert('Error al guardar la imagen: ' + (result.error || 'Error desconocido'));
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error procesando imagen:', error);
+        alert('Error al procesar la imagen');
+      }
     }
   };
 
@@ -117,12 +169,8 @@ export default function InventoryPage() {
       // Preparar datos del producto
       const quantity = Number(formData.quantity) || 0;
       
-      // Limitar el tamaño de la imagen (máximo 5MB)
-      let imageToSend = formData.image;
-      if (imageToSend && imageToSend.length > 5000000) {
-        alert('⚠️ La imagen es muy grande (>5MB). Por favor usa una imagen más pequeña.');
-        imageToSend = '';
-      }
+      // Ya no necesitamos validar tamaño porque solo enviamos la ruta
+      // La imagen ya fue guardada localmente en handleImageUpload
       
       // Crear producto en el backend
       const newProduct = await productService.createProduct({
@@ -131,7 +179,7 @@ export default function InventoryPage() {
         price: Number(formData.price),
         quantity: quantity,
         category: formData.category,
-        image: imageToSend,
+        image: formData.image, // Solo la ruta relativa
       });
 
       // Manejar diferentes estructuras de respuesta
@@ -175,14 +223,11 @@ export default function InventoryPage() {
         category: ''
       });
 
+      alert('✅ Producto creado exitosamente');
+
     } catch (err: any) {
       const errorMessage = err?.message || 'Error al crear el producto';
-      
-      if (errorMessage.includes('entity too large') || errorMessage.includes('413')) {
-        alert('⚠️ Error: La imágenes es demasiado grande. Intenta con una imagen más pequeña. El producto se creó sin imagen.');
-      } else {
-        alert(`❌ Error: ${errorMessage}`);
-      }
+      alert(`❌ Error: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -213,21 +258,17 @@ export default function InventoryPage() {
       
       // Solo agregar imagen si el usuario la cambió
       if (editImageChanged) {
-        let imageToSend = editFormData.image || '';
+        // Ya no validamos tamaño porque ahora solo enviamos la ruta
+        payload.image = editFormData.image || '';
         
-        // Validar tamaño - máximo 5MB para base64
-        if (imageToSend && imageToSend.length > 5000000) {
-          alert('⚠️ La imagen es muy grande (>5MB). Por favor usa una imagen más pequeña.');
-          imageToSend = '';
+        // Si borró la imagen anterior (y había una), eliminarla del sistema
+        if (editingProduct.image && !editFormData.image) {
+          await localImageService.deleteImage(editingProduct.image);
         }
-        
-        payload.image = imageToSend;
       }
 
       // Actualizar producto en el backend
       const updatedProduct = await productService.updateProduct(editingProduct.id, payload);
-
-      // VERIFICAR que el cambio se guardó realmente
 
       // Actualizar la lista local
       setProducts((Array.isArray(products) ? products : []).map(p => 
@@ -250,9 +291,11 @@ export default function InventoryPage() {
       setEditImageChanged(false);
       setShowEditModal(false);  // Cerrar modal ÚLTIMO
       
+      alert('✅ Producto actualizado exitosamente');
+      
     } catch (err: any) {
       const errorMessage = err?.message || 'Error al actualizar el producto';
-      
+      alert(`❌ Error: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
       // Asegurar que el estado se limpia completamente
@@ -274,6 +317,14 @@ export default function InventoryPage() {
     if (confirm('¿Estás seguro de eliminar este producto?')) {
       try {
         setIsSubmitting(true);
+        
+        // Encontrar el producto para obtener la ruta de la imagen
+        const productToDelete = (Array.isArray(products) ? products : []).find(p => p.id === id);
+        
+        // Eliminar imagen local si existe
+        if (productToDelete?.image) {
+          await localImageService.deleteImage(productToDelete.image);
+        }
         
         // Eliminar del backend
         await productService.deleteProduct(id);
@@ -321,12 +372,33 @@ export default function InventoryPage() {
     <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-50 to-purple-50">
       <div className="max-w-7xl mx-auto p-6 pb-12">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Package className="w-8 h-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Inventario</h1>
-            <p className="text-gray-600">Gestiona tus productos</p>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <Package className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Inventario</h1>
+              <p className="text-gray-600">Gestiona tus productos</p>
+            </div>
           </div>
+
+          {/* Selector de sucursal para admin */}
+          {user?.role === 'ADMIN' && branches.length > 0 && (
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700">Sucursal:</label>
+              <select
+                value={selectedBranchId || ''}
+                onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : undefined)}
+                className="px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Todas las sucursales</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Modal de edición */}
@@ -356,7 +428,7 @@ export default function InventoryPage() {
                     <div className="space-y-3">
                       {editFormData.image ? (
                         <div className="relative inline-block w-full">
-                          <img 
+                          <LocalImage
                             src={editFormData.image} 
                             alt="Preview" 
                             className="w-full h-48 object-cover rounded-lg border-2 border-gray-300"
@@ -484,7 +556,7 @@ export default function InventoryPage() {
                 <div className="space-y-3">
                   {formData.image ? (
                     <div className="relative inline-block w-full">
-                      <img 
+                      <LocalImage
                         src={formData.image} 
                         alt="Preview" 
                         className="w-full h-48 object-cover rounded-lg border-2 border-gray-300"
@@ -643,7 +715,7 @@ export default function InventoryPage() {
                       {/* Imagen/Emoji del producto */}
                       <div className="flex items-center justify-center bg-gradient-to-br from-primary/10 to-purple-100 rounded-xl p-8 mb-4">
                         {product.image ? (
-                          <img 
+                          <LocalImage
                             src={product.image} 
                             alt={product.name}
                             className="w-24 h-24 object-cover rounded-lg"
@@ -771,7 +843,7 @@ export default function InventoryPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             {product.image ? (
-                              <img 
+                              <LocalImage
                                 src={product.image} 
                                 alt={product.name}
                                 className="w-12 h-12 object-cover rounded-lg"

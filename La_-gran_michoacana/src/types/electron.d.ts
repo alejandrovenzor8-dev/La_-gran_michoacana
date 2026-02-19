@@ -20,6 +20,11 @@ export interface ElectronAPI {
   onUpdateAvailable: (callback: (info: any) => void) => () => void;
   onDownloadProgress: (callback: (progress: any) => void) => () => void;
   onUpdateDownloaded: (callback: (info: any) => void) => () => void;
+  
+  // Imágenes locales
+  saveImage: (base64Data: string) => Promise<{ success: boolean; path?: string; fullPath?: string; error?: string }>;
+  getImagePath: (relativePath: string) => Promise<{ success: boolean; path?: string; fullPath?: string; error?: string }>;
+  deleteImage: (relativePath: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

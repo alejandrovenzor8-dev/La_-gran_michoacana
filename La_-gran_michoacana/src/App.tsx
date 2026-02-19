@@ -8,6 +8,7 @@ import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
 import PermissionsPage from './pages/PermissionsPage';
 import ReportsPage from './pages/ReportsPage';
+import BranchesPage from './pages/BranchesPage';
 import LoginPage from './pages/LoginPage';
 import { MainLayout } from './components/MainLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -103,6 +104,16 @@ function App() {
                 <ProtectedRoute module="reports">
                   <MainLayout>
                     <ReportsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/branches"
+              element={
+                <ProtectedRoute module="branches">
+                  <MainLayout>
+                    <BranchesPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

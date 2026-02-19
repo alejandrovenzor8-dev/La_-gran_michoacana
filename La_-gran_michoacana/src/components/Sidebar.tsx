@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield, BarChart3 } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield, BarChart3, Building } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { usePermissionsStore } from '@/stores/permissionsStore';
@@ -53,6 +53,13 @@ export function Sidebar() {
       path: '/users',
       icon: <Users className="w-5 h-5" />,
       module: 'users' as ModuleType,
+    },
+    {
+      id: 'branches',
+      label: 'Gestión de Sucursales',
+      path: '/branches',
+      icon: <Building className="w-5 h-5" />,
+      module: 'branches' as ModuleType,
     },
     {
       id: 'permissions',

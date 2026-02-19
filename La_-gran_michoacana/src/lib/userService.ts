@@ -6,6 +6,11 @@ export interface User {
   email: string;
   fullName: string | null;
   role: 'admin' | 'cajero' | 'gerente';
+  branchId: number | null;
+  branch?: {
+    id: number;
+    name: string;
+  } | null;
   active: boolean;
   timezone: string | null;
   createdAt: string;

@@ -1,5 +1,5 @@
 // Tipos de módulos disponibles en el sistema
-export type ModuleType = 'pos' | 'inventory' | 'users' | 'settings' | 'permissions' | 'reports';
+export type ModuleType = 'pos' | 'inventory' | 'users' | 'branches' | 'settings' | 'permissions' | 'reports';
 
 // Interfaz de permisos de usuario (simple - solo acceso/no acceso)
 export interface UserPermissions {
@@ -11,6 +11,7 @@ export interface RolePermissions {
   pos: boolean;
   inventory: boolean;
   users: boolean;
+  branches: boolean;
   settings: boolean;
   permissions: boolean;
   reports: boolean;
@@ -39,6 +40,11 @@ export const AVAILABLE_MODULES: ModuleInfo[] = [
     id: 'users',
     label: 'Gestión de Usuarios',
     description: 'Administración de usuarios del sistema',
+  },
+  {
+    id: 'branches',
+    label: 'Gestión de Sucursales',
+    description: 'Administración de sucursales del sistema',
   },
   {
     id: 'settings',

@@ -123,14 +123,22 @@ class SaleService {
    */
   async getSalesStats(
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    additionalParams?: string
   ): Promise<SalesStatsResponse['data']> {
     try {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
 
-      const queryString = params.toString();
+      let queryString = params.toString();
+      
+      // Agregar parámetros adicionales si existen (ej: branchId)
+      if (additionalParams) {
+        const additionalQueryParams = additionalParams.startsWith('?') ? additionalParams.substring(1) : additionalParams;
+        queryString = queryString ? `${queryString}&${additionalQueryParams}` : additionalQueryParams;
+      }
+
       const endpoint = `/sales/stats${queryString ? '?' + queryString : ''}`;
       const response = await apiClient.get<SalesStatsResponse>(endpoint);
       return response.data;
@@ -142,13 +150,20 @@ class SaleService {
   /**
    * Obtener tendencia de ventas de la última semana
    */
-  async getWeeklyTrend(startDate?: string, endDate?: string): Promise<Array<{ day: string; ventas: number; transacciones: number }>> {
+  async getWeeklyTrend(startDate?: string, endDate?: string, additionalParams?: string): Promise<Array<{ day: string; ventas: number; transacciones: number }>> {
     try {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
 
-      const queryString = params.toString();
+      let queryString = params.toString();
+      
+      // Agregar parámetros adicionales si existen (ej: branchId)
+      if (additionalParams) {
+        const additionalQueryParams = additionalParams.startsWith('?') ? additionalParams.substring(1) : additionalParams;
+        queryString = queryString ? `${queryString}&${additionalQueryParams}` : additionalQueryParams;
+      }
+
       const endpoint = `/sales/weekly-trend${queryString ? '?' + queryString : ''}`;
       const response = await apiClient.get<{ success: boolean; data: any[] }>(endpoint);
       return response.data || [];
@@ -160,13 +175,20 @@ class SaleService {
   /**
    * Obtener comparación por semanas del mes
    */
-  async getMonthlyComparison(startDate?: string, endDate?: string): Promise<Array<{ periodo: string; ventas: number }>> {
+  async getMonthlyComparison(startDate?: string, endDate?: string, additionalParams?: string): Promise<Array<{ periodo: string; ventas: number }>> {
     try {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
 
-      const queryString = params.toString();
+      let queryString = params.toString();
+      
+      // Agregar parámetros adicionales si existen (ej: branchId)
+      if (additionalParams) {
+        const additionalQueryParams = additionalParams.startsWith('?') ? additionalParams.substring(1) : additionalParams;
+        queryString = queryString ? `${queryString}&${additionalQueryParams}` : additionalQueryParams;
+      }
+
       const endpoint = `/sales/monthly-comparison${queryString ? '?' + queryString : ''}`;
       const response = await apiClient.get<{ success: boolean; data: any[] }>(endpoint);
       return response.data || [];
@@ -190,12 +212,19 @@ class SaleService {
   /**
    * Obtener corte de caja del día actual
    */
-  async getCashierCut(userId?: number): Promise<any> {
+  async getCashierCut(additionalParams?: string, userId?: number): Promise<any> {
     try {
       const params = new URLSearchParams();
       if (userId) params.append('userId', String(userId));
 
-      const queryString = params.toString();
+      let queryString = params.toString();
+      
+      // Agregar parámetros adicionales si existen (ej: branchId)
+      if (additionalParams) {
+        const additionalQueryParams = additionalParams.startsWith('?') ? additionalParams.substring(1) : additionalParams;
+        queryString = queryString ? `${queryString}&${additionalQueryParams}` : additionalQueryParams;
+      }
+
       const endpoint = `/sales/cashier-cut${queryString ? '?' + queryString : ''}`;
       const response = await apiClient.get<{ success: boolean; data: any }>(endpoint);
       return response.data;
