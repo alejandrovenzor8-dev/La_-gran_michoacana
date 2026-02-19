@@ -53,6 +53,10 @@ logger.info('✅ Rutas registradas:', {
   '/api/users': 'CRUD de usuarios (protegido)',
   '/api/products': 'CRUD de productos (protegido)',
   '/api/sales': 'CRUD de ventas (protegido)',
+  '/api/inventory': 'Gestión de inventario (protegido)',
+  '/api/permissions': 'Permisos y módulos (protegido)',
+  '/api/settings': 'Configuración del sistema (admin)',
+  '/api/branches': 'Gestión de sucursales (admin)',
 });
 
 // ============================================================
