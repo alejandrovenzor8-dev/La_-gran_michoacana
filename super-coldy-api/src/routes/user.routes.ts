@@ -40,6 +40,26 @@ router.get(
   })
 );
 
+// GET /api/users/stats - Obtener estadísticas de usuarios
+router.get(
+  '/stats',
+  asyncHandler(async (req, res) => {
+    try {
+      logger.debug('Obteniendo estadísticas de usuarios');
+
+      const stats = await authService.getUserStats();
+
+      res.status(200).json({
+        status: 'success',
+        data: stats,
+      });
+    } catch (error) {
+      logger.error('Error obteniendo estadísticas de usuarios:', error);
+      throw error;
+    }
+  })
+);
+
 // GET /api/users/:id - Obtener usuario por ID
 router.get(
   '/:id',

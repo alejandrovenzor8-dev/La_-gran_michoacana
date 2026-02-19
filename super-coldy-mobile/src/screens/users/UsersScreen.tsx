@@ -43,6 +43,10 @@ const ROLE_COLORS: Record<UserRole, string> = {
   CAJERO: '#10b981',
 };
 
+const getRoleColor = (role: UserRole | undefined): string => {
+  return ROLE_COLORS[role as UserRole] || '#6b7280';
+};
+
 export default function UsersScreen() {
   const theme = useTheme();
   const [isLoading, setIsLoading] = useState(true);
@@ -277,10 +281,10 @@ export default function UsersScreen() {
                     <View style={styles.statusContainer}>
                       <Chip
                         style={{
-                          backgroundColor: ROLE_COLORS[item.role] + '20',
+                          backgroundColor: getRoleColor(item.role) + '20',
                         }}
                         textStyle={{
-                          color: ROLE_COLORS[item.role],
+                          color: getRoleColor(item.role),
                           fontSize: 12,
                         }}
                       >

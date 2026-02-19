@@ -36,6 +36,10 @@ const ROLE_COLORS: Record<UserRole, string> = {
   CAJERO: '#10b981',
 };
 
+const getRoleColor = (role: UserRole | undefined): string => {
+  return ROLE_COLORS[role as UserRole] || '#6b7280';
+};
+
 export default function UsersManagementScreen() {
   const theme = useTheme();
   const [isLoading, setIsLoading] = useState(true);
@@ -142,7 +146,7 @@ export default function UsersManagementScreen() {
       <Card.Content>
         <View style={styles.userHeader}>
           <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, { backgroundColor: ROLE_COLORS[item.role] }]}>
+            <View style={[styles.avatar, { backgroundColor: getRoleColor(item.role) }]}>
               <Text variant="headlineSmall" style={styles.avatarText}>
                 {item.username.charAt(0).toUpperCase()}
               </Text>
@@ -180,7 +184,7 @@ export default function UsersManagementScreen() {
                 />
               )}
               label={ROLE_LABELS[item.role]}
-              style={{ backgroundColor: ROLE_COLORS[item.role] }}
+              style={{ backgroundColor: getRoleColor(item.role) }}
               textStyle={styles.chipText}
             />
           </View>
@@ -321,7 +325,7 @@ export default function UsersManagementScreen() {
                   </Text>
                   <Text
                     variant="bodyMedium"
-                    style={[styles.detailValue, { color: ROLE_COLORS[selectedUser.role] }]}
+                    style={[styles.detailValue, { color: getRoleColor(selectedUser.role) }]}
                   >
                     {ROLE_LABELS[selectedUser.role]}
                   </Text>

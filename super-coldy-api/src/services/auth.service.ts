@@ -173,14 +173,14 @@ class AuthService {
         username: user.username,
       });
 
-      // Retornar datos sin contraseña y con rol en minúsculas
+      // Retornar datos sin contraseña
       return {
         user: {
           id: user.id,
           username: user.username,
           email: user.email,
           fullName: user.fullName,
-          role: user.role.toLowerCase(), // Convertir a minúsculas
+          role: user.role,
           timezone: user.timezone || 'America/Mexico_City', // Zona horaria del usuario
         },
         accessToken,
@@ -264,10 +264,10 @@ class AuthService {
 
       logger.debug('Usuario obtenido', { userId });
 
-      // Retornar usuario con rol en minúsculas
+      // Retornar usuario
       return {
         ...user,
-        role: user.role.toLowerCase() as any,
+        role: user.role,
       };
     } catch (error) {
       if (error instanceof AppError) {
@@ -314,7 +314,7 @@ class AuthService {
       return {
         users: users.map((user) => ({
           ...user,
-          role: user.role.toLowerCase() as any,
+          role: user.role,
         })),
         total,
       };
@@ -389,7 +389,7 @@ class AuthService {
 
       return {
         ...updatedUser,
-        role: updatedUser.role.toLowerCase() as any,
+        role: updatedUser.role,
       };
     } catch (error) {
       if (error instanceof AppError) {
@@ -492,6 +492,37 @@ class AuthService {
         throw error;
       }
       logger.error('Error eliminando usuario:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener estadísticas de usuarios
+   */
+  async getUserStats() {
+    try {
+      const [total, active, byRole] = await Promise.all([
+        prisma.user.count(),
+        prisma.user.count({ where: { active: true } }),
+        prisma.user.groupBy({
+          by: ['role'],
+          _count: true,
+        }),
+      ]);
+
+      logger.debug('Estadísticas de usuarios obtenidas', { total, active });
+
+      return {
+        totalUsers: total,
+        activeUsers: active,
+        inactiveUsers: total - active,
+        byRole: byRole.map((r: any) => ({
+          role: r.role,
+          count: r._count,
+        })),
+      };
+    } catch (error) {
+      logger.error('Error obteniendo estadísticas de usuarios:', error);
       throw error;
     }
   }
