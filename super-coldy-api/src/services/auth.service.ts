@@ -30,6 +30,11 @@ interface LoginResponse {
     email: string;
     fullName: string | null;
     role: string; // Convertido a minúsculas
+    branchId: number | null;
+    branch?: {
+      id: number;
+      name: string;
+    } | null;
     timezone: string;
   };
   accessToken: string;
@@ -138,6 +143,14 @@ class AuthService {
         where: {
           OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
         },
+        include: {
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       });
 
       // Si no existe, lanzar error
@@ -181,6 +194,8 @@ class AuthService {
           email: user.email,
           fullName: user.fullName,
           role: user.role,
+          branchId: user.branchId,
+          branch: user.branch,
           timezone: user.timezone || 'America/Mexico_City', // Zona horaria del usuario
         },
         accessToken,

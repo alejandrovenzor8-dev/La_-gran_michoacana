@@ -27,6 +27,12 @@ class SaleService {
         throw new AppError('La venta debe tener al menos un item', 400);
       }
 
+      // Obtener la sucursal del usuario
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { branchId: true },
+      });
+
       // Usar transacción de Prisma
       const sale = await prisma.$transaction(async (tx) => {
         // Validar que todos los productos existan y estén activos
@@ -82,6 +88,7 @@ class SaleService {
         const newSale = await tx.sale.create({
           data: {
             userId,
+            branchId: user?.branchId,
             subtotal: new Prisma.Decimal(subtotal),
             total: new Prisma.Decimal(total),
             discount: new Prisma.Decimal(discount),
@@ -234,6 +241,10 @@ class SaleService {
 
       if (filters.source) {
         where.source = filters.source as Source;
+      }
+
+      if (filters.branchId) {
+        where.branchId = filters.branchId;
       }
 
       // Buscar ventas

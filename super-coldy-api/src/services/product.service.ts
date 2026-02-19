@@ -43,6 +43,7 @@ export interface ProductFilters {
   active?: boolean;
   category?: string;
   minStock?: boolean; // Busca productos con stock bajo
+  branchId?: number; // Filtrar por sucursal
 }
 
 /**
@@ -149,6 +150,10 @@ class ProductService {
 
       if (filters?.category) {
         where.category = filters.category;
+      }
+
+      if (filters?.branchId) {
+        where.branchId = filters.branchId;
       }
 
       if (filters?.minStock) {

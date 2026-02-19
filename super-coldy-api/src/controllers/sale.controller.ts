@@ -8,6 +8,7 @@ import { saleService } from '../services/sale.service.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import type { CreateSaleInput, SaleFilters } from '../types/sale.types.js';
+import prisma from '../config/database.js';
 
 class SaleController {
   /**
@@ -56,12 +57,18 @@ class SaleController {
    * GET /api/sales
    * Obtener todas las ventas con filtros y paginación
    * @access Private (GERENTE, ADMIN)
-   * @query startDate, endDate, userId, paymentMethod, status, source, page, limit
+   * @query startDate, endDate, userId, paymentMethod, status, source, page, limit, branchId
    */
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { startDate, endDate, userId, paymentMethod, status, source, page, limit } =
+      const { startDate, endDate, userId, paymentMethod, status, source, page, limit, branchId } =
         req.query;
+
+      // Obtener el usuario completo para verificar su sucursal
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { branchId: true, role: true },
+      });
 
       const filters: SaleFilters = {
         page: page ? Number(page) : 1,
@@ -90,6 +97,17 @@ class SaleController {
 
       if (source) {
         filters.source = String(source) as 'DESKTOP' | 'MOBILE';
+      }
+
+      // Filtrar por sucursal según rol
+      if (user?.role === 'ADMIN') {
+        // Admin puede filtrar por cualquier sucursal o ver todas
+        if (branchId) {
+          filters.branchId = Number(branchId);
+        }
+      } else {
+        // Usuario normal solo ve ventas de su sucursal
+        filters.branchId = user?.branchId ?? undefined;
       }
 
       const result = await saleService.getAllSales(filters);

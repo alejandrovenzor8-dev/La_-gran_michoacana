@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { productService } from '../services/product.service.js';
 import { logger } from '../utils/logger.js';
 import { AppError, asyncHandler } from '../middlewares/errorHandler.js';
+import prisma from '../config/database.js';
 
 /**
  * Controlador de Productos
@@ -36,7 +37,7 @@ class ProductController {
   /**
    * Obtener todos los productos
    * GET /api/products
-   * Query parameters: page, limit, active, category, minStock
+   * Query parameters: page, limit, active, category, minStock, branchId (solo admin)
    */
   async getAllProducts(
     req: Request,
@@ -51,11 +52,28 @@ class ProductController {
       const category = (req.query.category as string) || undefined;
       const minStockParam = req.query.minStock;
       const minStock = minStockParam === 'true' ? true : false;
+      const requestedBranchId = req.query.branchId ? parseInt(req.query.branchId as string) : undefined;
 
-      logger.debug('Obteniendo productos', { page, limit, active, category });
+      // Obtener el usuario completo para verificar su sucursal
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { branchId: true, role: true },
+      });
+
+      let branchId: number | undefined = undefined;
+
+      // Si el usuario es ADMIN, puede filtrar por cualquier sucursal o ver todas
+      if (user?.role === 'ADMIN') {
+        branchId = requestedBranchId; // Si no especifica, verá todas
+      } else {
+        // Si no es admin, solo ve productos de su sucursal
+        branchId = user?.branchId ?? undefined;
+      }
+
+      logger.debug('Obteniendo productos', { page, limit, active, category, branchId });
 
       const result = await productService.getAllProducts(
-        { active, category, minStock },
+        { active, category, minStock, branchId },
         { page, limit }
       );
 

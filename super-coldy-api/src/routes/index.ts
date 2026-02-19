@@ -6,6 +6,7 @@ import saleRoutes from './sale.routes.js';
 import inventoryRoutes from './inventory.routes.js';
 import { permissionRoutes } from './permission.routes.js';
 import settingsRoutes from './settings.routes.js';
+import branchRoutes from './branch.routes.js';
 
 const router = Router();
 
@@ -29,5 +30,8 @@ router.use('/permissions', permissionRoutes);
 
 // Rutas de configuración del sistema (protegidas, solo admin)
 router.use('/settings', settingsRoutes);
+
+// Rutas de sucursales (protegidas, solo admin)
+router.use('/branches', branchRoutes);
 
 export default router;

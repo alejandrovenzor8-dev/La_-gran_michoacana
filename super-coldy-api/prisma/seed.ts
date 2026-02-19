@@ -13,6 +13,26 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.module.deleteMany();
   await prisma.config.deleteMany();
+  await prisma.branch.deleteMany();
+
+  // Crear sucursales
+  const cedisBranch = await prisma.branch.create({
+    data: {
+      name: 'Cedis',
+      address: 'Centro de Distribución',
+      phone: '555-0100',
+      active: true,
+    },
+  });
+
+  const sucursal1Branch = await prisma.branch.create({
+    data: {
+      name: 'Sucursal 1',
+      address: 'Av. Principal #123',
+      phone: '555-0101',
+      active: true,
+    },
+  });
 
   // Crear usuarios
   const hashedPassword = await bcrypt.hash('password123', 10);
@@ -24,6 +44,7 @@ async function main() {
       passwordHash: hashedPassword,
       fullName: 'Administrator',
       role: UserRole.ADMIN,
+      branchId: cedisBranch.id,
       active: true,
     },
   });
@@ -35,6 +56,7 @@ async function main() {
       passwordHash: hashedPassword,
       fullName: 'María García',
       role: UserRole.CAJERO,
+      branchId: sucursal1Branch.id,
       active: true,
     },
   });
@@ -66,6 +88,15 @@ async function main() {
         name: 'Gestión de Usuarios',
         description: 'Administración de usuarios del sistema',
         icon: 'Users',
+        active: true,
+      },
+    }),
+    prisma.module.create({
+      data: {
+        key: 'branches',
+        name: 'Gestión de Sucursales',
+        description: 'Administración de sucursales del sistema',
+        icon: 'Building',
         active: true,
       },
     }),
@@ -140,6 +171,7 @@ async function main() {
         minStock: 10,
         barcode: 'FRESA001',
         emoji: '🍓',
+        branchId: sucursal1Branch.id,
         active: true,
       },
     }),
@@ -154,6 +186,7 @@ async function main() {
         minStock: 10,
         barcode: 'CHAMOY001',
         emoji: '🌶️',
+        branchId: sucursal1Branch.id,
         active: true,
       },
     }),
@@ -168,6 +201,7 @@ async function main() {
         minStock: 20,
         barcode: 'LIMON001',
         emoji: '🍋',
+        branchId: sucursal1Branch.id,
         active: true,
       },
     }),
@@ -182,6 +216,7 @@ async function main() {
         minStock: 5,
         barcode: 'COCO001',
         emoji: '🥥',
+        branchId: sucursal1Branch.id,
         active: true,
       },
     }),

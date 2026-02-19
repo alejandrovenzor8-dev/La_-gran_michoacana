@@ -149,6 +149,9 @@ export interface SaleFilters {
   /** ID del usuario que realizó la venta */
   userId?: string;
 
+  /** Filtrar por sucursal */
+  branchId?: number;
+
   /** Filtrar por método de pago */
   paymentMethod?: PaymentMethod | 'EFECTIVO' | 'TARJETA' | 'MIXTO';
 
