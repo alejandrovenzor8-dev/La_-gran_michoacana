@@ -48,7 +48,8 @@ class ProductController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const activeParam = req.query.active;
-      const active = activeParam === 'true' ? true : activeParam === 'false' ? false : undefined;
+      // Por defecto, mostrar solo activos si no se especifica
+      const active = activeParam === 'false' ? false : activeParam === 'true' ? true : true;
       const category = (req.query.category as string) || undefined;
       const minStockParam = req.query.minStock;
       const minStock = minStockParam === 'true' ? true : false;

@@ -142,10 +142,9 @@ class ProductService {
       // Construir filtros
       const where: any = {};
 
+      // Solo filtrar por active si se especifica explícitamente
       if (filters?.active !== undefined) {
         where.active = filters.active;
-      } else {
-        where.active = true; // Por defecto mostrar solo activos
       }
 
       if (filters?.category) {
