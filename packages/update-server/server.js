@@ -55,8 +55,8 @@ const server = http.createServer((req, res) => {
   if (parsedUrl.pathname === '/latest.yml') {
     let content = fs.readFileSync(filePath, 'utf-8');
     // Replace placeholders with correct values for v1.1.0
-    content = content.replace(/sha512: placeholder/g, 'sha512: FjDZeXBqEINI6HKXfVV5KNH6NBLa5r9AZSAmmt6HgXYM1BjtvP9R6dGbwunG6Beva4yqL4vBIXWl9QzHx0ho8w==');
-    content = content.replace(/size: 102140519/g, 'size: 102140482');
+    content = content.replace(/sha512: FjDZeXBqEINI6HKXfVV5KNH6NBLa5r9AZSAmmt6HgXYM1BjtvP9R6dGbwunG6Beva4yqL4vBIXWl9QzHx0ho8w==/g, 'sha512: 2LgvhKZ5g4TtHfKoUAEKnu5GhgQ+Hoq8JBi6PFLLc6FZIw1m8S2ccqmKpXDugGAXyGUdFp0DYqP+7DaUsDez4g==');
+    content = content.replace(/size: 102140482/g, 'size: 102140487');
     
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
