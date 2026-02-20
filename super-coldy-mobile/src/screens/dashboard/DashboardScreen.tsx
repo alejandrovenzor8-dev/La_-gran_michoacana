@@ -26,6 +26,7 @@ import { saleService } from '../../api/saleService';
 import { inventoryService } from '../../api/inventoryService';
 import { productService } from '../../api/productService';
 import { userService } from '../../api/userService';
+import { formatDateShort, MEXICO_TIMEZONES } from '../../utils/dateFormatter';
 import type { DailySalesStats } from '../../types';
 
 const ICON_SIZE = 28;
@@ -42,6 +43,27 @@ export default function DashboardScreen() {
   const [inventorySummary, setInventorySummary] = useState<any>(null);
   const [productStats, setProductStats] = useState<any>(null);
   const [userStats, setUserStats] = useState<any>(null);
+  const [formattedDate, setFormattedDate] = useState<string>('');
+
+  // Función helper para formatear fechas con timezone del usuario
+  const getFormattedDate = (): string => {
+    try {
+      const timezone = user?.timezone || 'America/Mexico_City';
+      const validTimezone = MEXICO_TIMEZONES.some(tz => tz.value === timezone)
+        ? timezone
+        : 'America/Mexico_City';
+      
+      return new Intl.DateTimeFormat('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+        timeZone: validTimezone,
+      }).format(new Date());
+    } catch (e) {
+      return new Date().toLocaleDateString('es-ES');
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -68,7 +90,13 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadData();
+    setFormattedDate(getFormattedDate());
   }, []);
+
+  useEffect(() => {
+    // Actualizar fecha cuando cambia el usuario (timezone)
+    setFormattedDate(getFormattedDate());
+  }, [user?.timezone]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -107,11 +135,7 @@ export default function DashboardScreen() {
                 {user?.role === 'ADMIN' && '👤 Administrador • '}
                 {user?.role === 'GERENTE' && '📊 Gerente • '}
                 {user?.role === 'CAJERO' && '💳 Cajero • '}
-                {new Date().toLocaleDateString('es-ES', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {formattedDate}
               </Text>
             </View>
             <MaterialCommunityIcons
@@ -128,7 +152,7 @@ export default function DashboardScreen() {
         <Card style={styles.card}>
           <Card.Title
             title="📊 Ventas de Hoy"
-            subtitle={new Date().toLocaleDateString('es-ES')}
+            subtitle={formattedDate.split(',')[0]} // Solo la fecha sin el día de la semana
             left={(props) => <MaterialCommunityIcons name="chart-bar" size={24} color={theme.colors.primary} />}
           />
           <Card.Content>

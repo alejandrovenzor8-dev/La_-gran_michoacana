@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useCartStore, CartItem } from '@/stores/cartStore';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateShort } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '@/lib/eventBus';
 
@@ -122,17 +122,10 @@ export default function CustomerDisplayPage() {
           </div>
           <div className="text-white text-2xl text-right">
             <div className="font-semibold">
-              {new Date().toLocaleDateString('es-MX', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
+              {formatDateShort(new Date())}
             </div>
             <div className="text-lg opacity-90">
-              {new Date().toLocaleTimeString('es-MX', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatDate(new Date(), true).split(' ').slice(-3).join(' ')}
             </div>
           </div>
         </div>

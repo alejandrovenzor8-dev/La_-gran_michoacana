@@ -14,6 +14,7 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { saleService } from '@/lib/saleService';
 import { branchService } from '@/lib/branchService';
+import { formatDate, formatDateShort } from '@/lib/utils';
 import type { Branch } from '@/types/branch';
 import {
   LineChart,
@@ -265,10 +266,10 @@ export default function ReportsPage() {
       ========================================
       
       Período: ${periodLabel}
-      ${dateRange.start ? `Del: ${new Date(dateRange.start).toLocaleDateString('es-MX')}` : ''}
-      ${dateRange.end ? `Al:  ${new Date(dateRange.end).toLocaleDateString('es-MX')}` : ''}
+      ${dateRange.start ? `Del: ${formatDateShort(new Date(dateRange.start))}` : ''}
+      ${dateRange.end ? `Al:  ${formatDateShort(new Date(dateRange.end))}` : ''}
       
-      Generado: ${new Date().toLocaleDateString('es-MX')} ${new Date().toLocaleTimeString('es-MX')}
+      Generado: ${formatDate(new Date())}
       Usuario: ${user?.username || 'N/A'}
       
       ========================================
@@ -330,7 +331,7 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
 
     const csvContent = [
       ['Reporte de Ventas', `Período: ${periodLabel}`],
-      ['Fecha de Generación', new Date().toLocaleDateString('es-MX')],
+      ['Fecha de Generación', formatDateShort(new Date())],
       [],
       ['Métrica', 'Valor'],
       ['Total Ventas', `$${currentData.total.toFixed(2)}`],
@@ -521,11 +522,7 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                   <div className="mt-2 flex items-center gap-2 text-sm">
                     <span className="inline-block w-2 h-2 bg-primary rounded-full animate-pulse"></span>
                     <span className="text-primary font-medium">
-                      Mostrando datos del {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-MX', { 
-                        day: '2-digit', 
-                        month: 'long', 
-                        year: 'numeric' 
-                      })}
+                      Mostrando datos del {formatDateShort(new Date(selectedDate + 'T00:00:00'))}
                     </span>
                   </div>
                 )}
@@ -770,12 +767,7 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                   Corte de Caja
                 </CardTitle>
                 <div className="text-sm text-gray-500">
-                  {new Date().toLocaleDateString('es-MX', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                  {formatDateShort(new Date())}
                 </div>
               </div>
             </CardHeader>
@@ -797,8 +789,8 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                         <p className="text-sm text-blue-700">Turno</p>
                         <p className="font-medium text-blue-900">
                           {cashierCutData.startTime 
-                            ? new Date(cashierCutData.startTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-                            : 'Sin ventas'} - {new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                            ? formatDate(new Date(cashierCutData.startTime), true)
+                            : 'Sin ventas'} - {formatDate(new Date(), true)}
                         </p>
                       </div>
                     </div>

@@ -20,6 +20,8 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { userService } from '../../api/userService';
+import { useAuthStore } from '../../stores/authStore';
+import { MEXICO_TIMEZONES } from '../../utils/dateFormatter';
 import type { User, UserRole } from '../../types';
 
 type UserRoleOption = 'ADMIN' | 'GERENTE' | 'CAJERO';
@@ -122,13 +124,24 @@ export default function UsersManagementScreen() {
   const parseDate = (dateString: string): string => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('es-ES', {
+      
+      // Obtener la zona horaria configurada del usuario
+      const user = useAuthStore.getState().user;
+      const timezone = user?.timezone || 'America/Mexico_City';
+      
+      // Validar que el timezone sea válido
+      const validTimezone = MEXICO_TIMEZONES.some(tz => tz.value === timezone)
+        ? timezone
+        : 'America/Mexico_City';
+      
+      return new Intl.DateTimeFormat('es-MX', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-      });
+        timeZone: validTimezone,
+      }).format(date);
     } catch {
       return dateString;
     }

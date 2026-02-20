@@ -11,6 +11,7 @@ import { useCartStore } from '@/stores/cartStore';
 import { saleService } from '@/lib/saleService';
 import { useAuthStore } from '@/stores/authStore';
 import { eventBus } from '@/lib/eventBus';
+import { formatDate } from '@/lib/utils';
 
 // Type definition para window.api (Electron)
 declare global {
@@ -179,7 +180,7 @@ export function PaymentDialog({
           amountReceived: paymentMethod === 'EFECTIVO' ? parseFloat(amountReceived) : total,
           change: changeAmount,
           cashier: user?.name || 'Cajero',
-          date: new Date().toLocaleString('es-MX'),
+          date: formatDate(new Date()),
           notes: notes || undefined
         };
 
