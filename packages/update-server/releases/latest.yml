@@ -1,8 +1,8 @@
-version: 1.0.3
+version: 1.1.0
 files:
-  - url: https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/download/v1.0.3/La-Gran-Michoacana-Setup-1.0.3.exe
-    sha512: C355RuCMjI9+7Bswg6M+hfIhSo4pq279NbbYhLwZKrIbkRe/m3QrJyBNyDMdWcZVAF8GWfvJm/kXQ2rh0ZVmlw==
+  - url: https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/download/v1.1.0/La-Gran-Michoacana-Setup-1.1.0.exe
+    sha512: placeholder
     size: 102140519
-path: La-Gran-Michoacana-Setup-1.0.3.exe
-sha512: C355RuCMjI9+7Bswg6M+hfIhSo4pq279NbbYhLwZKrIbkRe/m3QrJyBNyDMdWcZVAF8GWfvJm/kXQ2rh0ZVmlw==
-releaseDate: '2026-02-20T08:07:30.959Z'
+path: La-Gran-Michoacana-Setup-1.1.0.exe
+sha512: placeholder
+releaseDate: '2026-02-20T08:35:00.000Z'
