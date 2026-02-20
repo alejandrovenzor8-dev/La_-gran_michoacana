@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Settings, Info, Database, Clock, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import packageJson from '../../package.json';
 import { 
   getConfiguredTimezone, 
   setConfiguredTimezone, 
@@ -274,7 +275,7 @@ export default function SettingsPage() {
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-gray-600">Versión de Aplicación</p>
-                  <p className="font-semibold text-gray-800">v1.0.2</p>
+                  <p className="font-semibold text-gray-800">v{packageJson.version}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Nombre del Negocio</p>
