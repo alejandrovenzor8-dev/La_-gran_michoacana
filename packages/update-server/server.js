@@ -51,14 +51,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Special handling for latest.yml to inject correct GitHub download URL
+  // Special handling for latest.yml to inject correct values
   if (parsedUrl.pathname === '/latest.yml') {
     let content = fs.readFileSync(filePath, 'utf-8');
-    // Replace relative URL with full GitHub URL
-    content = content.replace(
-      /url: La-Gran-Michoacana-Setup-1\.0\.3\.exe/,
-      'url: https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/download/v1.0.3/La-Gran-Michoacana-Setup-1.0.3.exe'
-    );
+    // Replace placeholders with correct values for v1.1.0
+    content = content.replace(/sha512: placeholder/g, 'sha512: FjDZeXBqEINI6HKXfVV5KNH6NBLa5r9AZSAmmt6HgXYM1BjtvP9R6dGbwunG6Beva4yqL4vBIXWl9QzHx0ho8w==');
+    content = content.replace(/size: 102140519/g, 'size: 102140482');
+    
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -66,7 +65,7 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Length', Buffer.byteLength(content));
     res.writeHead(200);
     res.end(content);
-    console.log(`200: ${req.url} (dynamic content with GitHub URL)`);
+    console.log(`200: ${req.url} (latest.yml with injected values)`);
     return;
   }
 
