@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Info, Database, Clock } from 'lucide-react';
+import { Settings, Info, Database, Clock, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { 
   getConfiguredTimezone, 
@@ -12,11 +12,36 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { apiClient } from '@/lib/apiClient';
 
+// Type definition para window.api (Electron)
+declare global {
+  interface Window {
+    electronAPI?: {
+      checkForUpdates: () => void;
+      downloadUpdate: () => void;
+      installUpdate: () => void;
+      onUpdateAvailable: (callback: (info: any) => void) => () => void;
+      onDownloadProgress: (callback: (progress: any) => void) => () => void;
+      onUpdateDownloaded: (callback: (info: any) => void) => () => void;
+      onUpdateError: (callback: (error: any) => void) => () => void;
+      onUpdateNotAvailable: (callback: () => void) => () => void;
+    }
+  }
+}
+
 export default function SettingsPage() {
   const [timezone, setTimezone] = useState<string>(getConfiguredTimezone());
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isSaving, setIsSaving] = useState(false);
   const user = useAuthStore((state) => state.user);
+
+  // Estados para el modal de actualizaciones
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
 
   // Actualizar la hora cada segundo para mostrar el preview
   useEffect(() => {
@@ -26,6 +51,90 @@ export default function SettingsPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Escuchar eventos de actualización de Electron
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    // Escuchar cuando hay actualización disponible
+    const unsubscribeAvailable = window.electronAPI?.onUpdateAvailable?.((info: any) => {
+      setUpdateInfo(info);
+      setUpdateError(null);
+      setCheckingUpdates(false);
+      setShowUpdateModal(true);
+    });
+
+    // Escuchar cuando se está descargando
+    const unsubscribeProgress = window.electronAPI?.onDownloadProgress?.((progress: any) => {
+      setDownloadProgress(Math.round(progress.percent));
+      setIsDownloading(true);
+    });
+
+    // Escuchar cuando la descarga está completa
+    const unsubscribeDownloaded = window.electronAPI?.onUpdateDownloaded?.((info: any) => {
+      setIsDownloading(false);
+      setUpdateDownloaded(true);
+      toast.success('Actualización descargada', {
+        description: 'Reinicia la aplicación para instalar los cambios',
+      });
+    });
+
+    // Escuchar errores
+    const unsubscribeError = window.electronAPI?.onUpdateError?.((error: any) => {
+      setUpdateError(error.message || 'Error al verificar actualizaciones');
+      setCheckingUpdates(false);
+      setShowUpdateModal(true);
+    });
+
+    // Escuchar cuando no hay actualizaciones
+    const unsubscribeNotAvailable = window.electronAPI?.onUpdateNotAvailable?.(() => {
+      setUpdateInfo(null);
+      setUpdateError(null);
+      setCheckingUpdates(false);
+      setShowUpdateModal(true);
+      toast.info('Sistema actualizado', {
+        description: 'Ya tienes la versión más reciente',
+      });
+    });
+
+    return () => {
+      unsubscribeAvailable?.();
+      unsubscribeProgress?.();
+      unsubscribeDownloaded?.();
+      unsubscribeError?.();
+      unsubscribeNotAvailable?.();
+    };
+  }, []);
+
+  // Función para verificar actualizaciones
+  const handleCheckUpdates = async () => {
+    setCheckingUpdates(true);
+    setUpdateError(null);
+    setUpdateInfo(null);
+    setDownloadProgress(0);
+    setIsDownloading(false);
+    setUpdateDownloaded(false);
+
+    // Enviar mensaje a Electron para verificar actualizaciones
+    if (window.electronAPI?.checkForUpdates) {
+      window.electronAPI.checkForUpdates();
+    }
+  };
+
+  // Función para descargar la actualización
+  const handleDownloadUpdate = () => {
+    setIsDownloading(true);
+    if (window.electronAPI?.downloadUpdate) {
+      window.electronAPI.downloadUpdate();
+    }
+  };
+
+  // Función para instalar la actualización
+  const handleInstallUpdate = () => {
+    if (window.electronAPI?.installUpdate) {
+      window.electronAPI.installUpdate();
+    }
+  };
 
   const handleTimezoneChange = async (newTimezone: string) => {
     setTimezone(newTimezone);
@@ -176,6 +285,14 @@ export default function SettingsPage() {
                   <p className="font-semibold text-gray-800">20 de Febrero de 2026</p>
                 </div>
               </div>
+              <Button
+                onClick={handleCheckUpdates}
+                disabled={checkingUpdates}
+                className="w-full mt-4"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {checkingUpdates ? 'Verificando...' : 'Verificar Actualizaciones'}
+              </Button>
             </CardContent>
           </Card>
 
@@ -253,6 +370,114 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Modal de Actualizaciones */}
+        {showUpdateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-96 overflow-y-auto">
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    {updateError ? (
+                      <AlertCircle className="w-6 h-6 text-red-500" />
+                    ) : updateInfo ? (
+                      <Download className="w-6 h-6 text-blue-500" />
+                    ) : (
+                      <CheckCircle className="w-6 h-6 text-green-500" />
+                    )}
+                    <h2 className="text-xl font-bold text-gray-800">
+                      {updateError ? 'Error' : updateInfo ? 'Actualización Disponible' : 'Sistema Actualizado'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Contenido */}
+                {updateError ? (
+                  <div className="space-y-4">
+                    <p className="text-red-600 text-sm">{updateError}</p>
+                    <Button
+                      onClick={() => setShowUpdateModal(false)}
+                      className="w-full"
+                    >
+                      Cerrar
+                    </Button>
+                  </div>
+                ) : updateInfo ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Nueva versión disponible:</p>
+                      <p className="text-lg font-bold text-blue-600">{updateInfo.version}</p>
+                    </div>
+
+                    {updateInfo.releaseNotes && (
+                      <div>
+                        <p className="text-sm text-gray-600 mb-2">Cambios:</p>
+                        <div className="bg-gray-50 p-3 rounded text-sm text-gray-700 max-h-24 overflow-y-auto">
+                          {updateInfo.releaseNotes}
+                        </div>
+                      </div>
+                    )}
+
+                    {isDownloading && (
+                      <div>
+                        <p className="text-sm text-gray-600 mb-2">Descargando: {downloadProgress}%</p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full transition-all"
+                            style={{ width: `${downloadProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      {updateDownloaded ? (
+                        <Button
+                          onClick={handleInstallUpdate}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          Instalar Ahora
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleDownloadUpdate}
+                          disabled={isDownloading}
+                          className="flex-1"
+                        >
+                          {isDownloading ? 'Descargando...' : 'Descargar Actualización'}
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => setShowUpdateModal(false)}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Después
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-green-600 text-sm">Tu aplicación está actualizada a la última versión.</p>
+                    <Button
+                      onClick={() => setShowUpdateModal(false)}
+                      className="w-full"
+                    >
+                      Cerrar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

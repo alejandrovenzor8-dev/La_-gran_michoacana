@@ -66,18 +66,29 @@ function setupAutoUpdater() {
     log.info('Actualización disponible:', info.version);
     sendUpdateStatusToWindows('available', info);
     
-    // Preguntar al usuario si quiere actualizar
-    if (mainWindow) {
-      mainWindow.webContents.send('update-available', {
-        version: info.version,
-        releaseNotes: info.releaseNotes,
-      });
-    }
+    // Enviar evento específico a todas las ventanas
+    const windows = [mainWindow, customerWindow, loginWindow];
+    windows.forEach(win => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('update-available', {
+          version: info.version,
+          releaseNotes: info.releaseNotes,
+        });
+      }
+    });
   });
 
   autoUpdater.on('update-not-available', (info: any) => {
     log.info('Sistema actualizado:', info.version);
     sendUpdateStatusToWindows('not-available', info);
+    
+    // Enviar evento específico a todas las ventanas
+    const windows = [mainWindow, customerWindow, loginWindow];
+    windows.forEach(win => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('update-not-available', info);
+      }
+    });
   });
 
   autoUpdater.on('error', (err: Error) => {
@@ -88,6 +99,14 @@ function setupAutoUpdater() {
       return;
     }
     sendUpdateStatusToWindows('error', { message: err.message });
+    
+    // Enviar evento específico de error a todas las ventanas
+    const windows = [mainWindow, customerWindow, loginWindow];
+    windows.forEach(win => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('update-error', { message: err.message });
+      }
+    });
   });
 
   autoUpdater.on('download-progress', (progressObj: any) => {
@@ -95,21 +114,28 @@ function setupAutoUpdater() {
     log.info(message);
     sendUpdateStatusToWindows('downloading', progressObj);
     
-    if (mainWindow) {
-      mainWindow.webContents.send('download-progress', progressObj);
-    }
+    // Enviar evento específico a todas las ventanas
+    const windows = [mainWindow, customerWindow, loginWindow];
+    windows.forEach(win => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('download-progress', progressObj);
+      }
+    });
   });
 
   autoUpdater.on('update-downloaded', (info: any) => {
     log.info('Actualización descargada:', info.version);
     sendUpdateStatusToWindows('downloaded', info);
     
-    // Notificar al usuario que puede reiniciar
-    if (mainWindow) {
-      mainWindow.webContents.send('update-downloaded', {
-        version: info.version,
-      });
-    }
+    // Enviar evento específico a todas las ventanas
+    const windows = [mainWindow, customerWindow, loginWindow];
+    windows.forEach(win => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('update-downloaded', {
+          version: info.version,
+        });
+      }
+    });
   });
 }
 

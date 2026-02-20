@@ -139,6 +139,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-downloaded', listener);
     return () => ipcRenderer.removeListener('update-downloaded', listener);
   },
+
+  // Escuchar errores de actualización
+  onUpdateError: (callback: (error: any) => void) => {
+    const listener = (event: any, error: any) => callback(error);
+    ipcRenderer.on('update-error', listener);
+    return () => ipcRenderer.removeListener('update-error', listener);
+  },
+
+  // Escuchar cuando no hay actualizaciones disponibles
+  onUpdateNotAvailable: (callback: () => void) => {
+    const listener = (event: any) => callback();
+    ipcRenderer.on('update-not-available', listener);
+    return () => ipcRenderer.removeListener('update-not-available', listener);
+  },
 });
 
 // Type definitions para TypeScript
@@ -163,10 +177,12 @@ export interface ElectronAPI {
   onUpdateAvailable: (callback: (info: any) => void) => () => void;
   onDownloadProgress: (callback: (progress: any) => void) => () => void;
   onUpdateDownloaded: (callback: (info: any) => void) => () => void;
+  onUpdateError: (callback: (error: any) => void) => () => void;
+  onUpdateNotAvailable: (callback: () => void) => () => void;
 }
 
 declare global {
   interface Window {
-    api: ElectronAPI;
+    electronAPI: ElectronAPI;
   }
 }
