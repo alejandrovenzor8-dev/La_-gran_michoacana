@@ -81,8 +81,9 @@
       "perMachine": true
     },
     "publish": {
-      "provider": "generic",
-      "url": "https://update-server-production-7900.up.railway.app/"
+      "provider": "github",
+      "owner": "alejandrovenzor8-dev",
+      "repo": "La_-gran_michoacana"
     },
     "mac": {
       "target": [
