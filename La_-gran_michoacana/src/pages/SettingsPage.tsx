@@ -165,7 +165,7 @@ export default function SettingsPage() {
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-gray-600">Versión de Aplicación</p>
-                  <p className="font-semibold text-gray-800">v1.0.0</p>
+                  <p className="font-semibold text-gray-800">v1.0.2</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Nombre del Negocio</p>
@@ -173,7 +173,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <p className="text-gray-600">Última Actualización</p>
-                  <p className="font-semibold text-gray-800">29 de Enero de 2026</p>
+                  <p className="font-semibold text-gray-800">20 de Febrero de 2026</p>
                 </div>
               </div>
             </CardContent>
