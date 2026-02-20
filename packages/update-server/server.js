@@ -51,6 +51,25 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Special handling for latest.yml to inject correct GitHub download URL
+  if (parsedUrl.pathname === '/latest.yml') {
+    let content = fs.readFileSync(filePath, 'utf-8');
+    // Replace relative URL with full GitHub URL
+    content = content.replace(
+      /url: La-Gran-Michoacana-Setup-1\.0\.3\.exe/,
+      'url: https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/download/v1.0.3/La-Gran-Michoacana-Setup-1.0.3.exe'
+    );
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Content-Type', 'text/yaml');
+    res.setHeader('Content-Length', Buffer.byteLength(content));
+    res.writeHead(200);
+    res.end(content);
+    console.log(`200: ${req.url} (dynamic content with GitHub URL)`);
+    return;
+  }
+
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 

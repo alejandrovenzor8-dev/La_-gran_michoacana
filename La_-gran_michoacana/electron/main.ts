@@ -40,6 +40,16 @@ function setupAutoUpdater() {
     return;
   }
 
+  // Configurar para descargar desde GitHub releases con URL completa
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'alejandrovenzor8-dev',
+    repo: 'La_-gran_michoacana',
+    releaseType: 'release'
+  });
+
+  log.info('✓ Auto-actualización configurada desde GitHub');
+
   // Configurar auto-updater
   autoUpdater.autoDownload = false; // No descargar automáticamente
   autoUpdater.autoInstallOnAppQuit = true; // Instalar al cerrar la app
