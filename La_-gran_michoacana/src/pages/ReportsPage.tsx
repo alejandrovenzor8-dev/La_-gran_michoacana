@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,7 +45,6 @@ export default function ReportsPage() {
   const [useSpecificDate, setUseSpecificDate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
-  const [dailyData, setDailyData] = useState<any>(null);
   const [weeklyTrendData, setWeeklyTrendData] = useState<any[]>([]);
   const [monthlyComparisonData, setMonthlyComparisonData] = useState<any[]>([]);
   const [cashierCutData, setCashierCutData] = useState<any>(null);
@@ -55,6 +54,14 @@ export default function ReportsPage() {
   });
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
+  const [salesList, setSalesList] = useState<any[]>([]);
+  
+  // Estados para tabla mejorada
+  const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortField, setSortField] = useState<'id' | 'date' | 'total' | 'items' | 'paymentMethod'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Calcular rango de fechas según el período seleccionado
   const calculateDateRange = (period: ReportPeriod): { start: Date; end: Date } => {
@@ -171,6 +178,39 @@ export default function ReportsPage() {
     loadMonthlyComparison();
   }, [selectedPeriod, selectedBranchId]);
 
+  // Cargar lista de ventas cuando cambia el período o la sucursal
+  useEffect(() => {
+    const loadSalesList = async () => {
+      try {
+        const range = calculateDateRange(selectedPeriod);
+        const sales = await saleService.getAllSales({
+          startDate: range.start.toISOString(),
+          endDate: range.end.toISOString(),
+        });
+        
+        // Debug: ver qué estamos recibiendo
+        console.log('Sales cargadas:', sales);
+        console.log('Tipo de sales:', typeof sales, Array.isArray(sales));
+        if (sales && sales.length > 0) {
+          console.log('Estructura de primera venta:', JSON.stringify(sales[0], null, 2));
+        }
+        
+        // Asegurar que siempre es un array
+        const salesArray = Array.isArray(sales) ? sales : (sales ? [sales] : []);
+        setSalesList(salesArray);
+        setCurrentPage(1); // Reset de paginación
+        setExpandedRowId(null); // Cerrar filas expandidas
+      } catch (error) {
+        console.error('Error cargando ventas:', error);
+        setSalesList([]);
+        setCurrentPage(1);
+        setExpandedRowId(null);
+      }
+    };
+
+    loadSalesList();
+  }, [selectedPeriod, selectedBranchId]);
+
   // Cargar reporte diario cuando cambia la fecha específica o la sucursal
   useEffect(() => {
     const loadDailyReport = async () => {
@@ -232,6 +272,72 @@ export default function ReportsPage() {
       loadCashierCut();
     }
   }, [activeTab, selectedBranchId]);
+
+  // Función para cambiar ordenamiento
+  const handleSort = (field: 'id' | 'date' | 'total' | 'items' | 'paymentMethod') => {
+    if (sortField === field) {
+      // Si ya está ordenado por este campo, cambiar dirección
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Si es un nuevo campo, ordenar descendente
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    setCurrentPage(1); // Reset a primera página
+  };
+
+  // Función para obtener ventas ordenadas
+  const getSortedSales = () => {
+    const sorted = [...salesList];
+    sorted.sort((a, b) => {
+      let aVal: any = '';
+      let bVal: any = '';
+
+      if (sortField === 'id') {
+        aVal = a.id || 0;
+        bVal = b.id || 0;
+      } else if (sortField === 'date') {
+        aVal = new Date(a.createdAt || 0).getTime();
+        bVal = new Date(b.createdAt || 0).getTime();
+      } else if (sortField === 'total') {
+        aVal = a.total || 0;
+        bVal = b.total || 0;
+      } else if (sortField === 'items') {
+        aVal = a.items?.length || 0;
+        bVal = b.items?.length || 0;
+      } else if (sortField === 'paymentMethod') {
+        aVal = a.paymentMethod || '';
+        bVal = b.paymentMethod || '';
+      }
+
+      if (sortDirection === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+
+    return sorted;
+  };
+
+  // Función para obtener ventas paginadas
+  const getSortedAndPaginatedSales = () => {
+    const sorted = getSortedSales();
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = startIdx + pageSize;
+    return sorted.slice(startIdx, endIdx);
+  };
+
+  // Información de paginación
+  const sortedSalesList = getSortedSales();
+  const totalPages = Math.ceil(sortedSalesList.length / pageSize);
+  const displayedSales = getSortedAndPaginatedSales();
+
+  // Dato para renderizar indicador de sort
+  const getSortIndicator = (field: 'id' | 'date' | 'total' | 'items' | 'paymentMethod') => {
+    if (sortField !== field) return '';
+    return sortDirection === 'asc' ? ' ↑' : ' ↓';
+  };
 
   // Datos para gráfico circular (productos más vendidos)
   const topProductsData =
@@ -698,7 +804,7 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {topProductsData.map((entry, index) => (
+                      {topProductsData.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -748,6 +854,253 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     No hay datos de productos para este período
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Detalle de Ventas */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-5 h-5" />
+                  Detalle de Ventas ({sortedSalesList.length})
+                </div>
+                {pageSize && (
+                  <div className="text-sm text-gray-500 font-normal">
+                    Mostrando {displayedSales.length} de {sortedSalesList.length}
+                  </div>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader className="w-8 h-8 animate-spin text-primary" />
+                    <span className="ml-2 text-gray-500">Cargando ventas...</span>
+                  </div>
+                ) : sortedSalesList && sortedSalesList.length > 0 ? (
+                  <>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-center py-3 px-4 font-semibold text-gray-700 w-10">↔</th>
+                          <th 
+                            onClick={() => handleSort('id')}
+                            className="text-left py-3 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+                          >
+                            ID{getSortIndicator('id')}
+                          </th>
+                          <th 
+                            onClick={() => handleSort('date')}
+                            className="text-left py-3 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+                          >
+                            Fecha{getSortIndicator('date')}
+                          </th>
+                          <th 
+                            onClick={() => handleSort('total')}
+                            className="text-left py-3 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+                          >
+                            Total{getSortIndicator('total')}
+                          </th>
+                          <th 
+                            onClick={() => handleSort('items')}
+                            className="text-left py-3 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+                          >
+                            Productos{getSortIndicator('items')}
+                          </th>
+                          <th 
+                            onClick={() => handleSort('paymentMethod')}
+                            className="text-left py-3 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+                          >
+                            Forma de Pago{getSortIndicator('paymentMethod')}
+                          </th>
+                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedSales.map((sale: any) => (
+                          <Fragment key={sale.id}>
+                            <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                              <td className="text-center py-3 px-4">
+                                <button
+                                  onClick={() => setExpandedRowId(expandedRowId === sale.id ? null : sale.id)}
+                                  className="p-1 hover:bg-primary/10 rounded transition-colors"
+                                >
+                                  {expandedRowId === sale.id ? '▼' : '▶'}
+                                </button>
+                              </td>
+                              <td className="py-3 px-4 text-gray-800 font-medium">#{sale.id}</td>
+                              <td className="py-3 px-4 text-gray-600">
+                                {sale.createdAt ? formatDate(new Date(sale.createdAt)) : 'N/A'}
+                              </td>
+                              <td className="py-3 px-4 font-semibold text-gray-900">
+                                ${(sale.total || 0).toFixed(2)}
+                              </td>
+                              <td className="py-3 px-4 text-gray-600">
+                                {sale.items ? sale.items.length : 0} artículos
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                  sale.paymentMethod === 'EFECTIVO'
+                                    ? 'bg-green-100 text-green-800'
+                                    : sale.paymentMethod === 'TARJETA'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {sale.paymentMethod === 'EFECTIVO' && '💵 Efectivo'}
+                                  {sale.paymentMethod === 'TARJETA' && '💳 Tarjeta'}
+                                  {sale.paymentMethod === 'MIXTO' && '🔀 Mixto'}
+                                  {!sale.paymentMethod && 'N/A'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                  sale.status === 'COMPLETED' || !sale.status
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {sale.status === 'COMPLETED' || !sale.status ? '✓ Completada' : 'Pendiente'}
+                                </span>
+                              </td>
+                            </tr>
+
+                            {/* Fila expandida con detalles */}
+                            {expandedRowId === sale.id && sale.items && (
+                              <tr key={`${sale.id}-expanded`} className="bg-blue-50 border-b border-gray-100">
+                                <td colSpan={7} className="py-4 px-4">
+                                  <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-800 text-sm mb-3">
+                                      Productos en esta venta:
+                                    </h4>
+                                    <div className="space-y-2">
+                                      {sale.items.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center bg-white p-2 rounded border border-gray-200 text-sm">
+                                          <div className="flex-1">
+                                            <p className="font-medium text-gray-800">
+                                              {item.productName || `Producto #${item.productId}`}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                              {item.quantity} x ${(item.unitPrice || 0).toFixed(2)}
+                                            </p>
+                                          </div>
+                                          <div className="text-right">
+                                            <p className="font-semibold text-gray-900">
+                                              ${(item.subtotal || item.quantity * item.unitPrice).toFixed(2)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between text-sm font-semibold">
+                                      <span>Total de productos:</span>
+                                      <span>${(sale.total || 0).toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Controles de Paginación */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="pageSize" className="text-sm text-gray-600">
+                            Por página:
+                          </label>
+                          <select
+                            id="pageSize"
+                            value={pageSize}
+                            onChange={(e) => {
+                              setPageSize(Number(e.target.value));
+                              setCurrentPage(1);
+                            }}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                          >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            ⏮
+                          </button>
+                          <button
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            ◀
+                          </button>
+
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                              .filter(p => 
+                                p === 1 || 
+                                p === totalPages || 
+                                (p >= currentPage - 1 && p <= currentPage + 1)
+                              )
+                              .map((pageNum, idx, arr) => {
+                                const prevPageNum = arr[idx - 1];
+                                const showEllipsis = prevPageNum && pageNum - prevPageNum > 1;
+
+                                return (
+                                  <div key={pageNum} className="flex items-center gap-1">
+                                    {showEllipsis && <span className="text-gray-400">...</span>}
+                                    <button
+                                      onClick={() => setCurrentPage(pageNum)}
+                                      className={`px-3 py-1 rounded text-sm transition-colors ${
+                                        currentPage === pageNum
+                                          ? 'bg-primary text-white'
+                                          : 'border border-gray-300 hover:bg-gray-100'
+                                      }`}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                          </div>
+
+                          <button
+                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            ▶
+                          </button>
+                          <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            ⏭
+                          </button>
+                        </div>
+
+                        <div className="text-sm text-gray-600">
+                          Página {currentPage} de {totalPages}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No hay ventas registradas para este período
                   </div>
                 )}
               </div>

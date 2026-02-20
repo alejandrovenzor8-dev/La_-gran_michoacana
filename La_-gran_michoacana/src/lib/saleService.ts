@@ -98,10 +98,35 @@ class SaleService {
 
       const queryString = params.toString();
       const endpoint = `/sales${queryString ? '?' + queryString : ''}`;
-      const response = await apiClient.get<SaleResponse>(endpoint);
-      const sales = Array.isArray(response.data) ? response.data : (response as any).data?.data ? [(response as any).data.data] : [response.data];
+      const response = await apiClient.get<any>(endpoint);
+      
+      console.log('getAllSales raw response:', response);
+      
+      // Manejar diferentes estructuras de respuesta del backend
+      let sales: Sale[] = [];
+      
+      if (response.data) {
+        // Si tiene propiedad 'data'
+        if (Array.isArray(response.data)) {
+          sales = response.data;
+        } else if (response.data.data) {
+          // Si data.data contiene el array
+          sales = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        } else if (response.data.sales) {
+          // Si data.sales contiene el array
+          sales = Array.isArray(response.data.sales) ? response.data.sales : [response.data.sales];
+        } else {
+          // Si response.data es el objeto de venta directamente
+          sales = [response.data];
+        }
+      } else if (Array.isArray(response)) {
+        sales = response;
+      }
+      
+      console.log('getAllSales parsed sales:', sales);
       return sales || [];
     } catch (error) {
+      console.error('Error en getAllSales:', error);
       return [];
     }
   }
