@@ -35,6 +35,8 @@ class SaleService {
       );
 
       const data = response.data;
+      console.log('📊 Datos recibidos del backend:', data);
+      console.log('averageTicket valor:', data.averageTicket);
       
       return {
         stats: {
