@@ -281,18 +281,41 @@ class SaleService {
   /**
    * Obtener ventas y estadísticas de un día
    */
-  async getDailySales(date?: Date): Promise<{ sales: SaleResponse[]; stats: DailySalesStats }> {
+  async getDailySales(dateParam?: string | Date): Promise<{ sales: SaleResponse[]; stats: DailySalesStats }> {
     try {
-      const targetDate = date ? new Date(date) : new Date();
+      // Si se proporciona una fecha como string (YYYY-MM-DD), interpretarla en UTC
+      // Si se proporciona como Date, tratarla como UTC
+      // Si no se proporciona, no usar new Date() que daría timezone del servidor
       
-      // Trabajar SIEMPRE en UTC
-      // Crear rango de fechas en UTC
-      const yearUTC = targetDate.getUTCFullYear();
-      const monthUTC = targetDate.getUTCMonth();
-      const dateUTC = targetDate.getUTCDate();
-      
-      const startOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 0, 0, 0, 0));
-      const endOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 23, 59, 59, 999));
+      let startOfDay: Date;
+      let endOfDay: Date;
+
+      if (dateParam) {
+        let targetDate: Date;
+        
+        if (typeof dateParam === 'string') {
+          // Formato esperado: YYYY-MM-DD
+          // Esto representa ese día en la zona horaria del usuario
+          // Convertir directamente a UTC asumiendo que es el start del día UTC
+          const [year, month, day] = dateParam.split('-').map(Number);
+          targetDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+        } else {
+          targetDate = dateParam;
+        }
+        
+        // Trabajar en UTC
+        const yearUTC = targetDate.getUTCFullYear();
+        const monthUTC = targetDate.getUTCMonth();
+        const dateUTC = targetDate.getUTCDate();
+        
+        startOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 0, 0, 0, 0));
+        endOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 23, 59, 59, 999));
+      } else {
+        // Si NO se proporciona fecha, no usar new Date()
+        // Retornar ventas vacías o usar una fecha default
+        logger.warn('getDailySales llamado sin fecha - usando rango vacío');
+        throw new AppError('Parámetro de fecha requerido', 400);
+      }
 
       // Obtener ventas completadas del día
       const sales = await prisma.sale.findMany({

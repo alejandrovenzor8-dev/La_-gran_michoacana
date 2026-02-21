@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { getTodayInConfiguredTimezone } from '../utils/dateFormatter';
 import type { Sale, ApiResponse, DailySalesStats } from '../types';
 
 class SaleService {
@@ -26,15 +27,18 @@ class SaleService {
    */
   async getDailySales(): Promise<{ stats: DailySalesStats }> {
     try {
+      // Obtener la fecha de hoy en la zona horaria configurada
+      const today = await getTodayInConfiguredTimezone();
+      
       const response = await apiClient.get<ApiResponse<any>>(
-        '/sales/stats/daily'
+        `/sales/stats/daily?date=${today}`
       );
 
       const data = response.data;
       
       return {
         stats: {
-          date: new Date().toISOString().split('T')[0],
+          date: today,
           totalSales: data.totalSales || 0,
           totalAmount: data.totalRevenue || 0,
           averageTicket: data.averageTicket || 0,

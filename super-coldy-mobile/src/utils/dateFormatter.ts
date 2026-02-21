@@ -170,3 +170,27 @@ export async function formatTime(dateString: string | Date): Promise<string> {
     return dateString instanceof Date ? dateString.toISOString() : dateString;
   }
 }
+
+/**
+ * Obtiene "hoy" en la zona horaria configurada en formato YYYY-MM-DD
+ * Útil para enviar al backend para búsquedas correctas
+ */
+export async function getTodayInConfiguredTimezone(): Promise<string> {
+  try {
+    const timezone = await getConfiguredTimezone();
+    const now = new Date();
+
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: timezone,
+    });
+
+    return formatter.format(now);
+  } catch (e) {
+    console.error('Error al obtener fecha de hoy:', e);
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  }
+}

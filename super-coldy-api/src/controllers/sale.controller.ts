@@ -169,15 +169,16 @@ class SaleController {
     try {
       const { date } = req.query;
 
-      let targetDate: Date | undefined;
+      let dateString: string | undefined;
       if (date) {
-        targetDate = new Date(String(date));
-        if (isNaN(targetDate.getTime())) {
+        dateString = String(date);
+        // Validar formato YYYY-MM-DD
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
           throw new AppError('Formato de fecha inválido. Use YYYY-MM-DD', 400);
         }
       }
 
-      const result = await saleService.getDailySales(targetDate);
+      const result = await saleService.getDailySales(dateString);
 
       res.status(200).json({
         success: true,
@@ -201,15 +202,16 @@ class SaleController {
     try {
       const { date } = req.query;
 
-      let targetDate: Date | undefined;
+      let dateString: string | undefined;
       if (date) {
-        targetDate = new Date(String(date));
-        if (isNaN(targetDate.getTime())) {
+        dateString = String(date);
+        // Validar formato YYYY-MM-DD
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
           throw new AppError('Formato de fecha inválido. Use YYYY-MM-DD', 400);
         }
       }
 
-      const result = await saleService.getDailySales(targetDate);
+      const result = await saleService.getDailySales(dateString);
 
       res.status(200).json({
         success: true,
