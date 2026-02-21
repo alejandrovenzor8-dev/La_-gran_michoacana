@@ -79,6 +79,23 @@ function convertLocalDateToUTCRange(
   return { start: startUTC, end: endUTC };
 }
 
+/**
+ * Traduce nombre de día en inglés (en-US) a español
+ * Mon → Lun, Tue → Mar, etc.
+ */
+function translateDayNameToSpanish(englishDayName: string): string {
+  const dayMap: Record<string, string> = {
+    'Sun': 'Dom',
+    'Mon': 'Lun',
+    'Tue': 'Mar',
+    'Wed': 'Mié',
+    'Thu': 'Jue',
+    'Fri': 'Vie',
+    'Sat': 'Sáb',
+  };
+  return dayMap[englishDayName] || englishDayName;
+}
+
 class SaleService {
   /**
    * Crear una nueva venta
@@ -526,17 +543,12 @@ class SaleService {
 
         // Convertir a la zona horaria del usuario para obtener el día correcto
         const formatter = new Intl.DateTimeFormat('en-US', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
           weekday: 'short',
           timeZone: timezone,
         });
 
-        const parts = formatter.formatToParts(date);
-        const dayNameInTz = parts.find((p) => p.type === 'weekday')?.value || '';
-        const dayAbbrev = dayNameInTz.substring(0, 3);
-        const dayName = dayNames.find((d) => d.startsWith(dayAbbrev.charAt(0))) || dayAbbrev;
+        const dayNameInEnglish = formatter.format(date);
+        const dayName = translateDayNameToSpanish(dayNameInEnglish);
 
         if (!dailyData[dayName]) {
           dailyData[dayName] = { ventas: 0, transacciones: 0 };
@@ -550,8 +562,8 @@ class SaleService {
           timeZone: timezone,
         });
 
-        const dayNameInTz = formatter.format(sale.createdAt);
-        const dayName = dayNames.find((d) => d.startsWith(dayNameInTz.charAt(0))) || dayNameInTz;
+        const dayNameInEnglish = formatter.format(sale.createdAt);
+        const dayName = translateDayNameToSpanish(dayNameInEnglish);
 
         if (dailyData[dayName]) {
           dailyData[dayName].ventas += Number(sale.total);
