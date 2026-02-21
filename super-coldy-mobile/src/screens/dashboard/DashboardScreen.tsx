@@ -76,6 +76,10 @@ export default function DashboardScreen() {
         userService.getUserStats(),
       ]);
 
+      console.log('📊 [Dashboard] salesData completo:', salesData);
+      console.log('📊 [Dashboard] salesData.stats:', salesData.stats);
+      console.log('📊 [Dashboard] averageTicket en stats:', salesData.stats?.averageTicket);
+      
       setSalesStats(salesData.stats);
       setInventorySummary(inventoryData);
       setProductStats(prodStats);
@@ -155,6 +159,7 @@ export default function DashboardScreen() {
             subtitle={formattedDate.split(',')[0]} // Solo la fecha sin el día de la semana
             left={(props) => <MaterialCommunityIcons name="chart-bar" size={24} color={theme.colors.primary} />}
           />
+          {console.log('📊 [Render] salesStats actual:', salesStats)}
           <Card.Content>
             <View style={styles.statsGrid}>
               <View style={[styles.statBox, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -194,6 +199,7 @@ export default function DashboardScreen() {
                 <Text variant="labelSmall" style={styles.statBoxLabel}>
                   PROMEDIO
                 </Text>
+                {console.log('📊 [PROMEDIO] Renderizando con valor:', (salesStats?.averageTicket || 0).toFixed(2))}
                 <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.tertiary }]} numberOfLines={1}>
                   ${(salesStats?.averageTicket || 0).toFixed(2)}
                 </Text>
