@@ -23,6 +23,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { useAuthStore } from '../../stores/authStore';
 import { saleService } from '../../api/saleService';
+import { getTodayInConfiguredTimezone } from '../../utils/dateFormatter';
 import type { DailySalesStats } from '../../types';
 
 type ReportPeriod = 'day' | 'week' | 'month' | 'year';
@@ -58,22 +59,30 @@ export default function ReportsScreen() {
       
       setStatsData(salesData.stats);
 
-      // Calcular fechas según el período
-      let startDate = new Date();
-      let endDate = new Date();
+      // Obtener las fechas en la zona horaria correcta
+      const today = await getTodayInConfiguredTimezone();
+      let startDate: Date;
+      let endDate: Date;
+
+      // Convertir string YYYY-MM-DD a Dates
+      const [year, month, day] = today.split('-').map(Number);
+      endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
 
       switch (selectedPeriod) {
         case 'day':
+          startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
           break;
         case 'week':
-          startDate.setDate(endDate.getDate() - 6);
+          startDate = new Date(year, month - 1, day - 6, 0, 0, 0, 0);
           break;
         case 'month':
-          startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+          startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
           break;
         case 'year':
-          startDate = new Date(endDate.getFullYear(), 0, 1);
+          startDate = new Date(year, 0, 1, 0, 0, 0, 0);
           break;
+        default:
+          startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
       }
 
       // Siempre cargar datos para gráficas

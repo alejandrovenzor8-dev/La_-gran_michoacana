@@ -168,6 +168,7 @@ class SaleController {
   async getDailyReport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { date } = req.query;
+      const userId = (req as any).user?.userId;
 
       let dateString: string | undefined;
       if (date) {
@@ -178,7 +179,19 @@ class SaleController {
         }
       }
 
-      const result = await saleService.getDailySales(dateString);
+      // Obtener timezone del usuario
+      let userTimezone = 'America/Mexico_City';
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true },
+        });
+        if (user?.timezone) {
+          userTimezone = user.timezone;
+        }
+      }
+
+      const result = await saleService.getDailySales(dateString, userTimezone);
 
       res.status(200).json({
         success: true,
@@ -201,6 +214,7 @@ class SaleController {
   async getDailyStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { date } = req.query;
+      const userId = (req as any).user?.userId;
 
       let dateString: string | undefined;
       if (date) {
@@ -211,7 +225,19 @@ class SaleController {
         }
       }
 
-      const result = await saleService.getDailySales(dateString);
+      // Obtener timezone del usuario
+      let userTimezone = 'America/Mexico_City';
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true },
+        });
+        if (user?.timezone) {
+          userTimezone = user.timezone;
+        }
+      }
+
+      const result = await saleService.getDailySales(dateString, userTimezone);
 
       res.status(200).json({
         success: true,
@@ -231,6 +257,19 @@ class SaleController {
   async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { startDate, endDate } = req.query;
+      const userId = (req as any).user?.userId;
+
+      // Obtener timezone del usuario
+      let userTimezone = 'America/Mexico_City';
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true },
+        });
+        if (user?.timezone) {
+          userTimezone = user.timezone;
+        }
+      }
 
       let start: Date | undefined;
       let end: Date | undefined;
@@ -249,7 +288,7 @@ class SaleController {
         }
       }
 
-      const stats = await saleService.getSalesStats(start, end);
+      const stats = await saleService.getSalesStats(start, end, userTimezone);
 
       res.status(200).json({
         success: true,
@@ -269,6 +308,19 @@ class SaleController {
   async getWeeklyTrend(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { startDate, endDate } = req.query;
+      const userId = (req as any).user?.userId;
+
+      // Obtener timezone del usuario
+      let userTimezone = 'America/Mexico_City';
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true },
+        });
+        if (user?.timezone) {
+          userTimezone = user.timezone;
+        }
+      }
 
       let start: Date | undefined;
       let end: Date | undefined;
@@ -287,7 +339,7 @@ class SaleController {
         }
       }
 
-      const trend = await saleService.getWeeklyTrend(start, end);
+      const trend = await saleService.getWeeklyTrend(start, end, userTimezone);
 
       res.status(200).json({
         success: true,
@@ -307,6 +359,19 @@ class SaleController {
   async getMonthlyComparison(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { startDate, endDate } = req.query;
+      const userId = (req as any).user?.userId;
+
+      // Obtener timezone del usuario
+      let userTimezone = 'America/Mexico_City';
+      if (userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true },
+        });
+        if (user?.timezone) {
+          userTimezone = user.timezone;
+        }
+      }
 
       let start: Date | undefined;
       let end: Date | undefined;
@@ -325,7 +390,7 @@ class SaleController {
         }
       }
 
-      const comparison = await saleService.getMonthlyComparison(start, end);
+      const comparison = await saleService.getMonthlyComparison(start, end, userTimezone);
 
       res.status(200).json({
         success: true,

@@ -15,6 +15,70 @@ import type {
   SaleListResponse,
 } from '../types/sale.types.js';
 
+/**
+ * Calcula el offset (en minutos) entre UTC y una timezone específica
+ * para una fecha dada
+ */
+function getTimezoneOffsetMinutes(timezone: string, date: Date = new Date()): number {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+
+    const parts = formatter.formatToParts(date);
+    const partsMap = new Map(parts.map((p) => [p.type, p.value]));
+
+    const localDate = new Date(
+      parseInt(partsMap.get('year')!),
+      parseInt(partsMap.get('month')!) - 1,
+      parseInt(partsMap.get('day')!),
+      parseInt(partsMap.get('hour')!),
+      parseInt(partsMap.get('minute')!),
+      parseInt(partsMap.get('second')!)
+    );
+
+    // Diferencia en minutos entre UTC y la zona horaria
+    return Math.round((date.getTime() - localDate.getTime()) / 60000);
+  } catch (error) {
+    logger.warn(`Error calculating timezone offset for ${timezone}:`, error);
+    // Default a UTC-6 (México)
+    return -360;
+  }
+}
+
+/**
+ * Convierte YYYY-MM-DD en una zona horaria a rango UTC
+ * Ej: "2026-02-20" en UTC-6 → Feb 20, 2026 06:00 UTC a Feb 21, 2026 05:59:59 UTC
+ */
+function convertLocalDateToUTCRange(
+  dateString: string,
+  timezone: string
+): { start: Date; end: Date } {
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  // Crear una fecha de "medianoche" en la zona horaria especificada
+  const localMidnight = new Date(year, month - 1, day, 0, 0, 0, 0);
+
+  // Calcular el offset para esa fecha
+  const offsetMinutes = getTimezoneOffsetMinutes(timezone, localMidnight);
+
+  // Convertir a UTC sumando el offset (offset es UTC - local, entonces UTC = local + offset)
+  const startUTC = new Date(localMidnight.getTime() + offsetMinutes * 60 * 1000);
+
+  // Fin del día: 23:59:59 en la zona horaria local
+  const localEndOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+  const endUTC = new Date(localEndOfDay.getTime() + offsetMinutes * 60 * 1000);
+
+  return { start: startUTC, end: endUTC };
+}
+
 class SaleService {
   /**
    * Crear una nueva venta
@@ -281,41 +345,38 @@ class SaleService {
   /**
    * Obtener ventas y estadísticas de un día
    */
-  async getDailySales(dateParam?: string | Date): Promise<{ sales: SaleResponse[]; stats: DailySalesStats }> {
+  async getDailySales(
+    dateParam?: string | Date,
+    timezone: string = 'America/Mexico_City'
+  ): Promise<{ sales: SaleResponse[]; stats: DailySalesStats }> {
     try {
-      // Si se proporciona una fecha como string (YYYY-MM-DD), interpretarla en UTC
-      // Si se proporciona como Date, tratarla como UTC
-      // Si no se proporciona, no usar new Date() que daría timezone del servidor
-      
       let startOfDay: Date;
       let endOfDay: Date;
 
       if (dateParam) {
-        let targetDate: Date;
-        
         if (typeof dateParam === 'string') {
           // Formato esperado: YYYY-MM-DD
-          // Esto representa ese día en la zona horaria del usuario
-          // Convertir directamente a UTC asumiendo que es el start del día UTC
-          const [year, month, day] = dateParam.split('-').map(Number);
-          targetDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+          // Convertir a rango UTC considerando la timezone
+          const range = convertLocalDateToUTCRange(dateParam, timezone);
+          startOfDay = range.start;
+          endOfDay = range.end;
         } else {
-          targetDate = dateParam;
+          // Si es una Date, trabajar directamente en UTC
+          const yearUTC = dateParam.getUTCFullYear();
+          const monthUTC = dateParam.getUTCMonth();
+          const dateUTC = dateParam.getUTCDate();
+
+          startOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 0, 0, 0, 0));
+          endOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 23, 59, 59, 999));
         }
-        
-        // Trabajar en UTC
-        const yearUTC = targetDate.getUTCFullYear();
-        const monthUTC = targetDate.getUTCMonth();
-        const dateUTC = targetDate.getUTCDate();
-        
-        startOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 0, 0, 0, 0));
-        endOfDay = new Date(Date.UTC(yearUTC, monthUTC, dateUTC, 23, 59, 59, 999));
       } else {
         // Si NO se proporciona fecha, no usar new Date()
         // Retornar ventas vacías o usar una fecha default
         logger.warn('getDailySales llamado sin fecha - usando rango vacío');
         throw new AppError('Parámetro de fecha requerido', 400);
       }
+
+      logger.debug(`getDailySales: rango de búsqueda UTC desde ${startOfDay} a ${endOfDay}`);
 
       // Obtener ventas completadas del día
       const sales = await prisma.sale.findMany({
@@ -335,6 +396,8 @@ class SaleService {
         orderBy: { createdAt: 'desc' },
       });
 
+      logger.debug(`getDailySales: encontradas ${sales.length} ventas`);
+
       // Calcular estadísticas
       const stats = this.calculateDailySalesStats(sales);
 
@@ -351,29 +414,36 @@ class SaleService {
   /**
    * Obtener solo estadísticas de ventas para un período
    */
-  async getSalesStats(startDate?: Date, endDate?: Date): Promise<DailySalesStats> {
+  async getSalesStats(
+    startDate?: Date,
+    endDate?: Date,
+    timezone: string = 'America/Mexico_City'
+  ): Promise<DailySalesStats> {
     try {
       let start = startDate;
       let end = endDate;
 
       // Si no se especifican fechas, usar últimos 30 días
       if (!start || !end) {
-        end = new Date();
-        start = new Date();
-        start.setDate(start.getDate() - 30);
+        // Obtener "hoy" en la zona horaria del usuario
+        const today = new Date();
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          timeZone: timezone,
+        });
+        const todayString = formatter.format(today);
+        const todayRange = convertLocalDateToUTCRange(todayString, timezone);
+
+        end = todayRange.end;
+        start = new Date(end);
+        start.setUTCDate(start.getUTCDate() - 29); // Últimos 30 días
       }
 
-      // Trabajar SIEMPRE en UTC
-      const startYearUTC = start.getUTCFullYear();
-      const startMonthUTC = start.getUTCMonth();
-      const startDateUTC = start.getUTCDate();
-      
-      const endYearUTC = end.getUTCFullYear();
-      const endMonthUTC = end.getUTCMonth();
-      const endDateUTC = end.getUTCDate();
-
-      const startUTC = new Date(Date.UTC(startYearUTC, startMonthUTC, startDateUTC, 0, 0, 0, 0));
-      const endUTC = new Date(Date.UTC(endYearUTC, endMonthUTC, endDateUTC, 23, 59, 59, 999));
+      // Las fechas ya están correctamente en UTC
+      const startUTC = new Date(start);
+      const endUTC = new Date(end);
 
       const sales = await prisma.sale.findMany({
         where: {
@@ -399,32 +469,40 @@ class SaleService {
    * Obtener tendencia de ventas de la última semana (últimos 7 días)
    * O filtrado por rango de fechas
    */
-  async getWeeklyTrend(startDate?: Date, endDate?: Date): Promise<any[]> {
+  async getWeeklyTrend(
+    startDate?: Date,
+    endDate?: Date,
+    timezone: string = 'America/Mexico_City'
+  ): Promise<any[]> {
     try {
       let start: Date;
       let end: Date;
 
       if (startDate && endDate) {
+        // Si se proporcionan fechas, usarlas directamente (ya están en UTC correctamente)
         start = startDate instanceof Date ? startDate : new Date(startDate);
         end = endDate instanceof Date ? endDate : new Date(endDate);
       } else {
-        // Por defecto: últimos 7 días
-        end = new Date();
-        start = new Date();
-        start.setDate(end.getDate() - 6);
+        // Por defecto: últimos 7 días en la zona horaria del usuario
+        // Obtener "hoy" en la zona horaria del usuario
+        const today = new Date();
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          timeZone: timezone,
+        });
+        const todayString = formatter.format(today);
+        const todayRange = convertLocalDateToUTCRange(todayString, timezone);
+
+        end = todayRange.end;
+        start = new Date(end);
+        start.setUTCDate(start.getUTCDate() - 6);
       }
 
-      // Trabajar SIEMPRE en UTC
-      const startYearUTC = start.getUTCFullYear();
-      const startMonthUTC = start.getUTCMonth();
-      const startDateUTC = start.getUTCDate();
-      
-      const endYearUTC = end.getUTCFullYear();
-      const endMonthUTC = end.getUTCMonth();
-      const endDateUTC = end.getUTCDate();
-
-      const startUTC = new Date(Date.UTC(startYearUTC, startMonthUTC, startDateUTC, 0, 0, 0, 0));
-      const endUTC = new Date(Date.UTC(endYearUTC, endMonthUTC, endDateUTC, 23, 59, 59, 999));
+      // Las fechas starte y end ya están correctamente en UTC
+      const startUTC = new Date(start);
+      const endUTC = new Date(end);
 
       const sales = await prisma.sale.findMany({
         where: {
@@ -436,24 +514,45 @@ class SaleService {
         },
       });
 
-      // Agrupar por día
+      // Agrupar por día - usando la zona horaria del usuario
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       const dailyData: Record<string, { ventas: number; transacciones: number }> = {};
 
-      // Inicializar todos los días del rango usando fechas UTC
+      // Inicializar todos los días del rango
       const diffDays = Math.ceil((endUTC.getTime() - startUTC.getTime()) / (1000 * 60 * 60 * 24));
       for (let i = 0; i <= Math.min(diffDays, 6); i++) {
         const date = new Date(startUTC);
         date.setUTCDate(date.getUTCDate() + i);
-        const dayName = dayNames[date.getUTCDay()];
+
+        // Convertir a la zona horaria del usuario para obtener el día correcto
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          weekday: 'short',
+          timeZone: timezone,
+        });
+
+        const parts = formatter.formatToParts(date);
+        const dayNameInTz = parts.find((p) => p.type === 'weekday')?.value || '';
+        const dayAbbrev = dayNameInTz.substring(0, 3);
+        const dayName = dayNames.find((d) => d.startsWith(dayAbbrev.charAt(0))) || dayAbbrev;
+
         if (!dailyData[dayName]) {
           dailyData[dayName] = { ventas: 0, transacciones: 0 };
         }
       }
 
-      // Sumar ventas por día
+      // Sumar ventas por día (según la zona horaria del usuario)
       for (const sale of sales) {
-        const dayName = dayNames[sale.createdAt.getUTCDay()];
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          weekday: 'short',
+          timeZone: timezone,
+        });
+
+        const dayNameInTz = formatter.format(sale.createdAt);
+        const dayName = dayNames.find((d) => d.startsWith(dayNameInTz.charAt(0))) || dayNameInTz;
+
         if (dailyData[dayName]) {
           dailyData[dayName].ventas += Number(sale.total);
           dailyData[dayName].transacciones += 1;
@@ -477,32 +576,47 @@ class SaleService {
    * Obtener comparación por semanas del mes actual
    * O filtrado por rango de fechas
    */
-  async getMonthlyComparison(startDate?: Date, endDate?: Date): Promise<any[]> {
+  async getMonthlyComparison(
+    startDate?: Date,
+    endDate?: Date,
+    timezone: string = 'America/Mexico_City'
+  ): Promise<any[]> {
     try {
       let start: Date;
       let end: Date;
 
       if (startDate && endDate) {
+        // Si se proporcionan fechas, usarlas directamente (ya están en UTC correctamente)
         start = startDate instanceof Date ? startDate : new Date(startDate);
         end = endDate instanceof Date ? endDate : new Date(endDate);
       } else {
-        // Por defecto: mes actual
+        // Por defecto: mes actual en la zona horaria del usuario
         const now = new Date();
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        // Obtener el primer día del mes en la zona horaria del usuario
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          timeZone: timezone,
+        });
+
+        const todayString = formatter.format(now);
+        const [year, month] = todayString.split('-').map(Number);
+
+        const firstDayOfMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDayOfMonth = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
+
+        const startRange = convertLocalDateToUTCRange(firstDayOfMonth, timezone);
+        const endRange = convertLocalDateToUTCRange(lastDayOfMonth, timezone);
+
+        start = startRange.start;
+        end = endRange.end;
       }
 
-      // Trabajar SIEMPRE en UTC
-      const startYearUTC = start.getUTCFullYear();
-      const startMonthUTC = start.getUTCMonth();
-      const startDateUTC = start.getUTCDate();
-      
-      const endYearUTC = end.getUTCFullYear();
-      const endMonthUTC = end.getUTCMonth();
-      const endDateUTC = end.getUTCDate();
-
-      const startUTC = new Date(Date.UTC(startYearUTC, startMonthUTC, startDateUTC, 0, 0, 0, 0));
-      const endUTC = new Date(Date.UTC(endYearUTC, endMonthUTC, endDateUTC, 23, 59, 59, 999));
+      // Las fechas start y end ya están correctamente en UTC
+      const startUTC = new Date(start);
+      const endUTC = new Date(end);
 
       const sales = await prisma.sale.findMany({
         where: {
@@ -514,7 +628,7 @@ class SaleService {
         },
       });
 
-      // Agrupar por semana (semana 1-5)
+      // Agrupar por semana (semana 1-5) usando la zona horaria del usuario
       const weeklyData: Record<string, number> = {
         'Sem 1': 0,
         'Sem 2': 0,
@@ -524,9 +638,19 @@ class SaleService {
       };
 
       for (const sale of sales) {
-        const day = sale.createdAt.getDate();
+        // Convertir la fecha UTC a la zona horaria del usuario
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          timeZone: timezone,
+        });
+
+        const dateString = formatter.format(sale.createdAt);
+        const day = parseInt(dateString.split('-')[2], 10);
         const weekNumber = Math.ceil(day / 7);
         const weekKey = `Sem ${weekNumber}`;
+
         if (weeklyData[weekKey] !== undefined) {
           weeklyData[weekKey] += Number(sale.total);
         }
