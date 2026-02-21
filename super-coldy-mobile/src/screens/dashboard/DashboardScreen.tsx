@@ -190,17 +190,29 @@ export default function DashboardScreen() {
                 </Text>
               </View>
 
-              <View style={[styles.statBox, { backgroundColor: theme.colors.tertiary + '20' }]}>
+              <View style={[styles.statBox, { backgroundColor: '#fcd34d20' }]}>
                 <MaterialCommunityIcons
                   name="percent"
                   size={ICON_SIZE}
-                  color={theme.colors.tertiary}
+                  color="#f59e0b"
                 />
                 <Text variant="labelSmall" style={styles.statBoxLabel}>
                   PROMEDIO
                 </Text>
                 {console.log('📊 [PROMEDIO] Renderizando con valor:', (salesStats?.averageTicket || 0).toFixed(2))}
-                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.tertiary }]} numberOfLines={1}>
+                <Text 
+                  variant="headlineSmall" 
+                  style={[
+                    styles.statBoxValue, 
+                    { 
+                      color: '#f59e0b',
+                      backgroundColor: 'transparent',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }
+                  ]} 
+                  numberOfLines={1}
+                >
                   ${(salesStats?.averageTicket || 0).toFixed(2)}
                 </Text>
               </View>
