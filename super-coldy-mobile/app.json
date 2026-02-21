@@ -1,19 +1,37 @@
 {
   "expo": {
-    "name": "super-coldy-mobile",
-    "slug": "super-coldy-mobile",
+    "name": "La Gran Michoacana",
+    "slug": "la-gran-michoacana",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "lagranmichoacana",
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1f2937"
+        }
+      ]
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.alejandrovenzor.lagranmichoacana",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "La app necesita acceso a la red local para conectarse al POS",
+        "NSBonjourServiceTypes": [
+          "_http._tcp"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +39,13 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.alejandrovenzor.lagranmichoacana",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
