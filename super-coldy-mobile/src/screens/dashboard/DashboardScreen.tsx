@@ -166,7 +166,7 @@ export default function DashboardScreen() {
                 <Text variant="labelSmall" style={styles.statBoxLabel}>
                   INGRESOS
                 </Text>
-                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.primary }]}>
+                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.primary }]} numberOfLines={1}>
                   ${(salesStats?.totalAmount || 0).toFixed(2)}
                 </Text>
               </View>
@@ -180,7 +180,7 @@ export default function DashboardScreen() {
                 <Text variant="labelSmall" style={styles.statBoxLabel}>
                   VENTAS
                 </Text>
-                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.secondary }]}>
+                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.secondary }]} numberOfLines={1}>
                   {salesStats?.totalSales || 0}
                 </Text>
               </View>
@@ -194,7 +194,7 @@ export default function DashboardScreen() {
                 <Text variant="labelSmall" style={styles.statBoxLabel}>
                   PROMEDIO
                 </Text>
-                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.tertiary }]}>
+                <Text variant="headlineSmall" style={[styles.statBoxValue, { color: theme.colors.tertiary }]} numberOfLines={1}>
                   ${(salesStats?.averageTicket || 0).toFixed(2)}
                 </Text>
               </View>
@@ -453,26 +453,28 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
     marginTop: 12,
   },
   statBox: {
     flex: 1,
-    padding: 12,
+    padding: 14,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 110,
   },
   statBoxLabel: {
     marginTop: 8,
     textTransform: 'uppercase',
     fontWeight: '600',
     color: '#6b7280',
-    fontSize: 10,
+    fontSize: 9,
   },
   statBoxValue: {
-    marginTop: 4,
+    marginTop: 6,
     fontWeight: 'bold',
+    fontSize: 16,
   },
   paymentRow: {
     flexDirection: 'row',
