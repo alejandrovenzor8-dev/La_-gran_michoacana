@@ -181,7 +181,7 @@ export default function InventoryScreen() {
               <MaterialCommunityIcons 
                 name="package-variant" 
                 size={48} 
-                color={theme.colors.disabled}
+                color={theme.colors.outline}
               />
               <Text style={styles.emptyText}>Sin productos</Text>
             </Card.Content>

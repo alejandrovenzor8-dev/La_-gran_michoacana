@@ -105,9 +105,7 @@ export default function UsersManagementScreen() {
     if (!selectedUser) return;
 
     try {
-      const success = selectedUser.active
-        ? await userService.deactivateUser(selectedUser.id)
-        : await userService.activateUser(selectedUser.id);
+      const success = await userService.toggleUserStatus(selectedUser.id);
 
       if (success) {
         setShowStatusDialog(false);
@@ -183,20 +181,21 @@ export default function UsersManagementScreen() {
 
           <View style={styles.roleChip}>
             <Chip
-              icon={() => (
-                <MaterialCommunityIcons
-                  name={
-                    item.role === 'ADMIN'
-                      ? 'shield-admin'
-                      : item.role === 'GERENTE'
-                      ? 'briefcase'
-                      : 'cash-register'
-                  }
-                  size={12}
-                  color="white"
-                />
-              )}
-              label={ROLE_LABELS[item.role]}
+              icon={() => {
+                const iconNames: Record<string, any> = {
+                  'ADMIN': 'shield-account',
+                  'GERENTE': 'briefcase',
+                  'CAJERO': 'cash-register'
+                };
+                return (
+                  <MaterialCommunityIcons
+                    name={iconNames[item.role] || 'account'}
+                    size={12}
+                    color="white"
+                  />
+                );
+              }}
+              children={ROLE_LABELS[item.role]}
               style={{ backgroundColor: getRoleColor(item.role) }}
               textStyle={styles.chipText}
             />

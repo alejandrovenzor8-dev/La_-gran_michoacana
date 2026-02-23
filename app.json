@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "fc4e0b6a-09d1-4ee4-a323-15f626b36c67"
+      }
+    },
+    "android": {
+      "package": "com.venzorgtz.la_gran_michoacana"
+    }
+  }
+}

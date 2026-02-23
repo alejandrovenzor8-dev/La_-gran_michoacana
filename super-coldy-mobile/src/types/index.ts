@@ -24,6 +24,7 @@ export interface User {
   fullName?: string;
   role: UserRole;
   active: boolean;
+  timezone?: string;
   createdAt: string;
   updatedAt: string;
 }

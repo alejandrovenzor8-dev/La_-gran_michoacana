@@ -246,7 +246,7 @@ export default function UsersScreen() {
               <MaterialCommunityIcons 
                 name="account-multiple" 
                 size={48} 
-                color={theme.colors.disabled}
+                color={theme.colors.outline}
               />
               <Text style={styles.emptyText}>Sin usuarios</Text>
             </Card.Content>

@@ -178,7 +178,7 @@ export default function InventoryManagementScreen() {
             <View style={styles.actionButtons}>
               <Button
                 mode="outlined"
-                size="small"
+                compact
                 onPress={() => {
                   setSelectedProduct(item);
                   setShowAdjustModal(true);
@@ -247,7 +247,7 @@ export default function InventoryManagementScreen() {
               <Card.Content>
                 <View style={styles.emptyContent}>
                   <MaterialCommunityIcons
-                    name="package-off"
+                    name={"package-remove" as any}
                     size={48}
                     color={theme.colors.outline}
                   />
@@ -297,7 +297,7 @@ export default function InventoryManagementScreen() {
               label="Razón (opcional)"
               value={adjustReason}
               onChangeText={setAdjustReason}
-              placeh="Motivo del ajuste"
+              placeholder="Motivo del ajuste"
               multiline
               numberOfLines={3}
               style={styles.input}
