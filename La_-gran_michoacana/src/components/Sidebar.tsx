@@ -5,7 +5,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePermissionsStore } from '@/stores/permissionsStore';
 import { Button } from './ui/button';
 import type { ModuleType } from '@/types/permissions';
-import logoImage from '../../public/logo.png?url';
+
+const logoImage = './logo.png';
 
 interface NavItem {
   id: string;
