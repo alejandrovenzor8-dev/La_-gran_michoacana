@@ -59,7 +59,8 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "public/**/*"
     ],
     "win": {
       "target": [
