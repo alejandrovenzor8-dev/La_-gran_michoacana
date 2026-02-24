@@ -535,6 +535,73 @@ class AuthService {
   }
 
   /**
+   * Cambiar contraseña de un usuario (por admin, sin necesitar contraseña actual)
+   * @param userId - ID del usuario
+   * @param newPassword - Nueva contraseña
+   * @returns Usuario actualizado
+   * @throws AppError si usuario no existe
+   */
+  async changeUserPassword(userId: number, newPassword: string): Promise<any> {
+    try {
+      // Validar que usuario exista
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          fullName: true,
+          role: true,
+          active: true,
+          timezone: true,
+          branchId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError('Usuario no encontrado', 404);
+      }
+
+      // Hashear nueva contraseña
+      const newPasswordHash = await hashPassword(newPassword);
+
+      // Actualizar contraseña
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash: newPasswordHash },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          fullName: true,
+          role: true,
+          active: true,
+          timezone: true,
+          branchId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      logger.info('Contraseña de usuario cambiada por admin', { userId });
+      return updatedUser;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      logger.error('Error cambiando contraseña de usuario:', error);
+      throw error;
+    }
+  }
+      }
+      logger.error('Error eliminando usuario:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Obtener estadísticas de usuarios
    */
   async getUserStats() {

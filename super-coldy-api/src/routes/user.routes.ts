@@ -134,4 +134,36 @@ router.delete(
   })
 );
 
+// POST /api/users/:id/change-password - Admin cambia contraseña de usuario
+router.post(
+  '/:id/change-password',
+  asyncHandler(async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id as string);
+      const { newPassword } = req.body;
+
+      if (!newPassword || newPassword.length < 6) {
+        res.status(400).json({
+          status: 'error',
+          message: 'La contraseña debe tener al menos 6 caracteres',
+        });
+        return;
+      }
+
+      logger.info('Admin cambiando contraseña de usuario', { userId, adminId: (req as any).user?.id });
+
+      const updatedUser = await authService.changeUserPassword(userId, newPassword);
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Contraseña del usuario actualizada exitosamente',
+        data: { user: updatedUser },
+      });
+    } catch (error) {
+      logger.error('Error cambiando contraseña de usuario:', error);
+      throw error;
+    }
+  })
+);
+
 export default router;

@@ -17,6 +17,9 @@ import {
   ActivityIndicator,
   useTheme,
   Chip,
+  Dialog,
+  Portal,
+  TextInput,
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
@@ -64,6 +67,15 @@ export default function SettingsScreen() {
   const [isSavingTimezone, setIsSavingTimezone] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Cambio de contraseña
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   // Detectar si hay cambios
   useEffect(() => {
     setHasChanges(selectedTimezone !== (user?.timezone || 'America/Mexico_City'));
@@ -95,6 +107,37 @@ export default function SettingsScreen() {
       Alert.alert('❌ Error', 'No se pudo actualizar la zona horaria');
     } finally {
       setIsSavingTimezone(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      Alert.alert('⚠️ Validación', 'Por favor completa todos los campos');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      Alert.alert('⚠️ Error', 'Las contraseñas nuevas no coinciden');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      Alert.alert('⚠️ Error', 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      await userService.changeOwnPassword(passwordForm.currentPassword, passwordForm.newPassword);
+      Alert.alert('✅ Éxito', 'Contraseña actualizada correctamente');
+      setShowChangePasswordDialog(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('Error cambiando contraseña:', error);
+      const message = error?.response?.data?.message || 'No se pudo cambiar la contraseña';
+      Alert.alert('❌ Error', message);
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -190,6 +233,30 @@ export default function SettingsScreen() {
           </Card.Content>
         </Card>
 
+        {/* Seguridad */}
+        <Card style={styles.section}>
+          <Card.Title
+            title="Seguridad"
+            left={(props) => (
+              <MaterialCommunityIcons
+                name="lock-outline"
+                size={24}
+                color={theme.colors.primary}
+              />
+            )}
+          />
+          <Card.Content>
+            <Button
+              mode="outlined"
+              onPress={() => setShowChangePasswordDialog(true)}
+              icon="lock-reset"
+              style={{ marginBottom: 8 }}
+            >
+              Cambiar Contraseña
+            </Button>
+          </Card.Content>
+        </Card>
+
         {/* Información de la app */}
         <Card style={styles.section}>
           <Card.Title
@@ -264,6 +331,63 @@ export default function SettingsScreen() {
         {/* Spacing final */}
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Diálogo de cambio de contraseña */}
+      <Portal>
+        <Dialog visible={showChangePasswordDialog} onDismiss={() => setShowChangePasswordDialog(false)}>
+          <Dialog.Title>Cambiar Contraseña</Dialog.Title>
+          <Dialog.Content>
+            <TextInput
+              label="Contraseña Actual"
+              value={passwordForm.currentPassword}
+              onChangeText={(text) => setPasswordForm({ ...passwordForm, currentPassword: text })}
+              secureTextEntry={true}
+              mode="outlined"
+              style={styles.passwordInput}
+              disabled={isChangingPassword}
+            />
+
+            <TextInput
+              label="Nueva Contraseña"
+              value={passwordForm.newPassword}
+              onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
+              secureTextEntry={true}
+              mode="outlined"
+              style={styles.passwordInput}
+              disabled={isChangingPassword}
+            />
+
+            <TextInput
+              label="Confirmar Nueva Contraseña"
+              value={passwordForm.confirmPassword}
+              onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmPassword: text })}
+              secureTextEntry={true}
+              mode="outlined"
+              style={styles.passwordInput}
+              disabled={isChangingPassword}
+            />
+          </Dialog.Content>
+
+          <Dialog.Actions>
+            <Button
+              onPress={() => {
+                setShowChangePasswordDialog(false);
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+              }}
+              disabled={isChangingPassword}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onPress={handleChangePassword}
+              loading={isChangingPassword}
+              disabled={isChangingPassword}
+            >
+              Cambiar
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
@@ -341,5 +465,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     marginBottom: 8,
+  },
+  passwordInput: {
+    marginBottom: 12,
   },
 });

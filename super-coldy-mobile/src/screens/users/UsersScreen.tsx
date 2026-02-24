@@ -63,6 +63,7 @@ export default function UsersScreen() {
   // Modales
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -77,6 +78,12 @@ export default function UsersScreen() {
     email: '',
     role: 'CAJERO',
     branchId: undefined,
+  });
+
+  // Formulario de cambio de contraseña
+  const [passwordForm, setPasswordForm] = useState({
+    newPassword: '',
+    confirmPassword: '',
   });
 
   const loadData = async () => {
@@ -183,6 +190,38 @@ export default function UsersScreen() {
     } catch (error) {
       console.error('Error resetting password:', error);
       alert('Error al resetear la contraseña');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!selectedUser) return;
+    
+    if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
+      alert('Por favor completa ambos campos');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      await userService.changeUserPassword(selectedUser.id, passwordForm.newPassword);
+      alert('Contraseña cambiada exitosamente');
+      setShowChangePasswordModal(false);
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      alert('Error al cambiar la contraseña');
     } finally {
       setIsProcessing(false);
     }
@@ -449,11 +488,12 @@ export default function UsersScreen() {
                 </Button>
                 <Button
                   mode="outlined"
-                  onPress={handleResetPassword}
+                  onPress={() => setShowChangePasswordModal(true)}
                   disabled={isProcessing}
                   style={{ flex: 1, marginLeft: 8 }}
+                  icon="lock"
                 >
-                  Reset Pass
+                  Cambiar Pass
                 </Button>
               </View>
             )}
@@ -472,6 +512,55 @@ export default function UsersScreen() {
               disabled={isProcessing}
             >
               Guardar
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        {/* Diálogo de cambio de contraseña */}
+        <Dialog visible={showChangePasswordModal} onDismiss={() => setShowChangePasswordModal(false)}>
+          <Dialog.Title>Cambiar Contraseña</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodySmall" style={{ marginBottom: 16, color: '#6b7280' }}>
+              Usuario: {selectedUser?.fullName || selectedUser?.username}
+            </Text>
+
+            <TextInput
+              label="Nueva Contraseña"
+              value={passwordForm.newPassword}
+              onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
+              secureTextEntry={true}
+              style={styles.input}
+              mode="outlined"
+              disabled={isProcessing}
+            />
+
+            <TextInput
+              label="Confirmar Contraseña"
+              value={passwordForm.confirmPassword}
+              onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmPassword: text })}
+              secureTextEntry={true}
+              style={styles.input}
+              mode="outlined"
+              disabled={isProcessing}
+            />
+          </Dialog.Content>
+
+          <Dialog.Actions>
+            <Button
+              onPress={() => {
+                setShowChangePasswordModal(false);
+                setPasswordForm({ newPassword: '', confirmPassword: '' });
+              }}
+              disabled={isProcessing}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onPress={handleChangePassword}
+              loading={isProcessing}
+              disabled={isProcessing}
+            >
+              Cambiar
             </Button>
           </Dialog.Actions>
         </Dialog>

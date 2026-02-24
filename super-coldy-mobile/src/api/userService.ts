@@ -195,6 +195,37 @@ class UserService {
       return [];
     }
   }
+
+  /**
+   * Cambiar contraseña del usuario actual
+   */
+  async changeOwnPassword(currentPassword: string, newPassword: string): Promise<boolean> {
+    try {
+      const response = await apiClient.post<ApiResponse<{ message: string }>>('/auth/change-password', {
+        currentPassword,
+        newPassword,
+      });
+      return response.status === 200;
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cambiar contraseña de otro usuario (admin)
+   */
+  async changeUserPassword(userId: number, newPassword: string): Promise<User | null> {
+    try {
+      const response = await apiClient.post<ApiResponse<{ user: User }>>(`/users/${userId}/change-password`, {
+        newPassword,
+      });
+      return response.data.user || null;
+    } catch (error) {
+      console.error(`Error changing password for user ${userId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const userService = new UserService();
