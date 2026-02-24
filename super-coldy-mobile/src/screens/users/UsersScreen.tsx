@@ -27,7 +27,8 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { userService } from '../../api/userService';
-import type { User, UserRole } from '../../types';
+import { branchService } from '../../api/branchService';
+import type { User, UserRole, Branch } from '../../types';
 
 type UserRoleOption = 'ADMIN' | 'GERENTE' | 'CAJERO';
 
@@ -54,6 +55,8 @@ export default function UsersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
   
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'active' | 'inactive'>('all');
   
@@ -68,20 +71,26 @@ export default function UsersScreen() {
     fullName: string;
     email: string;
     role: UserRole;
+    branchId?: number;
   }>({
     fullName: '',
     email: '',
     role: 'CAJERO',
+    branchId: undefined,
   });
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const allUsers = await userService.getAllUsers();
+      const [allUsers, allBranches] = await Promise.all([
+        userService.getAllUsers(),
+        branchService.getBranches(),
+      ]);
       setUsers(allUsers);
       setFilteredUsers(allUsers);
+      setBranches(allBranches);
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -147,6 +156,7 @@ export default function UsersScreen() {
         fullName: editForm.fullName,
         email: editForm.email,
         role: editForm.role,
+        branchId: editForm.branchId,
       });
       
       await loadData();
@@ -184,6 +194,7 @@ export default function UsersScreen() {
       fullName: user.fullName || '',
       email: user.email,
       role: user.role,
+      branchId: user.branchId,
     });
     setShowDetailModal(false);
     setShowEditModal(true);
@@ -330,6 +341,14 @@ export default function UsersScreen() {
                   <Text variant="bodySmall" style={styles.label}>Rol:</Text>
                   <Text variant="bodySmall">{ROLE_LABELS[selectedUser.role]}</Text>
                 </View>
+                {selectedUser.branchId && (
+                  <View style={styles.detailRow}>
+                    <Text variant="bodySmall" style={styles.label}>Sucursal:</Text>
+                    <Text variant="bodySmall">
+                      {branches.find(b => b.id === selectedUser.branchId)?.name || 'Sin asignar'}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.detailRow}>
                   <Text variant="bodySmall" style={styles.label}>Estado:</Text>
                   <Text variant="bodySmall">
@@ -390,6 +409,32 @@ export default function UsersScreen() {
                 </Chip>
               ))}
             </View>
+
+            {/* Selector de sucursal */}
+            {branches.length > 0 && (
+              <>
+                <Text variant="labelMedium" style={{ marginTop: 12 }}>Sucursal</Text>
+                <View style={styles.branchChipsContainer}>
+                  <Chip
+                    onPress={() => setEditForm({ ...editForm, branchId: undefined })}
+                    selected={editForm.branchId === undefined}
+                    style={{ marginRight: 8, marginBottom: 8 }}
+                  >
+                    Sin sucursal
+                  </Chip>
+                  {branches.map((branch) => (
+                    <Chip
+                      key={branch.id}
+                      onPress={() => setEditForm({ ...editForm, branchId: branch.id })}
+                      selected={editForm.branchId === branch.id}
+                      style={{ marginRight: 8, marginBottom: 8 }}
+                    >
+                      {branch.name}
+                    </Chip>
+                  ))}
+                </View>
+              </>
+            )}
 
             {/* Botones de acción */}
             {selectedUser && (
@@ -511,6 +556,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   roleChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  branchChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 12,
