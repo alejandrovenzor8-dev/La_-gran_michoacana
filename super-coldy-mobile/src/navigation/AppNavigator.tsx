@@ -3,13 +3,15 @@
  * Maneja autenticación y tabs principales
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
+import { LogoHeader } from '../components/LogoHeader';
 
 // Screens
+import SplashScreen from '../screens/auth/SplashScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ReportsScreen from '../screens/reports/ReportsScreen';
@@ -55,7 +57,7 @@ function AdminTabs() {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: '🍦 La Michoacana' }}
+        options={{ headerTitle: () => <LogoHeader /> }}
       />
       <Tab.Screen
         name="Reports"
@@ -81,10 +83,25 @@ function AdminTabs() {
  */
 export function AppNavigator() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000); // Mostrar splash por 3 segundos
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
+      {showSplash ? (
+        <Stack.Screen 
+          name="Splash" 
+          component={SplashScreen}
+          options={{ animationEnabled: false }}
+        />
+      ) : !isAuthenticated ? (
         <Stack.Screen name="Login" component={LoginScreen} />
       ) : (
         <Stack.Screen name="Main" component={AdminTabs} />

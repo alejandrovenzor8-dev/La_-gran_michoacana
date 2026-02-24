@@ -53,8 +53,12 @@ export default function LoginPage() {
           <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8 mb-6 animate-in fade-in zoom-in duration-700">
             {/* Logo y título */}
             <div className="text-center mb-10">
-              <div className="inline-block mb-4 p-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full">
-                <span className="text-5xl">🍲</span>
+              <div className="inline-block mb-4">
+                <img 
+                  src="/logo.png" 
+                  alt="La Gran Michoacana" 
+                  className="w-32 h-32 object-contain"
+                />
               </div>
               <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
                 La Gran Michoacana

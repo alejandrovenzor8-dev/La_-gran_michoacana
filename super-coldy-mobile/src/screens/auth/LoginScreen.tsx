@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import {
   TextInput,
@@ -53,9 +54,11 @@ export default function LoginScreen() {
         <View style={styles.content}>
           {/* Logo/Header */}
           <View style={styles.header}>
-            <Text variant="displaySmall" style={styles.logo}>
-              🍦
-            </Text>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text variant="headlineLarge" style={styles.title}>
               La Michoacana
             </Text>
@@ -153,7 +156,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logo: {
-    fontSize: 64,
+    width: 120,
+    height: 120,
     marginBottom: 8,
   },
   title: {

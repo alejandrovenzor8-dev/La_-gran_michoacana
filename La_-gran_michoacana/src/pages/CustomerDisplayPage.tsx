@@ -112,8 +112,12 @@ export default function CustomerDisplayPage() {
       <header className="bg-white/10 backdrop-blur-md p-6 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-4xl">
-              🍦
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+              <img 
+                src="/logo.png" 
+                alt="La Gran Michoacana" 
+                className="w-20 h-20 object-cover"
+              />
             </div>
             <div>
               <h1 className="text-4xl font-bold text-white">La Gran Michoacana</h1>

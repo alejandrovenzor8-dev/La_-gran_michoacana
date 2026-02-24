@@ -75,10 +75,13 @@ export default function ReportsPage() {
         end = new Date(today);
         break;
       case 'week':
-        // Últimos 7 días
+        // Calcular lunes de esta semana a domingo de esta semana (no últimos 7 días)
+        const dayOfWeek = today.getDay(); // 0=domingo, 1=lunes, 6=sábado
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calcular cuántos días atrás es el lunes
         start = new Date(today);
-        start.setDate(today.getDate() - 6);
-        end = new Date(today);
+        start.setDate(today.getDate() - daysToMonday); // Ir al lunes de esta semana
+        end = new Date(start);
+        end.setDate(start.getDate() + 6); // Ir al domingo (6 días después del lunes)
         break;
       case 'month':
         // Primer día del mes actual hasta hoy
@@ -187,13 +190,6 @@ export default function ReportsPage() {
           startDate: range.start.toISOString(),
           endDate: range.end.toISOString(),
         });
-        
-        // Debug: ver qué estamos recibiendo
-        console.log('Sales cargadas:', sales);
-        console.log('Tipo de sales:', typeof sales, Array.isArray(sales));
-        if (sales && sales.length > 0) {
-          console.log('Estructura de primera venta:', JSON.stringify(sales[0], null, 2));
-        }
         
         // Asegurar que siempre es un array
         const salesArray = Array.isArray(sales) ? sales : (sales ? [sales] : []);
@@ -326,6 +322,145 @@ export default function ReportsPage() {
     const startIdx = (currentPage - 1) * pageSize;
     const endIdx = startIdx + pageSize;
     return sorted.slice(startIdx, endIdx);
+  };
+
+  // Función para agrupar datos diarios por mes
+  const groupDailyDataByMonth = (dailyData: any[]): any[] => {
+    if (!dailyData || dailyData.length === 0) {
+      return [];
+    }
+
+    const monthlyGrouped: Record<number, number> = {};
+
+    for (const item of dailyData) {
+      // Obtener la fecha
+      let dateStr = item.date || item.day || '';
+      const date = new Date(dateStr);
+      
+      if (!isNaN(date.getTime())) {
+        const month = date.getMonth() + 1; // 1-12
+        const ventas = parseFloat(item.ventas || item.sales || '0');
+        
+        if (!monthlyGrouped[month]) {
+          monthlyGrouped[month] = 0;
+        }
+        monthlyGrouped[month] += ventas;
+      }
+    }
+
+    // Convertir a array en formato esperado
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return months.map((name, index) => ({
+      periodo: `${index + 1}`,
+      month: index + 1,
+      ventas: Math.round(monthlyGrouped[index + 1] || 0),
+    }));
+  };
+
+  // Función para obtener datos de tendencia semanal ordenados por fecha
+  const getSortedWeeklyData = () => {
+    if (!weeklyTrendData || weeklyTrendData.length === 0) {
+      return [];
+    }
+    
+    return [...weeklyTrendData].sort((a: any, b: any) => {
+      // Intentar convertir a fecha si es string
+      const dateA = new Date(a.date || a.day || '');
+      const dateB = new Date(b.date || b.day || '');
+      
+      // Si son fechas válidas, comparar por getTime()
+      if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      
+      // Si no, asumir que ya están en orden o comparar como strings
+      return 0;
+    });
+  };
+
+  // Función para transformar etiquetas de período según el tipo
+  const getFormattedChartData = () => {
+    try {
+      let chartData = [];
+      
+      if (selectedPeriod === 'year') {
+        // Para año: usar monthlyComparisonData para agregar semanas por mes
+        if (!monthlyComparisonData || monthlyComparisonData.length === 0) {
+          const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+          return months.map(name => ({ name, value: 0 }));
+        }
+
+        // Agrupar semanas por mes (mes se extrae del periodo "Sem 1" -> asumimos son del mes actual)
+        const monthlyGrouped: Record<number, number> = {};
+        
+        // Dado que monthlyComparisonData tiene semanas del mes, necesitamos agrupar por semana
+        // Pero si estamos en "año", debemos mapear las semanas a meses
+        // Por ahora, mostraremos solo los datos que tenemos para este mes
+        for (const item of monthlyComparisonData) {
+          const ventas = parseFloat(item.ventas || '0');
+          // Si es año, mostrar febrero (mes actual) con las semanas
+          monthlyGrouped[2] = (monthlyGrouped[2] || 0) + ventas;
+        }
+
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        return months.map((name, index) => {
+          return {
+            name: name,
+            value: monthlyGrouped[index + 1] || 0,
+          };
+        });
+      } else if (selectedPeriod === 'month') {
+        // Para mes: mostrar semanas del mes
+        if (!monthlyComparisonData || monthlyComparisonData.length === 0) {
+          return ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'].map(name => ({ name, value: 0 }));
+        }
+
+        const monthlyData = getSortedMonthlyData();
+        return monthlyData.map((item: any) => ({
+          name: item.periodo || `Sem ${item.week || ''}`,
+          value: parseFloat(item.ventas || '0'),
+        }));
+      } else {
+        // Para semana o día: mostrar días
+        if (!weeklyTrendData || weeklyTrendData.length === 0) {
+          const defaultDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab'];
+          return defaultDays.map(name => ({ name, value: 0 }));
+        }
+
+        const sortedWeekly = getSortedWeeklyData();
+        return sortedWeekly.map((item: any) => ({
+          name: item.day || item.name || '',
+          value: parseFloat(item.ventas || item.sales || '0'),
+        }));
+      }
+    } catch (error) {
+      console.error('Error en getFormattedChartData:', error);
+      return [];
+    }
+  };
+
+  // Función para obtener datos de comparación mensual ordenados por período/fecha
+  const getSortedMonthlyData = () => {
+    if (!monthlyComparisonData || monthlyComparisonData.length === 0) {
+      return [];
+    }
+    
+    return [...monthlyComparisonData].sort((a: any, b: any) => {
+      // Si tienen startDate, usar eso
+      if (a.startDate && b.startDate) {
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      }
+      
+      // Si tienen semana/periodo, intentar extraer número
+      const aNum = parseInt(a.periodo?.match(/\d+/)?.[0] || a.week?.match(/\d+/)?.[0] || '0');
+      const bNum = parseInt(b.periodo?.match(/\d+/)?.[0] || b.week?.match(/\d+/)?.[0] || '0');
+      
+      if (aNum && bNum) {
+        return aNum - bNum;
+      }
+      
+      return 0;
+    });
   };
 
   // Información de paginación
@@ -714,7 +849,10 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Tendencia de Ventas Semanal</CardTitle>
+                <CardTitle>
+                  Tendencia de Ventas
+                  {selectedPeriod === 'year' ? ' (Mensual)' : selectedPeriod === 'month' ? ' (Semanal)' : ' (Diaria)'}
+                </CardTitle>
                 <Button
                   onClick={handleExportReport}
                   className="flex items-center gap-2"
@@ -727,9 +865,9 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={weeklyTrendData}>
+                <LineChart data={getFormattedChartData()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="day" stroke="#888" />
+                  <XAxis dataKey="name" stroke="#888" />
                   <YAxis stroke="#888" />
                   <Tooltip
                     contentStyle={{
@@ -742,7 +880,7 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                   <Legend />
                   <Line
                     type="monotone"
-                    dataKey="ventas"
+                    dataKey="value"
                     stroke="#4ECDC4"
                     strokeWidth={3}
                     dot={{ fill: '#4ECDC4', r: 5 }}
@@ -756,16 +894,18 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
 
           {/* Gráficos en Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Gráfico de Barras - Comparación Semanal */}
+            {/* Gráfico de Barras - Comparativa por período */}
             <Card>
               <CardHeader>
-                <CardTitle>Comparación Mensual</CardTitle>
+                <CardTitle>
+                  {selectedPeriod === 'year' ? 'Comparación Mensual' : selectedPeriod === 'month' ? 'Comparación Semanal' : 'Comparación Diaria'}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyComparisonData}>
+                  <BarChart data={getFormattedChartData()}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="periodo" stroke="#888" />
+                    <XAxis dataKey="name" stroke="#888" />
                     <YAxis stroke="#888" />
                     <Tooltip
                       contentStyle={{
@@ -776,7 +916,7 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                       formatter={(value: number | undefined) => value ? `$${value.toLocaleString()}` : '$0'}
                     />
                     <Bar
-                      dataKey="ventas"
+                      dataKey="value"
                       fill="#4ECDC4"
                       radius={[8, 8, 0, 0]}
                       name="Ventas ($)"
