@@ -40,15 +40,15 @@ function setupAutoUpdater() {
     return;
   }
 
-  // Configurar para descargar desde GitHub releases con URL completa
+  // Configurar para descargar desde GitHub releases usando URL genérica
+  // Esto evita problemas con la API de GitHub y funciona con repos públicos
   autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: 'alejandrovenzor8-dev',
-    repo: 'La_-gran_michoacana',
-    releaseType: 'release'
+    provider: 'generic',
+    url: 'https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/latest/download',
+    useMultipleRangeRequest: false
   });
 
-  log.info('✓ Auto-actualización configurada desde GitHub');
+  log.info('✓ Auto-actualización configurada desde GitHub (generic provider)');
 
   // Configurar auto-updater
   autoUpdater.autoDownload = false; // No descargar automáticamente
