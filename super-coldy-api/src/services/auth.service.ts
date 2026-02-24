@@ -595,11 +595,6 @@ class AuthService {
       throw error;
     }
   }
-      }
-      logger.error('Error eliminando usuario:', error);
-      throw error;
-    }
-  }
 
   /**
    * Obtener estadísticas de usuarios
