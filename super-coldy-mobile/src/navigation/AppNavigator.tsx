@@ -20,6 +20,7 @@ import InventoryScreen from '../screens/inventory/InventoryScreen';
 import UsersScreen from '../screens/users/UsersScreen';
 import BranchesScreen from '../screens/branches/BranchesScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
+import PermissionsScreen from '../screens/permissions/PermissionsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -45,6 +46,9 @@ function AdminTabs() {
             iconName = focused ? 'business' : 'business-outline';
           } else if (route.name === 'Users') {
             iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'Permissions') {
+            useIonicons = false;
+            iconName = focused ? 'shield-lock' : 'shield-lock-outline';
           } else if (route.name === 'Settings') {
             useIonicons = false;
             iconName = focused ? 'cog' : 'cog-outline';
@@ -91,6 +95,11 @@ function AdminTabs() {
         name="Users"
         component={UsersScreen}
         options={{ title: 'Usuarios' }}
+      />
+      <Tab.Screen
+        name="Permissions"
+        component={PermissionsScreen}
+        options={{ title: 'Permisos' }}
       />
       <Tab.Screen
         name="Settings"

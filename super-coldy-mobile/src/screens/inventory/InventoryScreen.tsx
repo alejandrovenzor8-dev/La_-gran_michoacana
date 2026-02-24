@@ -12,6 +12,8 @@ import {
   FlatList,
   Modal,
   TextInput as RNTextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   Card,
@@ -50,10 +52,39 @@ export default function InventoryScreen() {
   
   // Modales
   const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
+  // Ajuste de stock
   const [adjustQuantity, setAdjustQuantity] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [isAdjusting, setIsAdjusting] = useState(false);
+  
+  // Formulario (Create/Update)
+  const [formData, setFormData] = useState<{
+    name: string;
+    description?: string;
+    price: string;
+    cost?: string;
+    category: string;
+    stock: string;
+    minStock: string;
+    barcode?: string;
+    emoji?: string;
+  }>({
+    name: '',
+    description: '',
+    price: '0',
+    cost: '0',
+    category: 'General',
+    stock: '0',
+    minStock: '0',
+    barcode: '',
+    emoji: '',
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const loadData = async () => {
     try {
@@ -128,6 +159,98 @@ export default function InventoryScreen() {
       alert('Error al ajustar el stock');
     } finally {
       setIsAdjusting(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setFormData({
+      name: '',
+      description: '',
+      price: '0',
+      cost: '0',
+      category: 'General',
+      stock: '0',
+      minStock: '0',
+      barcode: '',
+      emoji: '',
+    });
+    setIsEditMode(false);
+    setSelectedProduct(null);
+    setShowFormModal(true);
+  };
+
+  const openEditModal = (product: Product) => {
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      price: String(product.price || 0),
+      cost: String(product.cost || 0),
+      category: product.category,
+      stock: String(product.stock || 0),
+      minStock: String(product.minStock || 0),
+      barcode: product.barcode || '',
+      emoji: product.emoji || '',
+    });
+    setIsEditMode(true);
+    setSelectedProduct(product);
+    setShowFormModal(true);
+  };
+
+  const handleSaveProduct = async () => {
+    if (!formData.name || !formData.category || !formData.price) {
+      alert('Por favor completa los campos requeridos');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+
+      const productData = {
+        name: formData.name,
+        description: formData.description || undefined,
+        price: parseFloat(formData.price),
+        cost: formData.cost ? parseFloat(formData.cost) : undefined,
+        category: formData.category,
+        stock: parseInt(formData.stock) || 0,
+        minStock: parseInt(formData.minStock) || 0,
+        barcode: formData.barcode || undefined,
+        emoji: formData.emoji || undefined,
+        active: true,
+      };
+
+      if (isEditMode && selectedProduct) {
+        await productService.updateProduct(selectedProduct.id, productData);
+        alert('Producto actualizado exitosamente');
+      } else {
+        await productService.createProduct(productData);
+        alert('Producto creado exitosamente');
+      }
+
+      setShowFormModal(false);
+      await loadData();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert('Error al guardar el producto');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      setIsProcessing(true);
+      await productService.deleteProduct(selectedProduct.id);
+      setShowDeleteDialog(false);
+      setSelectedProduct(null);
+      await loadData();
+      alert('Producto eliminado exitosamente');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Error al eliminar el producto');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -257,6 +380,29 @@ export default function InventoryScreen() {
                   >
                     Ajustar Stock
                   </Button>
+
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <Button
+                      mode="outlined"
+                      onPress={() => openEditModal(item)}
+                      style={{ flex: 1 }}
+                      icon="pencil"
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      mode="outlined"
+                      onPress={() => {
+                        setSelectedProduct(item);
+                        setShowDeleteDialog(true);
+                      }}
+                      style={{ flex: 1 }}
+                      icon="trash-can-outline"
+                      textColor="#ef4444"
+                    >
+                      Eliminar
+                    </Button>
+                  </View>
                 </Card.Content>
               </Card>
             )}
@@ -305,7 +451,151 @@ export default function InventoryScreen() {
             </Button>
           </Dialog.Actions>
         </Dialog>
+
+        {/* Modal de crear/editar producto */}
+        <Dialog visible={showFormModal} onDismiss={() => setShowFormModal(false)}>
+          <Dialog.Title>{isEditMode ? 'Editar Producto' : 'Crear Producto'}</Dialog.Title>
+          <Dialog.Content>
+            <ScrollView 
+              style={styles.formScrollView}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TextInput
+                label="Nombre *"
+                value={formData.name}
+                onChangeText={(text) => setFormData({ ...formData, name: text })}
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Descripción"
+                value={formData.description}
+                onChangeText={(text) => setFormData({ ...formData, description: text })}
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Categoría *"
+                value={formData.category}
+                onChangeText={(text) => setFormData({ ...formData, category: text })}
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Precio *"
+                value={formData.price}
+                onChangeText={(text) => setFormData({ ...formData, price: text })}
+                keyboardType="decimal-pad"
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Costo"
+                value={formData.cost}
+                onChangeText={(text) => setFormData({ ...formData, cost: text })}
+                keyboardType="decimal-pad"
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Stock"
+                value={formData.stock}
+                onChangeText={(text) => setFormData({ ...formData, stock: text })}
+                keyboardType="numeric"
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Stock Mínimo"
+                value={formData.minStock}
+                onChangeText={(text) => setFormData({ ...formData, minStock: text })}
+                keyboardType="numeric"
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Código de Barras"
+                value={formData.barcode}
+                onChangeText={(text) => setFormData({ ...formData, barcode: text })}
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+              />
+
+              <TextInput
+                label="Emoji"
+                value={formData.emoji}
+                onChangeText={(text) => setFormData({ ...formData, emoji: text })}
+                style={styles.input}
+                mode="outlined"
+                disabled={isProcessing}
+                maxLength={2}
+              />
+            </ScrollView>
+          </Dialog.Content>
+
+          <Dialog.Actions>
+            <Button 
+              onPress={() => setShowFormModal(false)}
+              disabled={isProcessing}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onPress={handleSaveProduct}
+              loading={isProcessing}
+              disabled={isProcessing}
+            >
+              {isEditMode ? 'Actualizar' : 'Crear'}
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        {/* Dialog de confirmación de eliminar */}
+        <Dialog visible={showDeleteDialog} onDismiss={() => setShowDeleteDialog(false)}>
+          <Dialog.Title>Eliminar Producto</Dialog.Title>
+          <Dialog.Content>
+            <Text>¿Estás seguro de que quieres eliminar "{selectedProduct?.name}"?</Text>
+            <Text style={styles.warningText}>Esta acción no se puede deshacer.</Text>
+          </Dialog.Content>
+
+          <Dialog.Actions>
+            <Button onPress={() => setShowDeleteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onPress={handleDeleteProduct}
+              loading={isProcessing}
+              disabled={isProcessing}
+              textColor="#ef4444"
+            >
+              Eliminar
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
       </Portal>
+
+      {/* FAB para crear nuevo producto */}
+      <FAB
+        icon="plus"
+        style={styles.fab}
+        onPress={openCreateModal}
+        label="Producto"
+      />
     </View>
   );
 }
@@ -406,5 +696,20 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
+  },
+  warningText: {
+    marginTop: 8,
+    color: '#9ca3af',
+    fontStyle: 'italic',
+    fontSize: 12,
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+  },
+  formScrollView: {
+    maxHeight: 400,
   },
 });

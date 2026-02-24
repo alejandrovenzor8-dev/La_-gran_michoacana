@@ -58,11 +58,38 @@ class PermissionService {
 
   /**
    * Obtener todos los roles
+   * Nota: El backend no tiene endpoint dedicado para roles
+   * Retorna roles hardcodeados basados en el diseño del sistema
    */
   async getAllRoles(): Promise<Role[]> {
     try {
-      const response = await apiClient.get<ApiResponse<{ roles: Role[] }>>('/roles');
-      return response.data.roles || [];
+      // Retorna roles hardcodeados ya que el backend no tiene endpoint /roles
+      return [
+        {
+          id: 1,
+          name: 'ADMIN',
+          description: 'Administrador del sistema',
+          permissions: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          name: 'GERENTE',
+          description: 'Gerente de tienda',
+          permissions: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 3,
+          name: 'CAJERO',
+          description: 'Personal de caja',
+          permissions: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
     } catch (error) {
       console.error('Error fetching roles:', error);
       return [];
@@ -82,35 +109,37 @@ class PermissionService {
     }
   }
 
-  /**
-   * Obtener permisos de un rol
+/**
+   * Obtener permisos de un usuario específico
+   * Retorna un mapa de módulos a booleanos indicando si tienen acceso
    */
-  async getRolePermissions(roleId: number): Promise<Permission[]> {
+  async getUserPermissions(userId: number): Promise<Record<string, boolean>> {
     try {
-      const response = await apiClient.get<ApiResponse<{ permissions: Permission[] }>>(
-        `/roles/${roleId}/permissions`
+      const response = await apiClient.get<ApiResponse<{ permissions: Record<string, boolean> }>>(
+        `/permissions/user/${userId}`
       );
-      return response.data.permissions || [];
+      return response.data.permissions || {};
     } catch (error) {
-      console.error(`Error fetching permissions for role ${roleId}:`, error);
-      return [];
+      console.error(`Error fetching permissions for user ${userId}:`, error);
+      return {};
     }
   }
 
   /**
-   * Asignar permisos a un rol
+   * Asignar permisos a un usuario
+   * Recibe un mapa de módulos a booleanos
    */
   async assignPermissionsToRole(
-    roleId: number,
-    permissionIds: number[]
+    userId: number,
+    permissionsMap: Record<string, boolean>
   ): Promise<boolean> {
     try {
-      await apiClient.post(`/roles/${roleId}/permissions`, {
-        permissionIds,
+      await apiClient.put(`/permissions/user/${userId}`, {
+        permissions: permissionsMap,
       });
       return true;
     } catch (error) {
-      console.error(`Error assigning permissions to role ${roleId}:`, error);
+      console.error(`Error assigning permissions to user ${userId}:`, error);
       throw error;
     }
   }
@@ -182,15 +211,33 @@ class PermissionService {
   /**
    * Obtener módulos disponibles
    */
-  async getAvailableModules(): Promise<string[]> {
+  async getAvailableModules(): Promise<any[]> {
     try {
-      const response = await apiClient.get<ApiResponse<{ modules: string[] }>>(
-        '/permissions/modules'
-      );
+      const response = await apiClient.get<
+        ApiResponse<{
+          modules: Array<{
+            id: number;
+            key: string;
+            name: string;
+            description?: string;
+            icon?: string;
+            active: boolean;
+            createdAt: string;
+            updatedAt: string;
+          }>;
+        }>
+      >('/permissions/modules');
       return response.data.modules || [];
     } catch (error) {
       console.error('Error fetching available modules:', error);
-      return [];
+      // Retornar módulos por defecto si el endpoint falla
+      return [
+        { id: 1, key: 'users', name: 'Usuarios', active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 2, key: 'inventory', name: 'Inventario', active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 3, key: 'reports', name: 'Reportes', active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 4, key: 'branches', name: 'Sucursales', active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 5, key: 'settings', name: 'Configuración', active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      ];
     }
   }
 }
