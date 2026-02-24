@@ -4,14 +4,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { PaperProvider, MD3LightTheme, Text } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/stores/authStore';
-import { notificationService } from './src/services/notificationService';
-import { offlineSyncService } from './src/services/offlineSyncService';
 
 // Tema personalizado
 const theme = {
@@ -33,35 +32,30 @@ const theme = {
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const initialize = useAuthStore((state) => state.initialize);
-  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    // Inicializar el store (cargar token desde AsyncStorage)
     const init = async () => {
-      await initialize();
-      
-      // Inicializar servicios de sync offline y notificaciones
-      await offlineSyncService.initialize();
-      
-      // Registrar para notificaciones push si el usuario está autenticado
-      if (user) {
-        await notificationService.registerForPushNotifications();
-        notificationService.setupNotificationListeners();
+      try {
+        await initialize();
+        console.log('✅ Auth initialized');
+      } catch (error) {
+        console.error('❌ Error:', error);
       }
-      
       setIsReady(true);
     };
     init();
-
-    // Cleanup
-    return () => {
-      offlineSyncService.cleanup();
-    };
-  }, []);
+  }, [initialize]);
 
   if (!isReady) {
-    // Puedes agregar un SplashScreen aquí
-    return null;
+    return (
+      <SafeAreaProvider>
+        <PaperProvider theme={theme}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text>Cargando...</Text>
+          </View>
+        </PaperProvider>
+      </SafeAreaProvider>
+    );
   }
 
   return (
