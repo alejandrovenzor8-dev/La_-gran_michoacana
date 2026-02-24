@@ -1,6 +1,6 @@
 {
   "name": "la-gran-michoacana-pos",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Sistema POS para La Gran Michoacana con doble pantalla",
   "main": "dist-electron/main.js",
   "author": "La Gran Michoacana",
