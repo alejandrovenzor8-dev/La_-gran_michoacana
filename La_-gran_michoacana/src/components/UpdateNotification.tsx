@@ -80,6 +80,13 @@ export default function UpdateNotification() {
     if (window.electronAPI) {
       window.electronAPI.downloadUpdate();
       setUpdateStatus('downloading');
+      // Inicializar progreso en 0 para mostrar la barra inmediatamente
+      setDownloadProgress({
+        percent: 0,
+        bytesPerSecond: 0,
+        transferred: 0,
+        total: 0,
+      });
       toast.info('Descargando actualización...', {
         description: 'El proceso continuará en segundo plano',
       });
@@ -149,7 +156,7 @@ export default function UpdateNotification() {
       )}
 
       {/* Descargando */}
-      {updateStatus === 'downloading' && downloadProgress && (
+      {updateStatus === 'downloading' && (
         <Card className="shadow-lg">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -160,11 +167,17 @@ export default function UpdateNotification() {
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${downloadProgress.percent}%` }}
+                      style={{ width: `${downloadProgress?.percent || 0}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-600 mt-1">
-                    {downloadProgress.percent.toFixed(1)}% - {(downloadProgress.transferred / 1024 / 1024).toFixed(1)} MB de {(downloadProgress.total / 1024 / 1024).toFixed(1)} MB
+                    {downloadProgress ? (
+                      <>
+                        {downloadProgress.percent.toFixed(1)}% - {(downloadProgress.transferred / 1024 / 1024).toFixed(1)} MB de {(downloadProgress.total / 1024 / 1024).toFixed(1)} MB
+                      </>
+                    ) : (
+                      'Iniciando descarga...'
+                    )}
                   </p>
                 </div>
               </div>

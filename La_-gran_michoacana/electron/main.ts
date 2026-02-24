@@ -170,6 +170,14 @@ ipcMain.on('check-for-updates', () => {
 
 ipcMain.on('download-update', () => {
   if (!isDev) {
+    log.info('Iniciando descarga de actualización...');
+    // Enviar estado inicial de descarga
+    sendUpdateStatusToWindows('downloading', {
+      percent: 0,
+      bytesPerSecond: 0,
+      transferred: 0,
+      total: 0
+    });
     autoUpdater.downloadUpdate();
   }
 });
