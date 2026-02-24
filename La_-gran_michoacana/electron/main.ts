@@ -195,6 +195,7 @@ function createLoginWindow() {
     title: 'La Michoacana POS - Login',
     resizable: true,
     fullscreen: true,
+    icon: path.join(__dirname, '../public/app-icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -221,6 +222,7 @@ function createMainWindow() {
     width: 1280,
     height: 1024,
     title: 'La Gran Michoacana POS - Cajero',
+    icon: path.join(__dirname, '../public/app-icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -278,6 +280,7 @@ function createCustomerDisplay() {
     fullscreen: !!externalDisplay,
     frame: !externalDisplay, // Con frame si es misma pantalla, sin frame si es externo
     alwaysOnTop: false,
+    icon: path.join(__dirname, '../public/app-icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

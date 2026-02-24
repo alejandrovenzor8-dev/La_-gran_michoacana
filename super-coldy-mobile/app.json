@@ -4,7 +4,7 @@
     "slug": "la-gran-michoacana",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icons/app-icon-192.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "lagranmichoacana",
