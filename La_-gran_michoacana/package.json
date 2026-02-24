@@ -1,6 +1,6 @@
 {
   "name": "la-gran-michoacana-pos",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Sistema POS para La Gran Michoacana con doble pantalla",
   "main": "dist-electron/main.js",
   "author": "La Gran Michoacana",
@@ -61,6 +61,16 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "extraFiles": [
+      {
+        "from": "dist/app-icon.png",
+        "to": "app-icon.png"
+      },
+      {
+        "from": "dist/logo.png",
+        "to": "logo.png"
+      }
+    ],
     "win": {
       "target": [
         {
@@ -69,7 +79,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "icon": "public/app-icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -89,13 +100,13 @@
       "target": [
         "dmg"
       ],
-      "icon": "public/icon.icns"
+      "icon": "public/app-icon.png"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "public/icon.png"
+      "icon": "public/app-icon.png"
     }
   }
 }

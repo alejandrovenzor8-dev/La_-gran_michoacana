@@ -73,7 +73,13 @@ export default function ReportsScreen() {
           startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
           break;
         case 'week':
-          startDate = new Date(year, month - 1, day - 6, 0, 0, 0, 0);
+          // Calcular lunes de esta semana (no los últimos 7 días)
+          const todayDate = new Date(year, month - 1, day);
+          const dayOfWeek = todayDate.getDay(); // 0=domingo, 1=lunes, 6=sábado
+          const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calcular cuántos días atrás es el lunes
+          startDate = new Date(year, month - 1, day - daysToMonday, 0, 0, 0, 0);
+          // El domingo es 6 días después del lunes
+          endDate = new Date(year, month - 1, day - daysToMonday + 6, 23, 59, 59, 999);
           break;
         case 'month':
           startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
@@ -88,7 +94,6 @@ export default function ReportsScreen() {
       // Siempre cargar datos para gráficas
       try {
         const weeklyTrend = await saleService.getWeeklyTrend(startDate, endDate);
-        console.log('Weekly trend data:', weeklyTrend);
         setWeeklyData(weeklyTrend || []);
       } catch (error) {
         console.error('Error fetching weekly trend:', error);
@@ -97,7 +102,6 @@ export default function ReportsScreen() {
 
       try {
         const monthlyComparison = await saleService.getMonthlyComparison(startDate, endDate);
-        console.log('Monthly comparison data:', monthlyComparison);
         setMonthlyData(monthlyComparison || []);
       } catch (error) {
         console.error('Error fetching monthly comparison:', error);
@@ -121,6 +125,39 @@ export default function ReportsScreen() {
     loadStats();
   };
 
+  // Función para agrupar datos diarios por mes
+  const groupDailyDataByMonth = (dailyData: any[]): any[] => {
+    if (!dailyData || dailyData.length === 0) {
+      return [];
+    }
+
+    const monthlyGrouped: Record<number, number> = {};
+
+    for (const item of dailyData) {
+      // Obtener la fecha
+      let dateStr = item.date || item.day || '';
+      const date = new Date(dateStr);
+      
+      if (!isNaN(date.getTime())) {
+        const month = date.getMonth() + 1; // 1-12
+        const ventas = parseFloat(item.ventas || item.sales || '0');
+        
+        if (!monthlyGrouped[month]) {
+          monthlyGrouped[month] = 0;
+        }
+        monthlyGrouped[month] += ventas;
+      }
+    }
+
+    // Convertir a array en formato esperado
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return months.map((name, index) => ({
+      periodo: `${index + 1}`,
+      month: index + 1,
+      ventas: Math.round(monthlyGrouped[index + 1] || 0),
+    }));
+  };
+
   const periodLabels = {
     day: 'Hoy',
     week: 'Esta Semana',
@@ -128,23 +165,88 @@ export default function ReportsScreen() {
     year: 'Este Año',
   };
 
-  // Preparar datos para gráfica de línea (tendencia semanal)
+  // Preparar datos para gráfica de línea (tendencia según el período)
   const prepareLineChartData = () => {
-    if (!weeklyData || weeklyData.length === 0) {
+    // Definir labels por defecto según el período
+    const defaultLabels = selectedPeriod === 'year' 
+      ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+      : selectedPeriod === 'month'
+      ? ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4']
+      : ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'];
+
+    const defaultData = selectedPeriod === 'year' 
+      ? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      : selectedPeriod === 'month'
+      ? [0, 0, 0, 0]
+      : [0, 0, 0, 0, 0, 0, 0];
+
+    try {
+      if (selectedPeriod === 'year') {
+        // Para año: usar monthlyData (semanas del mes actual)
+        if (!monthlyData || monthlyData.length === 0) {
+          return {
+            labels: defaultLabels,
+            datasets: [{ data: defaultData }],
+          };
+        }
+
+        // Agregar todas las semanas del mes actual al mes actual
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthlyGrouped: Record<number, number> = {};
+        
+        for (const item of monthlyData) {
+          const ventas = parseFloat(item.ventas || '0');
+          // Asumir que todos los datos son del mes actual (febrero = 2)
+          const currentMonth = new Date().getMonth() + 1;
+          monthlyGrouped[currentMonth] = (monthlyGrouped[currentMonth] || 0) + ventas;
+        }
+
+        const chartData = months.map((name, index) => monthlyGrouped[index + 1] || 0);
+
+        return {
+          labels: months,
+          datasets: [{ data: chartData }],
+        };
+      } else if (selectedPeriod === 'month') {
+        // Para mes: mostrar semanas del mes desde monthlyData
+        if (!monthlyData || monthlyData.length === 0) {
+          return {
+            labels: defaultLabels,
+            datasets: [{ data: defaultData }],
+          };
+        }
+
+        const labels = monthlyData.map((item: any) => item.periodo || `Sem ${item.week || ''}`);
+        const data = monthlyData.map((item: any) => parseFloat(item.ventas || '0'));
+
+        return {
+          labels,
+          datasets: [{ data }],
+        };
+      } else {
+        // Para semana o día: mostrar días desde weeklyData
+        if (!weeklyData || weeklyData.length === 0) {
+          return {
+            labels: defaultLabels,
+            datasets: [{ data: defaultData }],
+          };
+        }
+
+        const labels = weeklyData.map((item: any) => item.day || '');
+        const data = weeklyData.map((item: any) => parseFloat(item.ventas || item.sales || '0'));
+
+        return {
+          labels: labels.length > 0 ? labels : defaultLabels,
+          datasets: [{ data: data.length > 0 ? data : defaultData }],
+        };
+      }
+    } catch (error) {
+      console.error('Error en prepareLineChartData:', error);
       return {
-        labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'],
-        datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }],
+        labels: defaultLabels,
+        datasets: [{ data: defaultData }],
       };
     }
-
-    // El backend retorna array con propiedades: day, ventas, transacciones
-    const labels = weeklyData.map((item: any) => item.day || '');
-    const data = weeklyData.map((item: any) => parseFloat(item.ventas || '0'));
-
-    return {
-      labels: labels.length > 0 ? labels : ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'],
-      datasets: [{ data: data.length > 0 ? data : [0, 0, 0, 0, 0, 0, 0] }],
-    };
   };
 
   // Preparar datos para gráfica de barras (comparación mensual)
@@ -156,9 +258,19 @@ export default function ReportsScreen() {
       };
     }
 
+    // Ordenar datos por período/semana
+    const sortedData = [...monthlyData].sort((a: any, b: any) => {
+      // Intentar comparar por startDate si lo tienen
+      if (a.startDate && b.startDate) {
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      }
+      // Si no, asumir que el nombre está organizado semana 1, 2, 3...
+      return 0;
+    });
+
     // El backend retorna array con propiedades: periodo, ventas
-    const labels = monthlyData.map((item: any) => item.periodo || '');
-    const data = monthlyData.map((item: any) => parseFloat(item.ventas || '0'));
+    const labels = sortedData.map((item: any) => item.periodo || item.week || '');
+    const data = sortedData.map((item: any) => parseFloat(item.ventas || item.sales || '0'));
 
     return {
       labels: labels.length > 0 ? labels : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],

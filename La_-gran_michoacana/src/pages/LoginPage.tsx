@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Lock, User, ChevronRight } from 'lucide-react';
@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('password123');
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [logoImage, setLogoImage] = useState<string>('./logo.png');
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore((state) => ({
     login: state.login,
@@ -14,6 +15,24 @@ export default function LoginPage() {
     error: state.error,
   }));
   const clearError = useAuthStore((state) => state.clearError);
+
+  // Cargar ruta del logo desde Electron
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
+        if (isElectron) {
+          const result = await (window as any).electronAPI.getLogoPath();
+          if (result.success && result.path) {
+            setLogoImage(result.path);
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando logo:', err);
+      }
+    };
+    loadLogo();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +72,12 @@ export default function LoginPage() {
           <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8 mb-6 animate-in fade-in zoom-in duration-700">
             {/* Logo y título */}
             <div className="text-center mb-10">
-              <div className="inline-block mb-4 p-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full">
-                <span className="text-5xl">🍲</span>
+              <div className="inline-block mb-4">
+                <img 
+                  src={logoImage} 
+                  alt="La Gran Michoacana" 
+                  className="w-32 h-32 object-contain"
+                />
               </div>
               <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
                 La Gran Michoacana

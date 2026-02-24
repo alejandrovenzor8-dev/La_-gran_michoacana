@@ -7,6 +7,7 @@ import { eventBus } from '@/lib/eventBus';
 export default function CustomerDisplayPage() {
   const [localItems, setLocalItems] = useState<CartItem[]>([]);
   const [localTotal, setLocalTotal] = useState(0);
+  const [logoImage, setLogoImage] = useState<string>('./logo.png');
   const [showAd, setShowAd] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<string | null>(null);
@@ -33,6 +34,24 @@ export default function CustomerDisplayPage() {
     return () => {
       window.removeEventListener('storage', handleStorage);
     };
+  }, []);
+
+  // Cargar ruta del logo desde Electron
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
+        if (isElectron) {
+          const result = await (window as any).electronAPI.getLogoPath();
+          if (result.success && result.path) {
+            setLogoImage(result.path);
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando logo:', err);
+      }
+    };
+    loadLogo();
   }, []);
 
   useEffect(() => {
@@ -134,8 +153,12 @@ export default function CustomerDisplayPage() {
       <header className="bg-white/10 backdrop-blur-md p-6 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-4xl">
-              🍦
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+              <img 
+                src={logoImage} 
+                alt="La Gran Michoacana" 
+                className="w-20 h-20 object-cover"
+              />
             </div>
             <div>
               <h1 className="text-4xl font-bold text-white">La Gran Michoacana</h1>

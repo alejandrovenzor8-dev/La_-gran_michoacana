@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield, BarChart3, Building } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { usePermissionsStore } from '@/stores/permissionsStore';
 import { Button } from './ui/button';
@@ -18,12 +18,31 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
+  const [logoImage, setLogoImage] = useState<string>('./logo.png');
   const { user, logout } = useAuthStore((state) => ({
     user: state.user,
     logout: state.logout,
   }));
 
   const { hasPermission } = usePermissionsStore();
+
+  // Cargar ruta del logo desde Electron
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
+        if (isElectron) {
+          const result = await (window as any).electronAPI.getLogoPath();
+          if (result.success && result.path) {
+            setLogoImage(result.path);
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando logo:', err);
+      }
+    };
+    loadLogo();
+  }, []);
 
   const navItems: NavItem[] = [
     {
@@ -123,10 +142,17 @@ export function Sidebar() {
         }`}
       >
         {/* Header del Sidebar */}
-        <div className="p-6 border-b border-white/20">
-          <h1 className="text-xl font-bold">La Gran</h1>
-          <h1 className="text-xl font-bold">Michoacana</h1>
-          <p className="text-sm text-white/70 mt-2">Sistema POS</p>
+        <div className="p-6 border-b border-white/20 flex flex-col items-center gap-3">
+          <img
+            src={logoImage}
+            alt="La Gran Michoacana"
+            className="w-16 h-16 rounded-lg object-cover"
+          />
+          <div className="text-center">
+            <h1 className="text-lg font-bold">La Gran</h1>
+            <h1 className="text-lg font-bold">Michoacana</h1>
+            <p className="text-xs text-white/70 mt-2">Sistema POS</p>
+          </div>
         </div>
 
         {/* Usuario */}

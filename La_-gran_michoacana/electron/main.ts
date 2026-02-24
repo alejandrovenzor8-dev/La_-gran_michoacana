@@ -186,6 +186,7 @@ ipcMain.on('install-update', () => {
 
 function createLoginWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
+  const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
   
   loginWindow = new BrowserWindow({
     x: primaryDisplay.bounds.x,
@@ -195,6 +196,7 @@ function createLoginWindow() {
     title: 'La Michoacana POS - Login',
     resizable: true,
     fullscreen: true,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -217,11 +219,14 @@ function createLoginWindow() {
 }
 
 function createMainWindow() {
+  const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
+  
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 1024,
     title: 'La Gran Michoacana POS - Cajero',
     fullscreen: true,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -270,6 +275,8 @@ function createCustomerDisplay() {
     };
   }
 
+  const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
+  
   customerWindow = new BrowserWindow({
     x: displayBounds.x,
     y: displayBounds.y,
@@ -279,6 +286,7 @@ function createCustomerDisplay() {
     fullscreen: !!externalDisplay,
     frame: !externalDisplay, // Con frame si es misma pantalla, sin frame si es externo
     alwaysOnTop: false,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -519,6 +527,39 @@ ipcMain.handle('image:getPath', async (event, relativePath: string) => {
     };
   } catch (error) {
     log.error('Error obteniendo ruta de imagen:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+/**
+ * Obtiene la ruta del logo como file:// URL
+ */
+ipcMain.handle('asset:getLogoPath', async (event) => {
+  try {
+    const appPath = app.getAppPath();
+    const logoPath = path.join(appPath, 'dist', 'logo.png');
+    
+    // Verificar si el archivo existe
+    if (!fs.existsSync(logoPath)) {
+      log.warn('Logo no encontrado en:', logoPath);
+      return {
+        success: false,
+        error: 'Logo no encontrado',
+      };
+    }
+    
+    // Convertir a file:// URL
+    const fileUrl = `file://${logoPath.replace(/\\/g, '/')}`;
+    
+    return {
+      success: true,
+      path: fileUrl,
+    };
+  } catch (error) {
+    log.error('Error obteniendo ruta del logo:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
