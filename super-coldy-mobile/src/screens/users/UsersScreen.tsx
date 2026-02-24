@@ -326,7 +326,7 @@ export default function UsersScreen() {
       <Portal>
         <Dialog visible={showDetailModal} onDismiss={() => setShowDetailModal(false)}>
           {selectedUser && (
-            <>
+            <View>
               <Dialog.Title>{selectedUser.fullName || selectedUser.username}</Dialog.Title>
               <Dialog.Content>
                 <View style={styles.detailRow}>
@@ -368,7 +368,7 @@ export default function UsersScreen() {
                   Editar
                 </Button>
               </Dialog.Actions>
-            </>
+            </View>
           )}
         </Dialog>
 
@@ -412,7 +412,7 @@ export default function UsersScreen() {
 
             {/* Selector de sucursal */}
             {branches.length > 0 && (
-              <>
+              <View>
                 <Text variant="labelMedium" style={{ marginTop: 12 }}>Sucursal</Text>
                 <View style={styles.branchChipsContainer}>
                   <Chip
@@ -433,7 +433,7 @@ export default function UsersScreen() {
                     </Chip>
                   ))}
                 </View>
-              </>
+              </View>
             )}
 
             {/* Botones de acción */}

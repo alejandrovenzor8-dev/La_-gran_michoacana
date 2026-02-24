@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { LogoHeader } from '../components/LogoHeader';
 
@@ -18,6 +19,7 @@ import ReportsScreen from '../screens/reports/ReportsScreen';
 import InventoryScreen from '../screens/inventory/InventoryScreen';
 import UsersScreen from '../screens/users/UsersScreen';
 import BranchesScreen from '../screens/branches/BranchesScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -30,7 +32,8 @@ function AdminTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'home';
+          let iconName: keyof typeof Ionicons.glyphMap | string = 'home';
+          let useIonicons = true;
 
           if (route.name === 'Dashboard') {
             iconName = focused ? 'grid' : 'grid-outline';
@@ -42,9 +45,16 @@ function AdminTabs() {
             iconName = focused ? 'business' : 'business-outline';
           } else if (route.name === 'Users') {
             iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'Settings') {
+            useIonicons = false;
+            iconName = focused ? 'cog' : 'cog-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return useIonicons ? (
+            <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={size} color={color} />
+          ) : (
+            <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={size} color={color} />
+          );
         },
         tabBarActiveTintColor: '#2563eb',
         tabBarInactiveTintColor: '#9ca3af',
@@ -81,6 +91,11 @@ function AdminTabs() {
         name="Users"
         component={UsersScreen}
         options={{ title: 'Usuarios' }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: 'Configuración' }}
       />
     </Tab.Navigator>
   );
