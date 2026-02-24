@@ -1,14 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Lock, User, ChevronRight } from 'lucide-react';
-
-const logoImage = './logo.png';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('password123');
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [logoImage, setLogoImage] = useState<string>('./logo.png');
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore((state) => ({
     login: state.login,
@@ -16,6 +15,24 @@ export default function LoginPage() {
     error: state.error,
   }));
   const clearError = useAuthStore((state) => state.clearError);
+
+  // Cargar ruta del logo desde Electron
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
+        if (isElectron) {
+          const result = await (window as any).electronAPI.getLogoPath();
+          if (result.success && result.path) {
+            setLogoImage(result.path);
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando logo:', err);
+      }
+    };
+    loadLogo();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

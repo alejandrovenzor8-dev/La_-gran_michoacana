@@ -4,16 +4,33 @@ import { formatCurrency, formatDate, formatDateShort } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '@/lib/eventBus';
 
-const logoImage = './logo.png';
-
 export default function CustomerDisplayPage() {
   const [localItems, setLocalItems] = useState<CartItem[]>([]);
   const [localTotal, setLocalTotal] = useState(0);
+  const [logoImage, setLogoImage] = useState<string>('./logo.png');
   const [showAd, setShowAd] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Cargar ruta del logo desde Electron
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
+        if (isElectron) {
+          const result = await (window as any).electronAPI.getLogoPath();
+          if (result.success && result.path) {
+            setLogoImage(result.path);
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando logo:', err);
+      }
+    };
+    loadLogo();
+  }, []);
 
   useEffect(() => {
     // Verificar si estamos en Electron

@@ -516,6 +516,39 @@ ipcMain.handle('image:getPath', async (event, relativePath: string) => {
 });
 
 /**
+ * Obtiene la ruta del logo como file:// URL
+ */
+ipcMain.handle('asset:getLogoPath', async (event) => {
+  try {
+    const appPath = app.getAppPath();
+    const logoPath = path.join(appPath, 'dist', 'logo.png');
+    
+    // Verificar si el archivo existe
+    if (!fs.existsSync(logoPath)) {
+      log.warn('Logo no encontrado en:', logoPath);
+      return {
+        success: false,
+        error: 'Logo no encontrado',
+      };
+    }
+    
+    // Convertir a file:// URL
+    const fileUrl = `file://${logoPath.replace(/\\/g, '/')}`;
+    
+    return {
+      success: true,
+      path: fileUrl,
+    };
+  } catch (error) {
+    log.error('Error obteniendo ruta del logo:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+/**
  * Elimina una imagen del sistema de archivos
  * @param relativePath - Ruta relativa de la imagen
  */

@@ -113,6 +113,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getImagePath: async (relativePath: string) => {
     return await ipcRenderer.invoke('image:getPath', relativePath);
   },
+
+  // Obtener ruta del logo (como file:// URL)
+  getLogoPath: async () => {
+    return await ipcRenderer.invoke('asset:getLogoPath');
+  },
   
   // Eliminar imagen del sistema de archivos
   deleteImage: async (relativePath: string) => {
@@ -179,6 +184,9 @@ export interface ElectronAPI {
   onUpdateDownloaded: (callback: (info: any) => void) => () => void;
   onUpdateError: (callback: (error: any) => void) => () => void;
   onUpdateNotAvailable: (callback: () => void) => () => void;
+  
+  // Gestión de activos
+  getLogoPath: () => Promise<{ success: boolean; path?: string; error?: string }>;
 }
 
 declare global {
