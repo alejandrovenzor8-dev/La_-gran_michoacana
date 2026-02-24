@@ -17,6 +17,7 @@ import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ReportsScreen from '../screens/reports/ReportsScreen';
 import InventoryScreen from '../screens/inventory/InventoryScreen';
 import UsersScreen from '../screens/users/UsersScreen';
+import BranchesScreen from '../screens/branches/BranchesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -37,6 +38,8 @@ function AdminTabs() {
             iconName = focused ? 'stats-chart' : 'stats-chart-outline';
           } else if (route.name === 'Inventory') {
             iconName = focused ? 'cube' : 'cube-outline';
+          } else if (route.name === 'Branches') {
+            iconName = focused ? 'business' : 'business-outline';
           } else if (route.name === 'Users') {
             iconName = focused ? 'people' : 'people-outline';
           }
@@ -68,6 +71,11 @@ function AdminTabs() {
         name="Inventory"
         component={InventoryScreen}
         options={{ title: 'Inventario' }}
+      />
+      <Tab.Screen
+        name="Branches"
+        component={BranchesScreen}
+        options={{ title: 'Sucursales' }}
       />
       <Tab.Screen
         name="Users"
