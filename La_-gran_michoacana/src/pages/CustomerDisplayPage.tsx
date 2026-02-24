@@ -3,8 +3,7 @@ import { useCartStore, CartItem } from '@/stores/cartStore';
 import { formatCurrency, formatDate, formatDateShort } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '@/lib/eventBus';
-
-const logoImage = '/logo.png';
+import logoImage from '../../public/logo.png?url';
 
 export default function CustomerDisplayPage() {
   const [localItems, setLocalItems] = useState<CartItem[]>([]);

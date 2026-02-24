@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Lock, User, ChevronRight } from 'lucide-react';
-
-const logoImage = '/logo.png';
+import logoImage from '../../public/logo.png?url';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('admin');
