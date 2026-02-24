@@ -30,7 +30,6 @@ class LocalImageService {
    */
   async saveImage(base64Data: string): Promise<ImageSaveResult> {
     if (!isElectron() || !window.electronAPI) {
-      console.warn('saveImage solo funciona en Electron');
       return {
         success: false,
         error: 'Función solo disponible en Electron',
@@ -41,7 +40,6 @@ class LocalImageService {
       const result = await window.electronAPI.saveImage(base64Data);
       return result;
     } catch (error) {
-      console.error('Error guardando imagen:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido',
@@ -60,7 +58,6 @@ class LocalImageService {
     }
 
     if (!isElectron() || !window.electronAPI) {
-      console.warn('getImageUrl solo funciona en Electron');
       // En modo desarrollo web, retornar la ruta tal cual
       return relativePath;
     }
@@ -71,11 +68,9 @@ class LocalImageService {
       if (result.success && result.path) {
         return result.path;
       } else {
-        console.error('Error obteniendo ruta de imagen:', result.error);
         return null;
       }
     } catch (error) {
-      console.error('Error obteniendo URL de imagen:', error);
       return null;
     }
   }
@@ -90,7 +85,6 @@ class LocalImageService {
     }
 
     if (!isElectron() || !window.electronAPI) {
-      console.warn('deleteImage solo funciona en Electron');
       return false;
     }
 
@@ -98,7 +92,6 @@ class LocalImageService {
       const result = await window.electronAPI.deleteImage(relativePath);
       return result.success;
     } catch (error) {
-      console.error('Error eliminando imagen:', error);
       return false;
     }
   }

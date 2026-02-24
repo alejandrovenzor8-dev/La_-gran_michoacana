@@ -20,7 +20,7 @@ router.put(
   asyncHandler(async (req, res) => {
     try {
       // Verificar que el usuario es admin
-      if (req.user?.role !== 'admin') {
+      if (req.user?.role !== 'ADMIN') {
         throw new AppError('Solo los administradores pueden cambiar la configuración global', 403);
       }
 

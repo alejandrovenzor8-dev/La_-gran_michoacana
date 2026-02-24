@@ -188,4 +188,8 @@ export const validateCreateSale = (): ValidationChain[] => [
     .optional()
     .isDecimal({ decimal_digits: '1,2' })
     .withMessage('Monto recibido inválido'),
+  body('branchId')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Sucursal inválida'),
 ];

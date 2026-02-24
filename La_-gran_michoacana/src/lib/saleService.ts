@@ -16,6 +16,7 @@ export interface Sale {
   paymentMethod?: string;
   items: SaleItem[];
   status?: string;
+  branchId?: number;
 }
 
 export interface SaleResponse {
@@ -54,6 +55,7 @@ interface SaleFilters {
   endDate?: string;
   status?: string;
   paymentMethod?: string;
+  branchId?: number;
   page?: number;
   limit?: number;
 }
@@ -93,14 +95,13 @@ class SaleService {
       if (filters?.endDate) params.append('endDate', filters.endDate);
       if (filters?.status) params.append('status', filters.status);
       if (filters?.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
+      if (filters?.branchId) params.append('branchId', String(filters.branchId));
       if (filters?.page) params.append('page', String(filters.page));
       if (filters?.limit) params.append('limit', String(filters.limit));
 
       const queryString = params.toString();
       const endpoint = `/sales${queryString ? '?' + queryString : ''}`;
       const response = await apiClient.get<any>(endpoint);
-      
-      console.log('getAllSales raw response:', response);
       
       // Manejar diferentes estructuras de respuesta del backend
       let sales: Sale[] = [];
@@ -123,10 +124,8 @@ class SaleService {
         sales = response;
       }
       
-      console.log('getAllSales parsed sales:', sales);
       return sales || [];
     } catch (error) {
-      console.error('Error en getAllSales:', error);
       return [];
     }
   }

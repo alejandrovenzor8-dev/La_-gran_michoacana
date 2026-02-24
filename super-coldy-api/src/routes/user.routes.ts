@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { authService } from '../services/auth.service.js';
+import { userService } from '../services/user.service.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
@@ -87,16 +88,17 @@ router.put(
   asyncHandler(async (req, res) => {
     try {
       const userId = parseInt(req.params.id as string);
-      const { email, fullName, role, active, timezone } = req.body;
+      const { email, fullName, role, active, timezone, branchId } = req.body;
 
-      logger.info('Actualizando usuario', { userId, timezone });
+      logger.info('Actualizando usuario', { userId, branchId });
 
-      const updatedUser = await authService.updateUser(userId, {
-        ...(email && { email }),
-        ...(fullName && { fullName }),
-        ...(role && { role }),
-        ...(active !== undefined && { active }),
-        ...(timezone && { timezone }),
+      const updatedUser = await userService.updateUser(userId, {
+        email,
+        fullName,
+        role,
+        active,
+        timezone,
+        branchId,
       });
 
       res.status(200).json({

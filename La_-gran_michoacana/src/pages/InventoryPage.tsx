@@ -17,7 +17,10 @@ export default function InventoryPage() {
   const [editImageChanged, setEditImageChanged] = useState(false);  // Rastrear si la imagen fue cambiada
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
+  // Si no es ADMIN, usar automáticamente la sucursal del usuario
+  const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(
+    user?.role !== 'ADMIN' ? user?.branchId ?? undefined : undefined
+  );
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const itemsPerPage = 3;
@@ -29,7 +32,8 @@ export default function InventoryPage() {
     image: '',
     quantity: 0,
     price: 0,
-    category: ''
+    category: '',
+    branchId: user?.role !== 'ADMIN' ? (user?.branchId ?? undefined) : undefined
   });
 
   const [editFormData, setEditFormData] = useState<Partial<Product>>({
@@ -38,8 +42,21 @@ export default function InventoryPage() {
     image: '',
     quantity: 0,
     price: 0,
-    category: ''
+    category: '',
+    branchId: undefined
   });
+
+  // Actualizar selectedBranchId cuando el usuario cambie (si no es ADMIN)
+  useEffect(() => {
+    if (user && user.role !== 'ADMIN' && user.branchId) {
+      setSelectedBranchId(user.branchId);
+      // Actualizar formData con branchId del usuario
+      setFormData(prev => ({
+        ...prev,
+        branchId: user.branchId ?? undefined
+      }));
+    }
+  }, [user?.branchId, user?.role]);
 
   // Cargar productos del backend
   useEffect(() => {
@@ -51,7 +68,6 @@ export default function InventoryPage() {
         // Asegurarse de que data es siempre un array
         setProducts(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Error al cargar los productos:', err);
         setProducts([]); // Establecer array vacío en caso de error
       } finally {
         setLoading(false);
@@ -69,7 +85,7 @@ export default function InventoryPage() {
           const data = await branchService.getBranches({ active: true });
           setBranches(data);
         } catch (err) {
-          console.error('Error al cargar sucursales:', err);
+          // Error al cargar sucursales
         }
       }
     };
@@ -98,7 +114,6 @@ export default function InventoryPage() {
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        console.error('Error procesando imagen:', error);
         alert('Error al procesar la imagen');
       }
     }
@@ -126,7 +141,6 @@ export default function InventoryPage() {
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        console.error('Error procesando imagen:', error);
         alert('Error al procesar la imagen');
       }
     }
@@ -163,14 +177,21 @@ export default function InventoryPage() {
       return;
     }
 
+    // Validar que tenga branchId
+    const branchIdToUse = user?.role === 'ADMIN' 
+      ? formData.branchId 
+      : user?.branchId;
+    
+    if (!branchIdToUse) {
+      alert('Por favor selecciona una sucursal para el producto');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       
       // Preparar datos del producto
       const quantity = Number(formData.quantity) || 0;
-      
-      // Ya no necesitamos validar tamaño porque solo enviamos la ruta
-      // La imagen ya fue guardada localmente en handleImageUpload
       
       // Crear producto en el backend
       const newProduct = await productService.createProduct({
@@ -180,6 +201,7 @@ export default function InventoryPage() {
         quantity: quantity,
         category: formData.category,
         image: formData.image, // Solo la ruta relativa
+        branchId: branchIdToUse
       });
 
       // Manejar diferentes estructuras de respuesta
@@ -220,7 +242,8 @@ export default function InventoryPage() {
         image: '',
         quantity: 0,
         price: 0,
-        category: ''
+        category: '',
+        branchId: user?.role !== 'ADMIN' ? (user?.branchId ?? undefined) : undefined
       });
 
       alert('✅ Producto creado exitosamente');
@@ -241,24 +264,34 @@ export default function InventoryPage() {
       return;
     }
 
+    // Validar que tenga branchId
+    const branchIdToUse = user?.role === 'ADMIN' 
+      ? editFormData.branchId 
+      : (editingProduct.branchId || user?.branchId);
+    
+    if (!branchIdToUse) {
+      alert('Por favor selecciona una sucursal para el producto');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
       // Preparar datos del producto
       const quantity = Number(editFormData.quantity) || 0;
       
-      // Construir payload - SOLO incluir imagen si fue modificada
+      // Construir payload
       const payload: any = {
         name: editFormData.name,
         description: editFormData.description || '',
         price: Number(editFormData.price),
         quantity: quantity,
         category: editFormData.category,
+        branchId: branchIdToUse
       };
       
       // Solo agregar imagen si el usuario la cambió
       if (editImageChanged) {
-        // Ya no validamos tamaño porque ahora solo enviamos la ruta
         payload.image = editFormData.image || '';
         
         // Si borró la imagen anterior (y había una), eliminarla del sistema
@@ -285,7 +318,8 @@ export default function InventoryPage() {
         image: '',
         quantity: 0,
         price: 0,
-        category: ''
+        category: '',
+        branchId: undefined
       });
       setEditingProduct(null);
       setEditImageChanged(false);
@@ -352,6 +386,10 @@ export default function InventoryPage() {
   const safeProducts = Array.isArray(products) ? products : [];
   // Filtrar productos válidos (con id)
   const validProducts = safeProducts.filter(p => p && p.id);
+  const getBranchName = (branchId?: number) => {
+    if (!branchId) return 'Sin sucursal';
+    return branches.find((branch) => branch.id === branchId)?.name || 'Sin sucursal';
+  };
   const startIndex = currentIndex * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentProducts = validProducts.slice(startIndex, endIndex);
@@ -513,6 +551,26 @@ export default function InventoryPage() {
                       />
                     </div>
 
+                    {/* Selector de sucursal - Solo visible para ADMIN */}
+                    {user?.role === 'ADMIN' && branches.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Sucursal *</label>
+                        <select
+                          value={editFormData.branchId || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, branchId: e.target.value ? Number(e.target.value) : undefined })}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                          required
+                        >
+                          <option value="">Selecciona una sucursal</option>
+                          {branches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="md:col-span-2 flex gap-3 justify-end pt-4 border-t">
                       <Button
                         type="button"
@@ -641,6 +699,26 @@ export default function InventoryPage() {
                   />
                 </div>
 
+                {/* Selector de sucursal - Solo visible para ADMIN */}
+                {user?.role === 'ADMIN' && branches.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Sucursal *</label>
+                    <select
+                      value={formData.branchId || ''}
+                      onChange={(e) => setFormData({ ...formData, branchId: e.target.value ? Number(e.target.value) : undefined })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                    >
+                      <option value="">Selecciona una sucursal</option>
+                      {branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="md:col-span-2 flex gap-3 justify-end pt-2">
                   <Button
                     type="button"
@@ -652,7 +730,8 @@ export default function InventoryPage() {
                         image: '',
                         quantity: 0,
                         price: 0,
-                        category: ''
+                        category: '',
+                        branchId: user?.role !== 'ADMIN' ? (user?.branchId ?? undefined) : undefined
                       });
                       setEditingProduct(null);
                     }}
@@ -733,6 +812,11 @@ export default function InventoryPage() {
                           <span className="inline-block px-2 py-1 bg-primary/20 text-primary rounded-full text-xs font-medium mb-2">
                             {product.category}
                           </span>
+                        )}
+                        {user?.role === 'ADMIN' && (
+                          <div className="text-xs text-gray-500 mb-2">
+                            Sucursal: {getBranchName(product.branchId)}
+                          </div>
                         )}
                         <h3 className="text-xl font-bold text-gray-800 mb-4">
                           {product.name || 'Producto sin nombre'}
@@ -861,6 +945,11 @@ export default function InventoryPage() {
                             </span>
                           ) : (
                             <span className="text-gray-400 text-sm">Sin categoría</span>
+                          )}
+                          {user?.role === 'ADMIN' && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Sucursal: {getBranchName(product.branchId)}
+                            </div>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">

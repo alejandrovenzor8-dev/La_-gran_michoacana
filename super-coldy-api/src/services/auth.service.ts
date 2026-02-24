@@ -18,6 +18,7 @@ interface RegisterData {
   password: string;
   fullName?: string;
   role?: UserRole;
+  branchId?: number;
 }
 
 /**
@@ -66,7 +67,7 @@ class AuthService {
    */
   async register(data: RegisterData): Promise<UserWithoutPassword> {
     try {
-      const { username, email, password, fullName, role = 'CAJERO' } = data;
+      const { username, email, password, fullName, role = 'CAJERO', branchId } = data;
 
       // Validar que username no exista
       const existingUsername = await prisma.user.findUnique({
@@ -102,6 +103,7 @@ class AuthService {
           passwordHash,
           fullName: fullName || null,
           role: roleUppercase,
+          branchId: branchId || null,
           active: true,
         },
         select: {
@@ -111,6 +113,12 @@ class AuthService {
           fullName: true,
           role: true,
           branchId: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           active: true,
           timezone: true,
           createdAt: true,
@@ -357,6 +365,7 @@ class AuthService {
       role?: UserRole;
       active?: boolean;
       timezone?: string;
+      branchId?: number | null;
     }
   ): Promise<UserWithoutPassword> {
     try {
@@ -380,11 +389,15 @@ class AuthService {
         }
       }
 
-      // Convertir role a uppercase para Prisma (enum values)
-      const updateData = {
-        ...data,
-        ...(data.role && { role: data.role.toUpperCase() as UserRole }),
-      };
+      // Construir objeto de actualización de forma explícita
+      const updateData: any = {};
+      
+      if (data.email !== undefined) updateData.email = data.email;
+      if (data.fullName !== undefined) updateData.fullName = data.fullName;
+      if (data.role !== undefined) updateData.role = data.role.toUpperCase() as UserRole;
+      if (data.active !== undefined) updateData.active = data.active;
+      if (data.timezone !== undefined) updateData.timezone = data.timezone;
+      if (data.branchId !== undefined) updateData.branchId = data.branchId;
 
       // Actualizar usuario
       const updatedUser = await prisma.user.update({
@@ -397,6 +410,12 @@ class AuthService {
           fullName: true,
           role: true,
           branchId: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           active: true,
           timezone: true,
           createdAt: true,

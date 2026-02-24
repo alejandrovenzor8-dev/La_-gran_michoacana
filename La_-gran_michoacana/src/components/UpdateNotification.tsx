@@ -39,7 +39,6 @@ export default function UpdateNotification() {
         });
       } else if (status === 'error') {
         // No mostrar errores de actualización al usuario final
-        console.warn('Error de auto-actualización:', data?.message);
       } else if (status === 'not-available') {
         // No mostrar toast cuando no hay actualizaciones (es el caso normal)
       }

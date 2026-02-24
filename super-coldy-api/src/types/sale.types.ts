@@ -75,6 +75,9 @@ export interface CreateSaleInput {
 
   /** Origen de la transacción (web, mobile, etc) */
   source?: Source | 'DESKTOP' | 'MOBILE';
+
+  /** Sucursal para registrar la venta (solo ADMIN) */
+  branchId?: number;
 }
 
 /**

@@ -12,6 +12,7 @@ interface RegisterRequestBody {
   password: string;
   fullName?: string | undefined;
   role?: UserRole;
+  branchId?: number;
 }
 
 /**
@@ -53,9 +54,9 @@ class AuthController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { username, email, password, fullName, role } = req.body;
+      const { username, email, password, fullName, role, branchId } = req.body;
 
-      logger.info('Iniciando registro de usuario', { username, email });
+      logger.info('Iniciando registro de usuario', { username, email, branchId });
 
       // Llamar al servicio de autenticación
       const user = await authService.register({
@@ -64,6 +65,7 @@ class AuthController {
         password,
         fullName,
         role,
+        branchId,
       });
 
       // Generar tokens para el nuevo usuario

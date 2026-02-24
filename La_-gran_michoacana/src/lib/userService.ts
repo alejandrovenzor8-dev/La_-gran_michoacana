@@ -5,7 +5,7 @@ export interface User {
   username: string;
   email: string;
   fullName: string | null;
-  role: 'admin' | 'cajero' | 'gerente';
+  role: 'ADMIN' | 'CAJERO' | 'GERENTE';
   branchId: number | null;
   branch?: {
     id: number;
@@ -22,15 +22,17 @@ export interface CreateUserData {
   email: string;
   password: string;
   fullName?: string;
-  role: 'admin' | 'cajero' | 'gerente';
+  role: 'ADMIN' | 'CAJERO' | 'GERENTE';
+  branchId?: number;
 }
 
 export interface UpdateUserData {
   email?: string;
   fullName?: string;
-  role?: 'admin' | 'cajero' | 'gerente';
+  role?: 'ADMIN' | 'CAJERO' | 'GERENTE';
   active?: boolean;
   timezone?: string;
+  branchId?: number | null;
 }
 
 interface GetUsersResponse {

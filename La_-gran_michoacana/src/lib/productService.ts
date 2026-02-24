@@ -9,6 +9,7 @@ export interface Product {
   category?: string;
   image?: string;  // Cambiado de imageUrl a image para consistencia en el frontend
   emoji?: string;
+  branchId?: number;
 }
 
 export interface ProductResponse {

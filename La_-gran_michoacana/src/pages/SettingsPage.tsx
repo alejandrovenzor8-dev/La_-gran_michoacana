@@ -192,7 +192,6 @@ export default function SettingsPage() {
         });
       }
     } catch (error) {
-      console.error('Error al guardar timezone:', error);
       toast.error('Error al guardar', {
         description: 'La zona horaria se guardó localmente pero no en el servidor',
       });

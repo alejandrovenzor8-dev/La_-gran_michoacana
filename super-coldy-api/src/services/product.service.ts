@@ -17,6 +17,7 @@ export interface ProductCreateInput {
   barcode?: string;
   imageUrl?: string;
   emoji?: string;
+  branchId?: number;
 }
 
 /**
@@ -34,6 +35,7 @@ export interface ProductUpdateInput {
   imageUrl?: string;
   emoji?: string;
   active?: boolean;
+  branchId?: number;
 }
 
 /**
@@ -108,6 +110,7 @@ class ProductService {
           barcode: data.barcode || null,
           imageUrl: data.imageUrl || null,
           emoji: data.emoji || null,
+          branchId: data.branchId || null,
           active: true,
         },
       });
@@ -262,6 +265,7 @@ class ProductService {
       if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
       if (data.emoji !== undefined) updateData.emoji = data.emoji;
       if (data.active !== undefined) updateData.active = data.active;
+      if (data.branchId !== undefined) updateData.branchId = data.branchId;
 
       logger.info('🔧 BACKEND - updateProduct: Datos recibidos del cliente', {
         productId: id,

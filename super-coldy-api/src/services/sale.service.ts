@@ -101,18 +101,51 @@ class SaleService {
    * Crear una nueva venta
    * Valida productos, stock, calcula montos y registra la transacción
    */
-  async createSale(data: CreateSaleInput, userId: number): Promise<SaleResponse> {
+  async createSale(
+    data: CreateSaleInput,
+    userId: number,
+    requesterRole?: string
+  ): Promise<SaleResponse> {
     try {
       // Validar que haya items
       if (!data.items || data.items.length === 0) {
         throw new AppError('La venta debe tener al menos un item', 400);
       }
 
-      // Obtener la sucursal del usuario
+      // Obtener la sucursal del usuario para asignarla a la venta
+      // IMPORTANTE: Todas las ventas se registran con la sucursal del usuario que las crea
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { branchId: true },
+        select: { branchId: true, username: true, role: true },
       });
+
+      const normalizedBranchId = data.branchId !== undefined ? Number(data.branchId) : undefined;
+
+      const userRole = (requesterRole || user?.role || '').toUpperCase().trim();
+      const isAdmin = userRole === 'ADMIN';
+
+      let branchIdToUse: number | undefined;
+      if (isAdmin) {
+        if (!Number.isNaN(normalizedBranchId)) {
+          branchIdToUse = normalizedBranchId;
+        }
+
+        if (!branchIdToUse) {
+          throw new AppError(
+            'Selecciona una sucursal para registrar la venta.',
+            400
+          );
+        }
+      } else {
+        branchIdToUse = user?.branchId ?? undefined;
+        
+        if (!branchIdToUse) {
+          throw new AppError(
+            `El usuario no tiene una sucursal asignada. Contacta al administrador para asignar una sucursal.`,
+            400
+          );
+        }
+      }
 
       // Usar transacción de Prisma
       const sale = await prisma.$transaction(async (tx) => {
@@ -169,7 +202,7 @@ class SaleService {
         const newSale = await tx.sale.create({
           data: {
             userId,
-            branchId: user?.branchId,
+            branchId: branchIdToUse, // La venta se registra en la sucursal seleccionada
             subtotal: new Prisma.Decimal(subtotal),
             total: new Prisma.Decimal(total),
             discount: new Prisma.Decimal(discount),
@@ -434,7 +467,8 @@ class SaleService {
   async getSalesStats(
     startDate?: Date,
     endDate?: Date,
-    timezone: string = 'America/Mexico_City'
+    timezone: string = 'America/Mexico_City',
+    branchId?: number
   ): Promise<DailySalesStats> {
     try {
       let start = startDate;
@@ -469,6 +503,7 @@ class SaleService {
             gte: startUTC,
             lte: endUTC,
           },
+          ...(branchId ? { branchId } : {}),
         },
         include: {
           items: true,
@@ -489,7 +524,8 @@ class SaleService {
   async getWeeklyTrend(
     startDate?: Date,
     endDate?: Date,
-    timezone: string = 'America/Mexico_City'
+    timezone: string = 'America/Mexico_City',
+    branchId?: number
   ): Promise<any[]> {
     try {
       let start: Date;
@@ -528,6 +564,7 @@ class SaleService {
             gte: startUTC,
             lte: endUTC,
           },
+          ...(branchId ? { branchId } : {}),
         },
       });
 
@@ -591,7 +628,8 @@ class SaleService {
   async getMonthlyComparison(
     startDate?: Date,
     endDate?: Date,
-    timezone: string = 'America/Mexico_City'
+    timezone: string = 'America/Mexico_City',
+    branchId?: number
   ): Promise<any[]> {
     try {
       let start: Date;
@@ -637,6 +675,7 @@ class SaleService {
             gte: startUTC,
             lte: endUTC,
           },
+          ...(branchId ? { branchId } : {}),
         },
       });
 
@@ -865,7 +904,7 @@ class SaleService {
    * Obtener corte de caja del día actual
    * Desglose por método de pago y totales
    */
-  async getCashierCut(userId?: number) {
+  async getCashierCut(filters?: { userId?: number; branchId?: number }) {
     try {
       // Trabajar SIEMPRE en UTC
       const today = new Date();
@@ -885,8 +924,13 @@ class SaleService {
       };
 
       // Si se proporciona userId, filtrar solo ese cajero
-      if (userId) {
-        whereClause.userId = userId;
+      if (filters?.userId) {
+        whereClause.userId = filters.userId;
+      }
+
+      // Si se proporciona branchId, filtrar por sucursal
+      if (filters?.branchId) {
+        whereClause.branchId = filters.branchId;
       }
 
       // Obtener todas las ventas del día
@@ -923,7 +967,7 @@ class SaleService {
 
       return {
         date: today.toISOString(),
-        cashier: userId ? sales[0]?.user?.username || 'N/A' : 'Todos',
+        cashier: filters?.userId ? sales[0]?.user?.username || 'N/A' : 'Todos',
         startTime: firstSale,
         endTime: lastSale,
         paymentMethods: {

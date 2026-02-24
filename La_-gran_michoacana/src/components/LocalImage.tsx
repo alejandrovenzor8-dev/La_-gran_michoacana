@@ -44,7 +44,6 @@ export function LocalImage({ src, alt, className, fallback }: LocalImageProps) {
           setError(true);
         }
       } catch (err) {
-        console.error('Error cargando imagen:', err);
         setError(true);
       } finally {
         setLoading(false);
