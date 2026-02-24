@@ -63,9 +63,12 @@
     ],
     "extraFiles": [
       {
-        "from": "dist",
-        "to": "",
-        "filter": ["*.png"]
+        "from": "dist/app-icon.png",
+        "to": "app-icon.png"
+      },
+      {
+        "from": "dist/logo.png",
+        "to": "logo.png"
       }
     ],
     "win": {

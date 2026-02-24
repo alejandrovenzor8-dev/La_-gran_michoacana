@@ -186,6 +186,7 @@ ipcMain.on('install-update', () => {
 
 function createLoginWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
+  const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
   
   loginWindow = new BrowserWindow({
     x: primaryDisplay.bounds.x,
@@ -195,7 +196,7 @@ function createLoginWindow() {
     title: 'La Michoacana POS - Login',
     resizable: true,
     fullscreen: true,
-    icon: path.join(__dirname, '../public/app-icon.png'),
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -218,11 +219,13 @@ function createLoginWindow() {
 }
 
 function createMainWindow() {
+  const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
+  
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 1024,
     title: 'La Gran Michoacana POS - Cajero',
-    icon: path.join(__dirname, '../public/app-icon.png'),
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -271,6 +274,8 @@ function createCustomerDisplay() {
     };
   }
 
+  const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
+  
   customerWindow = new BrowserWindow({
     x: displayBounds.x,
     y: displayBounds.y,
@@ -280,7 +285,7 @@ function createCustomerDisplay() {
     fullscreen: !!externalDisplay,
     frame: !externalDisplay, // Con frame si es misma pantalla, sin frame si es externo
     alwaysOnTop: false,
-    icon: path.join(__dirname, '../public/app-icon.png'),
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

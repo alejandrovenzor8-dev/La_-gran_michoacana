@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Lock, User, ChevronRight } from 'lucide-react';
+import logoImage from '../../public/logo.png';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('admin');
@@ -55,7 +56,7 @@ export default function LoginPage() {
             <div className="text-center mb-10">
               <div className="inline-block mb-4">
                 <img 
-                  src="/logo.png" 
+                  src={logoImage} 
                   alt="La Gran Michoacana" 
                   className="w-32 h-32 object-contain"
                 />

@@ -3,6 +3,7 @@ import { useCartStore, CartItem } from '@/stores/cartStore';
 import { formatCurrency, formatDate, formatDateShort } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '@/lib/eventBus';
+import logoImage from '../../public/logo.png';
 
 export default function CustomerDisplayPage() {
   const [localItems, setLocalItems] = useState<CartItem[]>([]);
@@ -114,7 +115,7 @@ export default function CustomerDisplayPage() {
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
               <img 
-                src="/logo.png" 
+                src={logoImage} 
                 alt="La Gran Michoacana" 
                 className="w-20 h-20 object-cover"
               />
