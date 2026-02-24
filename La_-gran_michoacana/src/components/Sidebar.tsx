@@ -6,6 +6,8 @@ import { usePermissionsStore } from '@/stores/permissionsStore';
 import { Button } from './ui/button';
 import type { ModuleType } from '@/types/permissions';
 
+const logoImage = new URL('../../public/logo.png', import.meta.url).href;
+
 interface NavItem {
   id: string;
   label: string;
@@ -125,7 +127,7 @@ export function Sidebar() {
         {/* Header del Sidebar */}
         <div className="p-6 border-b border-white/20 flex flex-col items-center gap-3">
           <img
-            src="/logo.png"
+            src={logoImage}
             alt="La Gran Michoacana"
             className="w-16 h-16 rounded-lg object-cover"
           />

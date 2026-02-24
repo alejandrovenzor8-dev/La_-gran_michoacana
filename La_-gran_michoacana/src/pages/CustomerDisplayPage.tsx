@@ -4,7 +4,7 @@ import { formatCurrency, formatDate, formatDateShort } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '@/lib/eventBus';
 
-const logoImage = new URL('../../../public/logo.png', import.meta.url).href;
+const logoImage = new URL('../../public/logo.png', import.meta.url).href;
 
 export default function CustomerDisplayPage() {
   const [localItems, setLocalItems] = useState<CartItem[]>([]);
