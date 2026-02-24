@@ -38,7 +38,7 @@ export const useAuthStore = create<AuthStore>()(
       error: null,
 
       /**
-       * Login
+       * Login - Solo permite administradores
        */
       login: async (username: string, password: string) => {
         set({ isLoading: true, error: null });
@@ -46,6 +46,18 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const response = await authService.login(username, password);
           const { user, accessToken, refreshToken } = response.data;
+
+          // ✅ VALIDACIÓN: Solo permitir ADMIN
+          if (user.role !== 'ADMIN') {
+            set({
+              isLoading: false,
+              error: 'Acceso denegado. Solo administradores pueden acceder a esta app.',
+              user: null,
+              isAuthenticated: false,
+            });
+            console.warn(`❌ Acceso denegado: ${username} es ${user.role}, se requiere ADMIN`);
+            return false;
+          }
 
           // Guardar token en el cliente
           await apiClient.setToken(accessToken);
