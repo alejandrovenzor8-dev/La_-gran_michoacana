@@ -322,6 +322,10 @@ export const validateCreateSale = (): ValidationChain[] => [
     .withMessage('Notas deben ser texto')
     .isLength({ max: 500 })
     .withMessage('Notas muy largas (max 500 caracteres)'),
+    body('branchId')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Sucursal inválida'),
   body('source')
     .optional()
     .isIn(['DESKTOP', 'MOBILE'])

@@ -17,6 +17,8 @@ interface UpdateUserRequestBody {
   fullName?: string;
   role?: UserRole;
   active?: boolean;
+  timezone?: string;
+  branchId?: number | null;
 }
 
 /**

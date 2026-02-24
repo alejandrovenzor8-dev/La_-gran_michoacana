@@ -9,22 +9,43 @@ import { productService, Product } from '@/lib/productService';
 import { saleService, Sale, SaleItem } from '@/lib/saleService';
 import { PaymentDialog } from '@/components/pos/PaymentDialog';
 import { eventBus } from '@/lib/eventBus';
+import { branchService } from '@/lib/branchService';
+import type { Branch } from '@/types/branch';
 
 export default function POSPage() {
   const { items, total, addItem, removeItem, updateQuantity, clearCart } = useCartStore();
   const user = useAuthStore((state) => state.user);
   const [products, setProducts] = useState<Product[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
-  // Cargar productos del backend
+  const getAdminBranchName = () => {
+    if (!selectedBranchId) return 'Todas las sucursales';
+    return branches.find((branch) => branch.id === selectedBranchId)?.name || 'Sucursal';
+  };
+
+  // Cargar productos del backend (filtrados por sucursal automáticamente)
   const loadProducts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await productService.getAllProducts();
+
+      // Si no es ADMIN, validar que el usuario tenga sucursal asignada
+      if (user?.role !== 'ADMIN' && !user?.branchId) {
+        setError('⚠️ Tu usuario no tiene una sucursal asignada. No se pueden cargar los productos. Contacta al administrador.');
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      // El backend filtra automáticamente por la sucursal del usuario
+      // Si es ADMIN y selecciona una sucursal, pasa el parámetro
+      const branchIdParam = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+      const data = await productService.getAllProducts(branchIdParam);
       // Asegurarse de que data es siempre un array
       setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -47,10 +68,54 @@ export default function POSPage() {
     };
   }, []);
 
-  // Cargar productos del backend
+  // Cargar sucursales si es admin
   useEffect(() => {
-    loadProducts();
-  }, []);
+    const loadBranches = async () => {
+      if (user?.role === 'ADMIN') {
+        try {
+          const data = await branchService.getBranches({ active: true });
+          setBranches(data);
+        } catch (err) {
+          // Error al cargar sucursales
+        }
+      }
+    };
+
+    loadBranches();
+  }, [user]);
+
+  // Cargar productos del backend (filtra automáticamente por sucursal del usuario)
+  useEffect(() => {
+    if (user) {
+      loadProducts();
+    }
+  }, [user?.branchId, selectedBranchId]); // Recargar cuando cambie la sucursal del usuario o la selección
+
+  useEffect(() => {
+    if (!user) return;
+
+    let branchName = 'Sin sucursal';
+    let branchId: number | undefined = undefined;
+
+    if (user.role === 'ADMIN') {
+      if (selectedBranchId) {
+        branchId = selectedBranchId;
+        branchName = branches.find((branch) => branch.id === selectedBranchId)?.name || 'Sucursal';
+      } else {
+        branchName = 'Todas las sucursales';
+      }
+    } else {
+      branchId = user.branchId ?? undefined;
+      branchName = user.branch?.name || 'Sin sucursal';
+    }
+
+    localStorage.setItem('pos_branch_name', branchName);
+    if (branchId) {
+      localStorage.setItem('pos_branch_id', String(branchId));
+    } else {
+      localStorage.removeItem('pos_branch_id');
+    }
+  }, [user, selectedBranchId, branches]);
 
   // Recargar productos cuando el carrito se vacía (después de una venta)
   useEffect(() => {
@@ -93,6 +158,12 @@ export default function POSPage() {
       return;
     }
 
+    // Validar que el usuario tenga sucursal asignada
+    if (user && !user.branchId) {
+      alert('⚠️ Tu usuario no tiene una sucursal asignada. Las ventas no se pueden registrar sin una sucursal. Contacta al administrador.');
+      return;
+    }
+
     setIsPaymentDialogOpen(true);
   };
 
@@ -115,6 +186,15 @@ export default function POSPage() {
       return;
     }
 
+    const branchIdToUse = user?.role === 'ADMIN'
+      ? selectedBranchId
+      : (user?.branchId ?? undefined);
+
+    if (user?.role === 'ADMIN' && !branchIdToUse) {
+      alert('Selecciona una sucursal para registrar la venta');
+      return;
+    }
+
     try {
       setIsProcessing(true);
 
@@ -128,6 +208,7 @@ export default function POSPage() {
         total,
         items: saleItems,
         paymentMethod: 'cash',
+        branchId: branchIdToUse,
       };
 
       const createdSale = await saleService.createSale(sale);
@@ -161,19 +242,51 @@ export default function POSPage() {
       {/* Panel de Productos */}
       <div className="flex-1 p-6 overflow-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <Package className="w-8 h-8 text-primary" />
-            Punto de Venta
-          </h1>
-          <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                <Package className="w-8 h-8 text-primary" />
+                Punto de Venta
+              </h1>
+              <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
+            </div>
+
+            {/* Selector de sucursal para admin */}
+            {user?.role === 'ADMIN' && branches.length > 0 && (
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-700">Sucursal:</label>
+                <select
+                  value={selectedBranchId || ''}
+                  onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : undefined)}
+                  className="px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="">Todas las sucursales</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           {user && (
             <div className="mt-3 space-y-1">
               <p className="text-sm text-gray-500">
                 Conectado como: <span className="font-semibold">{user.username}</span> ({user.role})
               </p>
-              {user.branch && (
+              {user.role === 'ADMIN' ? (
+                <p className="text-sm text-gray-500">
+                  Sucursal: <span className="font-semibold">{getAdminBranchName()}</span>
+                </p>
+              ) : user.branch ? (
                 <p className="text-sm text-gray-500">
                   Sucursal: <span className="font-semibold">{user.branch.name}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-red-600 font-semibold bg-red-50 px-3 py-2 rounded border border-red-200">
+                  ⚠️ Sin sucursal asignada - No se pueden registrar ventas
                 </p>
               )}
             </div>
@@ -181,10 +294,19 @@ export default function POSPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products.length === 0 ? (
+          {error ? (
+            <div className="col-span-full text-center py-12">
+              <Package className="w-16 h-16 mx-auto text-red-300 mb-3" />
+              <p className="text-red-600 font-semibold">{error}</p>
+            </div>
+          ) : products.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <Package className="w-16 h-16 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">No hay productos disponibles</p>
+              <p className="text-gray-500">
+                {user?.branchId 
+                  ? 'No hay productos disponibles para tu sucursal' 
+                  : 'Asigna una sucursal a tu usuario para ver productos'}
+              </p>
             </div>
           ) : (
             products.map((product) => (
@@ -347,6 +469,7 @@ export default function POSPage() {
         isOpen={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
         onPaymentComplete={handlePaymentComplete}
+        selectedBranchId={selectedBranchId}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import PermissionsPage from './pages/PermissionsPage';
 import ReportsPage from './pages/ReportsPage';
 import BranchesPage from './pages/BranchesPage';
 import LoginPage from './pages/LoginPage';
+import ForceLogoutPage from './pages/ForceLogoutPage';
 import { MainLayout } from './components/MainLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
@@ -35,6 +36,9 @@ function App() {
   return (
     <HashRouter>
       <Routes>
+        {/* Ruta especial para limpiar todo */}
+        <Route path="/force-logout" element={<ForceLogoutPage />} />
+        
         {!isAuthenticated ? (
           <>
             <Route path="/" element={<LoginPage />} />

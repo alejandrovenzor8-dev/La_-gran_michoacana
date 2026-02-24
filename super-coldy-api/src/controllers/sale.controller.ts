@@ -24,11 +24,22 @@ class SaleController {
         throw new AppError('Usuario no autenticado', 401);
       }
 
-      const { items, paymentMethod, amountReceived, discount, tax, notes, source } = req.body;
+      const { items, paymentMethod, amountReceived, discount, tax, notes, source, branchId } = req.body;
+      const parsedBranchId = branchId !== undefined ? Number(branchId) : undefined;
+      const requesterRole = (req.user?.role || '').toUpperCase().trim();
 
       // Validar que items no esté vacío
       if (!items || items.length === 0) {
         throw new AppError('La venta debe tener al menos un item', 400);
+      }
+
+      let branchIdForSale: number | undefined;
+      if (requesterRole === 'ADMIN') {
+        if (!Number.isNaN(parsedBranchId)) {
+          branchIdForSale = parsedBranchId;
+        } else {
+          throw new AppError('Selecciona una sucursal para registrar la venta.', 400);
+        }
       }
 
       const data: CreateSaleInput = {
@@ -39,9 +50,10 @@ class SaleController {
         tax,
         notes,
         source,
+        branchId: branchIdForSale,
       };
 
-      const sale = await saleService.createSale(data, userId);
+      const sale = await saleService.createSale(data, userId, req.user?.role);
 
       res.status(201).json({
         success: true,
@@ -259,15 +271,23 @@ class SaleController {
       const { startDate, endDate } = req.query;
       const userId = (req as any).user?.userId;
 
-      // Obtener timezone del usuario
+      // Obtener timezone y sucursal del usuario
       let userTimezone = 'America/Mexico_City';
+      let branchId: number | undefined = undefined;
       if (userId) {
         const user = await prisma.user.findUnique({
           where: { id: userId },
-          select: { timezone: true },
+          select: { timezone: true, branchId: true, role: true },
         });
         if (user?.timezone) {
           userTimezone = user.timezone;
+        }
+
+        const requestedBranchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+        if (user?.role === 'ADMIN') {
+          branchId = !Number.isNaN(requestedBranchId) ? requestedBranchId : undefined;
+        } else {
+          branchId = user?.branchId ?? undefined;
         }
       }
 
@@ -288,7 +308,7 @@ class SaleController {
         }
       }
 
-      const stats = await saleService.getSalesStats(start, end, userTimezone);
+      const stats = await saleService.getSalesStats(start, end, userTimezone, branchId);
 
       res.status(200).json({
         success: true,
@@ -310,15 +330,23 @@ class SaleController {
       const { startDate, endDate } = req.query;
       const userId = (req as any).user?.userId;
 
-      // Obtener timezone del usuario
+      // Obtener timezone y sucursal del usuario
       let userTimezone = 'America/Mexico_City';
+      let branchId: number | undefined = undefined;
       if (userId) {
         const user = await prisma.user.findUnique({
           where: { id: userId },
-          select: { timezone: true },
+          select: { timezone: true, branchId: true, role: true },
         });
         if (user?.timezone) {
           userTimezone = user.timezone;
+        }
+
+        const requestedBranchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+        if (user?.role === 'ADMIN') {
+          branchId = !Number.isNaN(requestedBranchId) ? requestedBranchId : undefined;
+        } else {
+          branchId = user?.branchId ?? undefined;
         }
       }
 
@@ -339,7 +367,7 @@ class SaleController {
         }
       }
 
-      const trend = await saleService.getWeeklyTrend(start, end, userTimezone);
+      const trend = await saleService.getWeeklyTrend(start, end, userTimezone, branchId);
 
       res.status(200).json({
         success: true,
@@ -361,15 +389,23 @@ class SaleController {
       const { startDate, endDate } = req.query;
       const userId = (req as any).user?.userId;
 
-      // Obtener timezone del usuario
+      // Obtener timezone y sucursal del usuario
       let userTimezone = 'America/Mexico_City';
+      let branchId: number | undefined = undefined;
       if (userId) {
         const user = await prisma.user.findUnique({
           where: { id: userId },
-          select: { timezone: true },
+          select: { timezone: true, branchId: true, role: true },
         });
         if (user?.timezone) {
           userTimezone = user.timezone;
+        }
+
+        const requestedBranchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+        if (user?.role === 'ADMIN') {
+          branchId = !Number.isNaN(requestedBranchId) ? requestedBranchId : undefined;
+        } else {
+          branchId = user?.branchId ?? undefined;
         }
       }
 
@@ -390,7 +426,7 @@ class SaleController {
         }
       }
 
-      const comparison = await saleService.getMonthlyComparison(start, end, userTimezone);
+      const comparison = await saleService.getMonthlyComparison(start, end, userTimezone, branchId);
 
       res.status(200).json({
         success: true,
@@ -445,9 +481,28 @@ class SaleController {
    */
   async getCashierCut(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
-      
-      const cashierCut = await saleService.getCashierCut(userId);
+      const requestedUserId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      const requestedBranchId = req.query.branchId ? parseInt(req.query.branchId as string) : undefined;
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { branchId: true, role: true },
+      });
+
+      const filters: { userId?: number; branchId?: number } = {};
+
+      if (user?.role === 'ADMIN') {
+        if (!Number.isNaN(requestedUserId)) {
+          filters.userId = requestedUserId;
+        }
+        if (!Number.isNaN(requestedBranchId)) {
+          filters.branchId = requestedBranchId;
+        }
+      } else {
+        filters.branchId = user?.branchId ?? undefined;
+      }
+
+      const cashierCut = await saleService.getCashierCut(filters);
 
       res.status(200).json({
         success: true,

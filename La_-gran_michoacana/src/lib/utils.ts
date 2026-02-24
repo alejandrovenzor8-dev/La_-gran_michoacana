@@ -53,7 +53,7 @@ export function getConfiguredTimezone(): string {
       }
     }
   } catch (e) {
-    console.warn('Error al leer timezone del usuario:', e);
+    // Error al leer timezone del usuario
   }
   
   // 2. Intentar obtener de localStorage (configuración manual)
@@ -63,7 +63,7 @@ export function getConfiguredTimezone(): string {
       return stored;
     }
   } catch (e) {
-    console.warn('Error al leer timezone del localStorage:', e);
+    // Error al leer timezone del localStorage
   }
   
   // 3. Intentar detectar la zona horaria del navegador
@@ -73,7 +73,7 @@ export function getConfiguredTimezone(): string {
       return browserTimezone;
     }
   } catch (e) {
-    console.warn('Error al detectar timezone del navegador:', e);
+    // Error al detectar timezone del navegador
   }
   
   // 4. Retornar default
@@ -92,7 +92,7 @@ export function setConfiguredTimezone(timezone: string): void {
     }
     localStorage.setItem(TIMEZONE_STORAGE_KEY, timezone);
   } catch (e) {
-    console.error('Error al guardar timezone:', e);
+    // Error al guardar timezone
   }
 }
 

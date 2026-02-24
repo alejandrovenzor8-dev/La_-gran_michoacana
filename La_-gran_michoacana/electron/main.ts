@@ -225,6 +225,7 @@ function createMainWindow() {
     width: 1280,
     height: 1024,
     title: 'La Gran Michoacana POS - Cajero',
+    fullscreen: true,
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
@@ -482,7 +483,7 @@ ipcMain.handle('image:save', async (event, base64Data: string) => {
 /**
  * Obtiene la ruta absoluta de una imagen
  * @param relativePath - Ruta relativa (ej: uploads/products/imagen.jpg)
- * @returns Ruta absoluta del archivo
+ * @returns Imagen en formato base64 (data:image/...) para mostrar directamente
  */
 ipcMain.handle('image:getPath', async (event, relativePath: string) => {
   try {
@@ -498,12 +499,30 @@ ipcMain.handle('image:getPath', async (event, relativePath: string) => {
       };
     }
     
-    // Convertir a file:// URL para que pueda ser usado en <img src=...
-    const fileUrl = `file://${fullPath.replace(/\\/g, '/')}`;
+    // Leer el archivo como buffer
+    const imageBuffer = fs.readFileSync(fullPath);
+    
+    // Detectar tipo de imagen por extensión
+    const ext = path.extname(fullPath).toLowerCase();
+    let mimeType = 'image/png'; // Default
+    
+    if (ext === '.jpg' || ext === '.jpeg') {
+      mimeType = 'image/jpeg';
+    } else if (ext === '.png') {
+      mimeType = 'image/png';
+    } else if (ext === '.gif') {
+      mimeType = 'image/gif';
+    } else if (ext === '.webp') {
+      mimeType = 'image/webp';
+    }
+    
+    // Convertir a base64
+    const base64Image = imageBuffer.toString('base64');
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
     
     return {
       success: true,
-      path: fileUrl,
+      path: dataUrl, // Retornar data URL en lugar de file://
       fullPath: fullPath,
     };
   } catch (error) {

@@ -60,7 +60,6 @@ class BranchService {
       const response = await apiClient.get<GetBranchesResponse>(url);
       return response.data.branches;
     } catch (error) {
-      console.error('Error obteniendo sucursales:', error);
       throw error;
     }
   }
@@ -75,7 +74,6 @@ class BranchService {
       const response = await apiClient.get<GetBranchResponse>(`/branches/${id}`);
       return response.data.branch;
     } catch (error) {
-      console.error(`Error obteniendo sucursal ${id}:`, error);
       throw error;
     }
   }
@@ -90,7 +88,6 @@ class BranchService {
       const response = await apiClient.post<CreateBranchResponse>('/branches', data);
       return response.data.branch;
     } catch (error) {
-      console.error('Error creando sucursal:', error);
       throw error;
     }
   }
@@ -106,7 +103,6 @@ class BranchService {
       const response = await apiClient.put<UpdateBranchResponse>(`/branches/${id}`, data);
       return response.data.branch;
     } catch (error) {
-      console.error(`Error actualizando sucursal ${id}:`, error);
       throw error;
     }
   }
@@ -125,7 +121,6 @@ class BranchService {
       );
       return response.data.branch;
     } catch (error) {
-      console.error(`Error cambiando estado de sucursal ${id}:`, error);
       throw error;
     }
   }
@@ -138,7 +133,6 @@ class BranchService {
     try {
       await apiClient.delete<DeleteBranchResponse>(`/branches/${id}`);
     } catch (error) {
-      console.error(`Error eliminando sucursal ${id}:`, error);
       throw error;
     }
   }

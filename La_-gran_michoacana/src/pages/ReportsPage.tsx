@@ -55,6 +55,13 @@ export default function ReportsPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
   const [salesList, setSalesList] = useState<any[]>([]);
+
+  const getReportBranchId = () => {
+    if (user?.role === 'ADMIN') {
+      return selectedBranchId;
+    }
+    return user?.branchId ?? undefined;
+  };
   
   // Estados para tabla mejorada
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
@@ -109,12 +116,19 @@ export default function ReportsPage() {
           const fetchedBranches = await branchService.getBranches();
           setBranches(fetchedBranches);
         } catch (error) {
-          console.error('Error loading branches:', error);
+          // Error loading branches
         }
       }
     };
     loadBranches();
   }, [user]);
+
+  // Si no es admin, usar su sucursal por defecto
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') {
+      setSelectedBranchId(user?.branchId ?? undefined);
+    }
+  }, [user?.branchId, user?.role]);
 
   // Cargar estadísticas del backend cuando cambia el período o la sucursal
   useEffect(() => {
@@ -130,7 +144,8 @@ export default function ReportsPage() {
           end: endStr,
         });
 
-        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const branchIdToUse = getReportBranchId();
+        const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         const stats = await saleService.getSalesStats(startStr, endStr, queryParams);
         setStatsData(stats || null);
       } catch (error) {
@@ -141,7 +156,7 @@ export default function ReportsPage() {
     };
 
     loadStats();
-  }, [selectedPeriod, selectedBranchId]);
+  }, [selectedPeriod, selectedBranchId, user?.branchId, user?.role]);
 
   // Cargar tendencia semanal cuando cambia el período o la sucursal
   useEffect(() => {
@@ -151,7 +166,8 @@ export default function ReportsPage() {
         const startStr = range.start.toISOString();
         const endStr = range.end.toISOString();
         
-        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const branchIdToUse = getReportBranchId();
+        const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         const trend = await saleService.getWeeklyTrend(startStr, endStr, queryParams);
         setWeeklyTrendData(trend || []);
       } catch (error) {
@@ -160,7 +176,7 @@ export default function ReportsPage() {
     };
 
     loadWeeklyTrend();
-  }, [selectedPeriod, selectedBranchId]);
+  }, [selectedPeriod, selectedBranchId, user?.branchId, user?.role]);
 
   // Cargar comparación mensual cuando cambia el período o la sucursal
   useEffect(() => {
@@ -170,7 +186,8 @@ export default function ReportsPage() {
         const startStr = range.start.toISOString();
         const endStr = range.end.toISOString();
         
-        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const branchIdToUse = getReportBranchId();
+        const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         const comparison = await saleService.getMonthlyComparison(startStr, endStr, queryParams);
         setMonthlyComparisonData(comparison || []);
       } catch (error) {
@@ -179,16 +196,18 @@ export default function ReportsPage() {
     };
 
     loadMonthlyComparison();
-  }, [selectedPeriod, selectedBranchId]);
+  }, [selectedPeriod, selectedBranchId, user?.branchId, user?.role]);
 
   // Cargar lista de ventas cuando cambia el período o la sucursal
   useEffect(() => {
     const loadSalesList = async () => {
       try {
         const range = calculateDateRange(selectedPeriod);
+        const branchIdToUse = getReportBranchId();
         const sales = await saleService.getAllSales({
           startDate: range.start.toISOString(),
           endDate: range.end.toISOString(),
+          branchId: branchIdToUse,
         });
         
         // Asegurar que siempre es un array
@@ -197,7 +216,6 @@ export default function ReportsPage() {
         setCurrentPage(1); // Reset de paginación
         setExpandedRowId(null); // Cerrar filas expandidas
       } catch (error) {
-        console.error('Error cargando ventas:', error);
         setSalesList([]);
         setCurrentPage(1);
         setExpandedRowId(null);
@@ -205,7 +223,7 @@ export default function ReportsPage() {
     };
 
     loadSalesList();
-  }, [selectedPeriod, selectedBranchId]);
+  }, [selectedPeriod, selectedBranchId, user?.branchId, user?.role]);
 
   // Cargar reporte diario cuando cambia la fecha específica o la sucursal
   useEffect(() => {
@@ -219,7 +237,8 @@ export default function ReportsPage() {
         const end = new Date(selectedDate);
         end.setHours(23, 59, 59, 999);
         
-        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const branchIdToUse = getReportBranchId();
+        const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         
         // Cargar datos con el rango de ese día
         const [stats, weeklyTrend, monthlyComparison] = await Promise.all([
@@ -247,14 +266,15 @@ export default function ReportsPage() {
     if (selectedDate && useSpecificDate) {
       loadDailyReport();
     }
-  }, [selectedDate, useSpecificDate, selectedBranchId]);
+  }, [selectedDate, useSpecificDate, selectedBranchId, user?.branchId, user?.role]);
 
   // Cargar corte de caja cuando se activa esa pestaña o cambia la sucursal
   useEffect(() => {
     const loadCashierCut = async () => {
       try {
         setLoading(true);
-        const queryParams = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+        const branchIdToUse = getReportBranchId();
+        const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         const data = await saleService.getCashierCut(queryParams);
         setCashierCutData(data);
       } catch (error) {
@@ -267,7 +287,7 @@ export default function ReportsPage() {
     if (activeTab === 'cashier-cut') {
       loadCashierCut();
     }
-  }, [activeTab, selectedBranchId]);
+  }, [activeTab, selectedBranchId, user?.branchId, user?.role]);
 
   // Función para cambiar ordenamiento
   const handleSort = (field: 'id' | 'date' | 'total' | 'items' | 'paymentMethod') => {
@@ -490,6 +510,20 @@ export default function ReportsPage() {
         avgTicket: statsData.averageTicket || 0,
       }
     : { total: 0, transactions: 0, avgTicket: 0 };
+
+  const salesByCashierData = Object.values(
+    (salesList || []).reduce((acc: Record<string, { cashier: string; total: number; transactions: number }>, sale: any) => {
+      const cashierName = sale?.user?.fullName || sale?.user?.username || 'Sin usuario';
+      if (!acc[cashierName]) {
+        acc[cashierName] = { cashier: cashierName, total: 0, transactions: 0 };
+      }
+      acc[cashierName].total += Number(sale?.total || 0);
+      acc[cashierName].transactions += 1;
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
 
   const handlePrintCut = () => {
     const periodLabel = {
@@ -956,6 +990,36 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
               </CardContent>
             </Card>
           </div>
+
+          {/* Gráfico de Ventas por Cajero */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ventas por Cajero</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {salesByCashierData.length === 0 ? (
+                <div className="text-sm text-gray-500">Sin datos para mostrar.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={salesByCashierData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" stroke="#888" />
+                    <YAxis type="category" dataKey="cashier" stroke="#888" width={140} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number | undefined) => value ? `$${value.toLocaleString()}` : '$0'}
+                    />
+                    <Legend />
+                    <Bar dataKey="total" fill="#45B7D1" name="Ventas ($)" radius={[0, 8, 8, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Top Productos */}
           <Card>

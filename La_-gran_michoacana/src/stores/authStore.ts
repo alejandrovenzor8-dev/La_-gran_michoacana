@@ -10,6 +10,11 @@ interface User {
   fullName?: string;
   role: 'ADMIN' | 'CAJERO' | 'GERENTE';
   timezone?: string;
+  branchId?: number | null;
+  branch?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 interface AuthResponse {

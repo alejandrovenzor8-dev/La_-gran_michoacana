@@ -13,6 +13,28 @@ export default function CustomerDisplayPage() {
   const [saleId, setSaleId] = useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [branchName, setBranchName] = useState('Sin sucursal');
+
+  useEffect(() => {
+    const readBranchName = () => {
+      const name = localStorage.getItem('pos_branch_name') || 'Sin sucursal';
+      setBranchName(name);
+    };
+
+    readBranchName();
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'pos_branch_name') {
+        readBranchName();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   // Cargar ruta del logo desde Electron
   useEffect(() => {
@@ -141,6 +163,7 @@ export default function CustomerDisplayPage() {
             <div>
               <h1 className="text-4xl font-bold text-white">La Gran Michoacana</h1>
               <p className="text-white/80 text-lg">Las mejores paletas y helados</p>
+              <p className="text-white/80 text-lg">Sucursal: {branchName}</p>
             </div>
           </div>
           <div className="text-white text-2xl text-right">

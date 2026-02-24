@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Users, Plus, Trash2, Edit2, Loader2, X } from 'lucide-react';
 import { formatDate, MEXICO_TIMEZONES, getConfiguredTimezone } from '@/lib/utils';
 import { userService, type User as ServiceUser } from '@/lib/userService';
+import { branchService } from '@/lib/branchService';
+import type { Branch } from '@/types/branch';
 
 // Extender el tipo User del servicio para la UI
 interface User extends Omit<ServiceUser, 'role'> {
@@ -12,6 +14,7 @@ interface User extends Omit<ServiceUser, 'role'> {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
@@ -25,6 +28,7 @@ export default function UsersPage() {
     fullName: '',
     role: 'CAJERO' as const,
     timezone: getConfiguredTimezone(),
+    branchId: '',
   });
 
   const [editFormData, setEditFormData] = useState({
@@ -33,13 +37,14 @@ export default function UsersPage() {
     role: 'CAJERO' as 'ADMIN' | 'CAJERO' | 'GERENTE',
     active: true,
     timezone: getConfiguredTimezone(),
+    branchId: '',
   });
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Cargar usuarios al montar el componente
+  // Cargar usuarios y sucursales al montar el componente
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -58,8 +63,18 @@ export default function UsersPage() {
     }
   };
 
+  const loadBranches = async () => {
+    try {
+      const branchesData = await branchService.getBranches({ active: true });
+      setBranches(branchesData);
+    } catch (err: any) {
+      // Error al cargar sucursales
+    }
+  };
+
   useEffect(() => {
     loadUsers();
+    loadBranches();
   }, []);
 
   const handleInputChange = (
@@ -101,6 +116,7 @@ export default function UsersPage() {
       role: user.role,
       active: user.active,
       timezone: user.timezone || getConfiguredTimezone(),
+      branchId: user.branchId ? user.branchId.toString() : '',
     });
     setError('');
     setSuccess('');
@@ -114,6 +130,7 @@ export default function UsersPage() {
       role: 'CAJERO',
       active: true,
       timezone: getConfiguredTimezone(),
+      branchId: '',
     });
     setError('');
   };
@@ -144,12 +161,14 @@ export default function UsersPage() {
 
     try {
       setIsSubmitting(true);
+      
       const updatedUser = await userService.updateUser(editingId, {
         email: editFormData.email,
         fullName: editFormData.fullName || undefined,
-        role: editFormData.role.toLowerCase() as 'admin' | 'cajero' | 'gerente',
+        role: editFormData.role as 'ADMIN' | 'CAJERO' | 'GERENTE',
         active: editFormData.active,
         timezone: editFormData.timezone,
+        branchId: editFormData.branchId ? parseInt(editFormData.branchId) : null,
       });
 
       // Actualizar el usuario en la lista (convertir rol a mayúsculas)
@@ -163,6 +182,9 @@ export default function UsersPage() {
       );
 
       setSuccess('Usuario actualizado exitosamente');
+      
+      // Recargar usuarios para asegurar que los datos estén sincronizados
+      await loadUsers();
       setEditingId(null);
       setEditFormData({
         email: '',
@@ -170,6 +192,7 @@ export default function UsersPage() {
         role: 'CAJERO',
         active: true,
         timezone: getConfiguredTimezone(),
+        branchId: '',
       });
 
       setTimeout(() => {
@@ -251,7 +274,8 @@ export default function UsersPage() {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName || undefined,
-        role: formData.role.toLowerCase() as 'admin' | 'cajero' | 'gerente',
+        role: formData.role as 'ADMIN' | 'CAJERO' | 'GERENTE',
+        branchId: formData.branchId ? parseInt(formData.branchId) : undefined,
       });
       
       // Actualizar timezone del usuario recién creado
@@ -277,6 +301,7 @@ export default function UsersPage() {
         fullName: '',
         role: 'CAJERO',
         timezone: getConfiguredTimezone(),
+        branchId: '',
       });
 
       setTimeout(() => {
@@ -423,6 +448,26 @@ export default function UsersPage() {
                       {MEXICO_TIMEZONES.map((tz) => (
                         <option key={tz.value} value={tz.value}>
                           {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Sucursal
+                    </label>
+                    <select
+                      name="branchId"
+                      value={formData.branchId}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Sin sucursal asignada</option>
+                      {branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
                         </option>
                       ))}
                     </select>
@@ -580,6 +625,26 @@ export default function UsersPage() {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Sucursal
+                    </label>
+                    <select
+                      name="branchId"
+                      value={editFormData.branchId}
+                      onChange={handleEditInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Sin sucursal asignada</option>
+                      {branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="flex items-center pt-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
@@ -654,6 +719,11 @@ export default function UsersPage() {
                         <p className="text-sm text-gray-600">{user.fullName}</p>
                       )}
                       <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+                      {user.branch && (
+                        <p className="text-xs text-blue-600 mt-1 font-medium">
+                          📍 {user.branch.name}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-2">
                         <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full capitalize">
                           {user.role.toLowerCase()}
@@ -661,11 +731,6 @@ export default function UsersPage() {
                         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${user.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {user.active ? 'Activo' : 'Inactivo'}
                         </span>
-                        {!user.active && (
-                          <span className="px-3 py-1 bg-red-100 text-red-600 text-sm font-semibold rounded-full">
-                            Inactivo
-                          </span>
-                        )}
                       </div>
                     </div>
 

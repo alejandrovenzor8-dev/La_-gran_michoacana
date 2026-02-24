@@ -21,7 +21,14 @@ class ProductController {
     try {
       logger.info('Creando nuevo producto');
 
-      const product = await productService.createProduct(req.body);
+      // Mapear campos del frontend (image → imageUrl, quantity → stock)
+      const productData = {
+        ...req.body,
+        imageUrl: req.body.image || req.body.imageUrl,
+        stock: req.body.quantity !== undefined ? req.body.quantity : req.body.stock
+      };
+
+      const product = await productService.createProduct(productData);
 
       res.status(201).json({
         status: 'success',
@@ -142,7 +149,14 @@ class ProductController {
 
       logger.info('Actualizando producto', { id });
 
-      const product = await productService.updateProduct(id, req.body);
+      // Mapear campos del frontend (image → imageUrl, quantity → stock)
+      const productData = {
+        ...req.body,
+        imageUrl: req.body.image !== undefined ? req.body.image : req.body.imageUrl,
+        stock: req.body.quantity !== undefined ? req.body.quantity : req.body.stock
+      };
+
+      const product = await productService.updateProduct(id, productData);
 
       res.status(200).json({
         status: 'success',

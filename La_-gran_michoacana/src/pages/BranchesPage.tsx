@@ -52,6 +52,7 @@ export default function BranchesPage() {
 
   const handleEdit = (branch: Branch) => {
     setEditingId(branch.id);
+    setShowForm(true);
     setFormData({
       name: branch.name,
       address: branch.address || '',
@@ -60,6 +61,11 @@ export default function BranchesPage() {
     });
     setError('');
     setSuccess('');
+    
+    // Scroll al formulario
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleCancelEdit = () => {
@@ -98,7 +104,7 @@ export default function BranchesPage() {
         setSuccess('Sucursal creada exitosamente.');
       }
 
-      // Limpiar formulario y recargar lista
+      // Limpiar formulario
       setFormData({
         name: '',
         address: '',
@@ -107,7 +113,12 @@ export default function BranchesPage() {
       });
       setShowForm(false);
       setEditingId(null);
+      
+      // Recargar lista después de guardar
       await loadBranches();
+      
+      // Limpiar mensaje de éxito después de 3 segundos
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al guardar la sucursal. Intenta de nuevo.');
     } finally {
@@ -143,20 +154,26 @@ export default function BranchesPage() {
         </div>
         <Button
           onClick={() => {
-            setShowForm(!showForm);
-            setEditingId(null);
-            setFormData({
-              name: '',
-              address: '',
-              phone: '',
-              active: true,
-            });
-            setError('');
-            setSuccess('');
+            if (showForm || editingId) {
+              // Cancelar formulario
+              handleCancelEdit();
+            } else {
+              // Mostrar formulario nuevo
+              setShowForm(true);
+              setEditingId(null);
+              setFormData({
+                name: '',
+                address: '',
+                phone: '',
+                active: true,
+              });
+              setError('');
+              setSuccess('');
+            }
           }}
           className="flex items-center gap-2"
         >
-          {showForm ? (
+          {(showForm || editingId) ? (
             <>
               <X className="h-4 w-4" />
               Cancelar

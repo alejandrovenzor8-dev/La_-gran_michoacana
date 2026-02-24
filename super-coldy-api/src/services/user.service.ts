@@ -19,6 +19,7 @@ interface UpdateUserInput {
   role?: UserRole;
   active?: boolean;
   timezone?: string;
+  branchId?: number | null;
 }
 
 interface UserFilters {
@@ -63,7 +64,15 @@ class UserService {
           email: true,
           fullName: true,
           role: true,
+          branchId: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           active: true,
+          timezone: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -95,7 +104,15 @@ class UserService {
         email: true,
         fullName: true,
         role: true,
+        branchId: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         active: true,
+        timezone: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -189,22 +206,33 @@ class UserService {
       }
     }
 
+    // Construir objeto de actualización de forma explícita
+    const updateData: any = {};
+    
+    if (data.username !== undefined) updateData.username = data.username;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.fullName !== undefined) updateData.fullName = data.fullName;
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.active !== undefined) updateData.active = data.active;
+    if (data.timezone !== undefined) updateData.timezone = data.timezone;
+    if (data.branchId !== undefined) updateData.branchId = data.branchId;
+
     const user = await prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(data.username && { username: data.username }),
-        ...(data.email && { email: data.email }),
-        ...(data.fullName !== undefined && { fullName: data.fullName }),
-        ...(data.role && { role: data.role }),
-        ...(data.active !== undefined && { active: data.active }),
-        ...(data.timezone && { timezone: data.timezone }),
-      },
+      data: updateData,
       select: {
         id: true,
         username: true,
         email: true,
         fullName: true,
         role: true,
+        branchId: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         active: true,
         timezone: true,
         createdAt: true,

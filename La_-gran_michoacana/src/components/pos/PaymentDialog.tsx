@@ -26,12 +26,14 @@ interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onPaymentComplete: (sale: any) => void;
+  selectedBranchId?: number;
 }
 
 export function PaymentDialog({
   isOpen,
   onClose,
-  onPaymentComplete
+  onPaymentComplete,
+  selectedBranchId
 }: PaymentDialogProps) {
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA' | 'MIXTO'>('EFECTIVO');
   const [amountReceived, setAmountReceived] = useState('');
@@ -42,6 +44,12 @@ export function PaymentDialog({
 
   const { items, total, clearCart } = useCartStore();
   const { user } = useAuthStore();
+
+  const getSelectedBranchId = () => {
+    if (selectedBranchId) return selectedBranchId;
+    const storedBranchId = localStorage.getItem('pos_branch_id');
+    return storedBranchId ? Number(storedBranchId) : undefined;
+  };
 
   // Calcular cambio automáticamente
   useEffect(() => {
@@ -61,6 +69,25 @@ export function PaymentDialog({
   const validatePayment = (): boolean => {
     if (!user) {
       setError('Usuario no autenticado');
+      return false;
+    }
+
+    const selectedBranchId = getSelectedBranchId();
+
+    // Validar sucursal para venta
+    if (user.role === 'ADMIN') {
+      if (!selectedBranchId) {
+        setError('Selecciona una sucursal para registrar la venta.');
+        toast.error('No se puede completar la venta', {
+          description: 'Selecciona una sucursal en el POS antes de cobrar.'
+        });
+        return false;
+      }
+    } else if (!user.branchId) {
+      setError('Tu usuario no tiene una sucursal asignada. Contacta al administrador.');
+      toast.error('No se puede completar la venta', {
+        description: 'Tu usuario necesita tener una sucursal asignada. Contacta al administrador.'
+      });
       return false;
     }
 
@@ -92,6 +119,11 @@ export function PaymentDialog({
     setError(null);
 
     try {
+      const selectedBranchId = getSelectedBranchId();
+      const branchIdToUse = user?.role === 'ADMIN'
+        ? selectedBranchId
+        : (user?.branchId ?? undefined);
+
       // Preparar datos de la venta
       const saleData = {
         items: items.map(item => ({
@@ -102,6 +134,7 @@ export function PaymentDialog({
           subtotal: item.price * item.quantity,
           discount: 0
         })),
+        branchId: branchIdToUse,
         paymentMethod,
         amountReceived: paymentMethod === 'EFECTIVO' ? parseFloat(amountReceived) : undefined,
         changeAmount: paymentMethod === 'EFECTIVO' ? changeAmount : undefined,
