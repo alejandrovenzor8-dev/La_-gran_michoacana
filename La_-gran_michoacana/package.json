@@ -59,8 +59,14 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*",
-      "public/**/*"
+      "dist-electron/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "dist",
+        "to": "",
+        "filter": ["*.png"]
+      }
     ],
     "win": {
       "target": [
