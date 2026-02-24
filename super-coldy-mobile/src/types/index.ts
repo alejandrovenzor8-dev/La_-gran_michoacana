@@ -3,6 +3,9 @@
  * Basados en el schema de Prisma del backend
  */
 
+// Importar tipos de sucursales
+export type { Branch, BranchCreateInput, BranchUpdateInput, BranchFilters } from './branch';
+
 // ============================================================
 // ENUMS
 // ============================================================
@@ -25,6 +28,7 @@ export interface User {
   role: UserRole;
   active: boolean;
   timezone?: string;
+  branchId?: number;
   createdAt: string;
   updatedAt: string;
 }
