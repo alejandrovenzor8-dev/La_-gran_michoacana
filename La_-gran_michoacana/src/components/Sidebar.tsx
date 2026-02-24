@@ -6,7 +6,7 @@ import { usePermissionsStore } from '@/stores/permissionsStore';
 import { Button } from './ui/button';
 import type { ModuleType } from '@/types/permissions';
 
-const logoImage = new URL('../../public/logo.png', import.meta.url).href;
+const logoImage = '/logo.png';
 
 interface NavItem {
   id: string;
