@@ -32,19 +32,22 @@
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "La app necesita acceso a la red local para conectarse al POS",
         "NSBonjourServiceTypes": [
+          "_http._tcp",
           "_http._tcp"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "icon": "./assets/icons/app-icon-512.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icons/app-icon-1024.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.alejandrovenzor.lagranmichoacana",
-      "versionCode": 1,
+      "versionCode": 2,
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
