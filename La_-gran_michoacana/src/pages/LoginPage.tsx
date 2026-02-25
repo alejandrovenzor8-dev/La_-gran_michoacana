@@ -4,8 +4,8 @@ import { useAuthStore } from '../stores/authStore';
 import { Lock, User, ChevronRight } from 'lucide-react';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('password123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [logoImage, setLogoImage] = useState<string>('./logo.png');
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ export default function LoginPage() {
       const isElectron = typeof window !== 'undefined' && (window as any).electronAPI;
       if (isElectron) {
         try {
-          (window as any).electronAPI.onLoginSuccess().catch((err: any) => {
+          (window as any).electronAPI.onLoginSuccess().catch((_err: any) => {
           });
         } catch (err) {
         }
@@ -174,27 +174,6 @@ export default function LoginPage() {
                 </button>
               )}
             </form>
-          </div>
-
-          {/* Card de credenciales */}
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom duration-1000">
-            <p className="text-xs font-semibold text-blue-100 mb-3 uppercase tracking-wide">
-              🔑 Credenciales de prueba
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-blue-50">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-300"></div>
-                <span className="font-mono font-medium">admin</span>
-                <span className="text-white/40">/</span>
-                <span className="font-mono font-medium">password123</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-blue-50">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-300"></div>
-                <span className="font-mono font-medium">cajera1</span>
-                <span className="text-white/40">/</span>
-                <span className="font-mono font-medium">password123</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
