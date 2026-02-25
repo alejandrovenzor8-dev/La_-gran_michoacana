@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Info, Database, Clock, Download, AlertCircle, CheckCircle } from 'lucide-react';
+import { Settings, Info, Database, Clock, Download, AlertCircle, CheckCircle, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import packageJson from '../../package.json';
 import { 
@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { apiClient } from '@/lib/apiClient';
+import { userService } from '@/lib/userService';
 
 // Type definition para window.api (Electron)
 declare global {
@@ -34,6 +35,16 @@ export default function SettingsPage() {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isSaving, setIsSaving] = useState(false);
   const user = useAuthStore((state) => state.user);
+
+  // Estados para cambio de contraseña
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   // Estados para el modal de actualizaciones
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -72,7 +83,7 @@ export default function SettingsPage() {
     });
 
     // Escuchar cuando la descarga está completa
-    const unsubscribeDownloaded = window.electronAPI?.onUpdateDownloaded?.((info: any) => {
+    const unsubscribeDownloaded = window.electronAPI?.onUpdateDownloaded?.((_info: any) => {
       setIsDownloading(false);
       setUpdateDownloaded(true);
       toast.success('Actualización descargada', {
@@ -200,6 +211,55 @@ export default function SettingsPage() {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    // Validaciones
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('Todos los campos son requeridos');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Las contraseñas nuevas no coinciden');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      await userService.changeOwnPassword(
+        passwordForm.currentPassword,
+        passwordForm.newPassword
+      );
+      
+      toast.success('Contraseña actualizada', {
+        description: 'Tu contraseña ha sido cambiada exitosamente',
+      });
+      
+      // Limpiar formulario y cerrar modal
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      setShowPasswordModal(false);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Error al cambiar la contraseña';
+      setPasswordError(message);
+      toast.error('Error', {
+        description: message,
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   return (
     <div className="h-full overflow-auto p-6">
       <div className="max-w-4xl">
@@ -292,6 +352,26 @@ export default function SettingsPage() {
               >
                 <Download className="w-4 h-4 mr-2" />
                 {checkingUpdates ? 'Verificando...' : 'Verificar Actualizaciones'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Seguridad - Cambio de Contraseña */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Lock className="w-6 h-6 text-primary" />
+                <h3 className="text-xl font-semibold text-gray-800">Seguridad</h3>
+              </div>
+              <div className="space-y-3 text-sm mb-4">
+                <p className="text-gray-600">Administra tu contraseña y configuración de seguridad</p>
+              </div>
+              <Button
+                onClick={() => setShowPasswordModal(true)}
+                className="w-full"
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                Cambiar Contraseña
               </Button>
             </CardContent>
           </Card>
@@ -476,6 +556,101 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Modal de Cambio de Contraseña */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <Card className="w-full max-w-md mx-4">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-1">Cambiar Contraseña</h2>
+                <p className="text-gray-600 text-sm mb-6">Actualiza tu contraseña para mantener tu cuenta segura</p>
+
+                {passwordError && (
+                  <div className="mb-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm">
+                    {passwordError}
+                  </div>
+                )}
+
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Contraseña Actual *
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) =>
+                        setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                      }
+                      placeholder="Ingresa tu contraseña actual"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isChangingPassword}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Nueva Contraseña *
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.newPassword}
+                      onChange={(e) =>
+                        setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                      }
+                      placeholder="Ingresa tu nueva contraseña (mín. 6 caracteres)"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isChangingPassword}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Confirmar Nueva Contraseña *
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                      }
+                      placeholder="Confirma tu nueva contraseña"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      disabled={isChangingPassword}
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="submit"
+                      className="flex-1"
+                      disabled={isChangingPassword}
+                    >
+                      {isChangingPassword ? 'Guardando...' : 'Cambiar Contraseña'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowPasswordModal(false);
+                        setPasswordForm({
+                          currentPassword: '',
+                          newPassword: '',
+                          confirmPassword: '',
+                        });
+                        setPasswordError('');
+                      }}
+                      disabled={isChangingPassword}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

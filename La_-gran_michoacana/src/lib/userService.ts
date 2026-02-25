@@ -153,6 +153,45 @@ class UserService {
       throw error;
     }
   }
+
+  /**
+   * Cambiar contraseña del usuario actual
+   * @param currentPassword - Contraseña actual
+   * @param newPassword - Nueva contraseña
+   */
+  async changeOwnPassword(currentPassword: string, newPassword: string): Promise<boolean> {
+    try {
+      const response = await apiClient.post<{ status: string; message: string }>(
+        '/auth/change-password',
+        {
+          currentPassword,
+          newPassword,
+        }
+      );
+      return response.status === 200;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Cambiar contraseña de otro usuario (solo admin)
+   * @param userId - ID del usuario
+   * @param newPassword - Nueva contraseña
+   */
+  async changeUserPassword(userId: number, newPassword: string): Promise<User> {
+    try {
+      const response = await apiClient.post<UpdateUserResponse>(
+        `/users/${userId}/change-password`,
+        {
+          newPassword,
+        }
+      );
+      return response.data.user;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 // Instancia singleton del servicio
