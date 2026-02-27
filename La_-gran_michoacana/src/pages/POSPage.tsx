@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { productService, Product } from '@/lib/productService';
 import { saleService, Sale, SaleItem } from '@/lib/saleService';
@@ -134,6 +134,25 @@ export default function POSPage() {
       });
     }
   }, []);
+
+  const handleOpenCashDrawer = async () => {
+    try {
+      if (!window.electronAPI?.openCashDrawer) {
+        alert('⚠️ La caja registradora no está disponible en esta versión de la aplicación');
+        return;
+      }
+
+      const result = await window.electronAPI.openCashDrawer();
+      
+      if (result.success) {
+        alert('✅ Caja registradora abierta correctamente');
+      } else {
+        alert(`❌ Error: ${result.message}`);
+      }
+    } catch (error) {
+      alert(`❌ Error al abrir la caja registradora: ${error}`);
+    }
+  };
 
   const handleAddProduct = (product: Product) => {
     addItem({
@@ -459,6 +478,14 @@ export default function POSPage() {
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Limpiar Carrito
+            </Button>
+            <Button
+              onClick={handleOpenCashDrawer}
+              variant="outline"
+              className="w-full bg-blue-50 hover:bg-blue-100 border-blue-200"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
+              Abrir Caja Registradora
             </Button>
           </div>
         </div>

@@ -64,6 +64,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke('print-ticket', ticketData);
   },
 
+  // Abrir caja registradora
+  openCashDrawer: async (portConfig?: { port: string }) => {
+    return await ipcRenderer.invoke('cashDrawer:open', portConfig);
+  },
+
   // Cerrar la aplicación completamente
   closeApp: () => {
     ipcRenderer.send('app:close');
