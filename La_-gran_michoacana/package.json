@@ -10,6 +10,9 @@
     "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
     "build": "npm run build:electron && vite build && electron-builder",
     "build:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win",
+    "build:win32": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --arch ia32",
+    "build:win64": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --arch x64",
+    "build:win-universal": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && npm run build:win32 && npm run build:win64",
     "build:publish": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --publish always",
     "preview": "vite preview",
     "build:vite": "vite build",
@@ -77,7 +80,8 @@
         {
           "target": "nsis",
           "arch": [
-            "ia32"
+            "ia32",
+            "x64"
           ]
         }
       ],

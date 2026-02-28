@@ -1,0 +1,60 @@
+# 🚀 INICIO RÁPIDO - La Gran Michoacana POS
+
+## Para compilar tu próxima versión
+
+```bash
+cd C:\ruta\del\proyecto\La_-gran_michoacana
+npm run build:win
+```
+
+**Resultado:** Se crearán 2 instaladores en `release/`
+- `La-Gran-Michoacana-Setup-X.X.X-ia32.exe` (32 bits)
+- `La-Gran-Michoacana-Setup-X.X.X-x64.exe` (64 bits)
+
+---
+
+## Para distribuir al cliente
+
+1. **Copia estos 3 archivos en la MISMA carpeta:**
+   - 📄 `install.bat` (desde `/build/`)
+   - 📦 `La-Gran-Michoacana-Setup-X.X.X-ia32.exe` (desde `/release/`)
+   - 📦 `La-Gran-Michoacana-Setup-X.X.X-x64.exe` (desde `/release/`)
+
+2. **Cliente ejecuta:**
+   - Doble clic en `install.bat`
+   - Selecciona versión (32 o 64 bits)
+   - ¡Listo!
+
+---
+
+## Archivos importantes en `/build/`
+
+| Archivo | Propósito |
+|---------|-----------|
+| `install.bat` ⭐ | Script principal - Doble clic para instalar |
+| `install.ps1` | Alternativa PowerShell (usuarios avanzados) |
+| `INSTRUCCIONES.txt` | Guía paso a paso en español |
+| `README.md` | Documentación técnica |
+| `RESUMEN_CONFIGURACION.md` | Resumen de cambios realizados |
+
+---
+
+## ✅ Lo que se configuró
+
+✓ Compilación para **32 y 64 bits**
+✓ Instalador inteligente que **autodetecta** arquitectura
+✓ Scripts de instalación automatizados
+✓ Documentación completa en español
+
+---
+
+## 📞 ¿Necesitas ayuda?
+
+Lee el archivo correspondiente:
+- **Usuarios normales:** `INSTRUCCIONES.txt`
+- **Técnicos:** `RESUMEN_CONFIGURACION.md` o `README.md`
+- **Desarrolladores:** `RESUMEN_CONFIGURACION.md`
+
+---
+
+**¡Tu sistema está listo para compilar instaladores universales!** 🎉

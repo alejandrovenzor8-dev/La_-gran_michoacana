@@ -1,0 +1,200 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║                                                                        ║
+║          LA GRAN MICHOACANA POS - GUÍA DE INSTALACIÓN                ║
+║                                                                        ║
+║                        Versión 1.1.8+                                 ║
+║                    Compatible con 32 y 64 bits                        ║
+║                                                                        ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 PASO 1: DESCARGAR LOS ARCHIVOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Necesitas descargar los siguientes archivos en la misma carpeta:
+
+   ✓ install.bat                          (Script principal)
+   ✓ La-Gran-Michoacana-Setup-X.X.X-ia32.exe   (Versión 32 bits)
+   ✓ La-Gran-Michoacana-Setup-X.X.X-x64.exe    (Versión 64 bits)
+
+Todos estos archivos deben estar juntos en la MISMA CARPETA.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 PASO 2: EJECUTAR EL INSTALADOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPCIÓN A: Instalación Automática (RECOMENDADO)
+──────────────────────────────────────────────
+
+1. Haz doble clic en 📄 install.bat
+2. Se abrirá una ventana de consola
+3. El script detectará automáticamente tu sistema (32 o 64 bits)
+4. Elige qué versión instalar:
+   
+   Opción 1: Instalar 32 bits
+   Opción 2: Instalar 64 bits  
+   Opción 3: Instalar la versión automática recomendada
+   Opción 0: Cancelar
+
+5. Presiona la opción deseada y presiona ENTER
+6. El instalador se abrirá automáticamente
+7. Sigue los pasos del instalador normalmente
+
+
+OPCIÓN B: Instalación Manual Directa
+──────────────────────────────────────
+
+Si prefieres instalar directamente sin usar el script:
+
+Para SISTEMAS DE 32 BITS:
+   ► Haz doble clic en:
+     La-Gran-Michoacana-Setup-X.X.X-ia32.exe
+
+Para SISTEMAS DE 64 BITS (RECOMENDADO):
+   ► Haz doble clic en:
+     La-Gran-Michoacana-Setup-X.X.X-x64.exe
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❓ ¿CÓMO SABER SI MI SISTEMA ES 32 O 64 BITS?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MÉTODO 1: Panel de Control
+─────────────────────────
+
+1. Abre el Panel de Control
+2. Busca "Sistema" o "Información del sistema"
+3. Mira la línea "Tipo de sistema"
+4. Verás uno de estos:
+   • "Windows X Professional, 32 bits"  ← Sistema de 32 bits
+   • "Windows X Professional, 64 bits"  ← Sistema de 64 bits ⭐
+
+MÉTODO 2: Combinación de Teclas Rápida
+──────────────────────────────────────
+
+1. Presiona: Windows + Pausa (Pause)
+2. Se abrirá "Información del Sistema"
+3. Busca "Tipo de sistema"
+4. Verás si es 32 o 64 bits
+
+
+MÉTODO 3: Por el nombre de la carpeta de programas
+──────────────────────────────────────────────────
+
+• Si en tu disco C: ves "Program Files (x86)" = Sistema de 64 bits ⭐
+• Si solo ves "Program Files" = Sistema de 32 bits
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚙️ PASO 3: SEGUIR EL INSTALADOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Una vez que se abre el instalador:
+
+1. Presiona "SIGUIENTE" o "NEXT"
+2. Lee el acuerdo de licencia y acepta
+3. Elige la carpeta donde instalar (por defecto está bien)
+4. Presiona "INSTALAR"
+5. Espera a que termine
+6. Presiona "FINALIZAR" cuando termine
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ PASO 4: INICIAR LA APLICACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Después de la instalación, encontrarás:
+
+📌 En el Escritorio:
+   • Acceso directo "La Gran Michoacana"
+
+📌 En el Menú Inicio:
+   • Programas > La Gran Michoacana > La Gran Michoacana
+
+Haz doble clic en cualquiera de estos para iniciar la aplicación.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ RECOMENDACIONES IMPORTANTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. VERSIÓN RECOMENDADA
+   ► Si tu sistema es de 64 bits, instala la versión de 64 bits
+   ► Mejor rendimiento y compatibilidad
+
+2. ANTIVIRUS
+   ► Si el antivirus bloquea el instalador, desactívalo temporalmente
+   ► Algunos antivirus bloquean instaladores EXE por defecto
+
+3. PERMISOS
+   ► Asegúrate de tener permisos de administrador
+   ► Si preguntas por permisos, haz clic en "Sí"
+
+4. CONEXIÓN A INTERNET
+   ► Mantén activa la conexión a Internet
+   ► El sistema se actualizará automáticamente cuando sea necesario
+
+5. COMBINACIÓN DE ARCHIVOS
+   ► Todos los archivos (install.bat y los .exe) deben estar juntos
+   ► No separes los archivos en diferentes carpetas
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆘 SOLUCIÓN DE PROBLEMAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROBLEMA: "El instalador no se ejecuta"
+────────────────────────────────────────
+✓ Verifica que todos los archivos están en la misma carpeta
+✓ Desactiva antivirus temporalmente
+✓ Asegúrate de tener permisos de administrador
+✓ Intenta instalar manualmente sin usar install.bat
+
+PROBLEMA: "El script install.bat no abre"
+──────────────────────────────────────────
+✓ Clic derecho > Ejecutar como administrador
+✓ O abre CMD y ejecuta: cd "ruta\de\la\carpeta" && install.bat
+
+PROBLEMA: "Tengo 64 bits pero quiero instalar 32 bits"
+───────────────────────────────────────────────────────
+✓ Ejecuta install.bat y elige opción 1 (32 bits)
+✓ O ejecuta directamente el archivo ia32.exe
+
+PROBLEMA: "No estoy seguro de mi arquitectura"
+───────────────────────────────────────────────
+✓ Ejecuta install.bat
+✓ El script mostrará automáticamente tu arquitectura
+✓ Puedes elegir cualquiera de las opciones
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 INFORMACIÓN DEL SISTEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Aplicación:     La Gran Michoacana POS
+Versión:        1.1.8+
+Tecnología:     Electron 40.1 + React 18.2
+Requisitos:     Windows XP SP3 o superior
+Espacio:        ~500 MB
+RAM mínima:     512 MB (1 GB recomendado)
+Actualización:  Automática
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 SOPORTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Para problemas de instalación:
+► Contacta al equipo de TI
+► Proporciona el error exacto que ves
+► Indica tu versión de Windows (32 o 64 bits)
+
+
+╔════════════════════════════════════════════════════════════════════════╗
+║                                                                        ║
+║  ¡LISTO! Ya puedes instalar La Gran Michoacana POS en tu sistema      ║
+║                                                                        ║
+║          La Gran Michoacana © 2026 - Sistema POS                      ║
+║                                                                        ║
+╚════════════════════════════════════════════════════════════════════════╝
