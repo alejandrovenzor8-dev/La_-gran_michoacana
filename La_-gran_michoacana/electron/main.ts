@@ -45,7 +45,7 @@ function setupAutoUpdater() {
   // Esto evita problemas con la API de GitHub y funciona con repos públicos
   autoUpdater.setFeedURL({
     provider: 'generic',
-    url: 'https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/latest/download',
+    url: 'https://raw.githubusercontent.com/alejandrovenzor8-dev/La_-gran_michoacana/main/La_-gran_michoacana/release',
     useMultipleRangeRequest: false
   });
 
