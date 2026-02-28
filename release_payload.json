@@ -1,0 +1,7 @@
+{
+  "tag_name": "v1.1.9",
+  "name": "Release 1.1.9 - Dual Architecture",
+  "body": "## Release 1.1.9 - Versión Dual Arquitectura\n\n### Cambios\n- Soporte explícito para arquitecturas x64 e ia32 separadas\n- Cada installer se compila optimizado para su arquitectura\n- Detección automática de arquitectura en la aplicación\n- Animaciones desactivadas en sistemas 32-bit\n\n### Descargas\n- La Gran Michoacana 1.1.9-x64.exe (89.3 MB) - Windows 64-bit\n- La Gran Michoacana 1.1.9-ia32.exe (174.2 MB) - Windows 32-bit",
+  "draft": false,
+  "prerelease": false
+}
