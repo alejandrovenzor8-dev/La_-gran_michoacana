@@ -1,7 +1,10 @@
 node_modules
 dist
 dist-electron
-release
+release/*.exe
+release/win-unpacked
+release/win-ia32-unpacked
+release/builder-*.yaml
 *.log
 .DS_Store
 *.local
