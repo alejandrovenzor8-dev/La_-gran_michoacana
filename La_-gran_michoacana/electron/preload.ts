@@ -216,6 +216,7 @@ export interface ElectronAPI {
   getSystemArchitecture: () => string;
   is32Bit: () => boolean;
   is64Bit: () => boolean;
+}
 
 declare global {
   interface Window {

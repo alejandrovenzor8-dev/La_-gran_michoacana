@@ -9,10 +9,10 @@
   "scripts": {
     "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
     "build": "npm run build:electron && vite build && electron-builder",
-    "build:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win",
-    "build:win32": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --arch ia32",
-    "build:win64": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --arch x64",
-    "build:win-universal": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && npm run build:win32 && npm run build:win64",
+    "build:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --x64 --ia32",
+    "build:win32": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --ia32",
+    "build:win64": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --x64",
+    "build:win-universal": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win",
     "build:publish": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build:electron && vite build && electron-builder --win --publish always",
     "preview": "vite preview",
     "build:vite": "vite build",
@@ -45,7 +45,7 @@
     "autoprefixer": "^10.4.17",
     "concurrently": "^8.2.2",
     "electron": "^40.1.0",
-    "electron-builder": "^26.6.0",
+    "electron-builder": "^24.6.4",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
@@ -78,14 +78,11 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
-          "arch": [
-            "ia32",
-            "x64"
-          ]
+          "target": "portable"
         }
       ],
-      "icon": "public/app-icon.png"
+      "icon": "public/app-icon.png",
+      "artifactName": "${productName} ${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
