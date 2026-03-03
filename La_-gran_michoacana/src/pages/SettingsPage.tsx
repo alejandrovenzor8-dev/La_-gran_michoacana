@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Info, Database, Clock, Download, AlertCircle, CheckCircle, Lock } from 'lucide-react';
+import { Settings, Info, Database, Clock, Download, AlertCircle, CheckCircle, Lock, Gauge, Cpu, MemoryStick, Zap } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import packageJson from '../../package.json';
 import { 
@@ -11,6 +11,7 @@ import {
 } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
+import { usePerformanceStore } from '@/stores/performanceStore';
 import { apiClient } from '@/lib/apiClient';
 import { userService } from '@/lib/userService';
 
@@ -35,6 +36,15 @@ export default function SettingsPage() {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isSaving, setIsSaving] = useState(false);
   const user = useAuthStore((state) => state.user);
+  
+  // Performance store
+  const { 
+    useBasicMode, 
+    isAutoDetected, 
+    systemResources, 
+    setBasicMode, 
+    detectSystemResources 
+  } = usePerformanceStore();
 
   // Estados para cambio de contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -261,23 +271,23 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-full overflow-auto p-6">
+    <div className="h-full overflow-auto p-3 md:p-4 lg:p-6">
       <div className="max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3 mb-2">
-            <Settings className="w-8 h-8 text-primary" />
+        <div className="mb-4 md:mb-8">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 flex items-center gap-2 md:gap-3 mb-2">
+            <Settings className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-primary" />
             Configuración
           </h1>
-          <p className="text-gray-600">Administra la configuración del sistema POS</p>
+          <p className="text-sm md:text-base text-gray-600">Administra la configuración del sistema POS</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Configuración de Zona Horaria */}
           <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Clock className="w-6 h-6 text-primary" />
-                <h3 className="text-xl font-semibold text-gray-800">Zona Horaria</h3>
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <Clock className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                <h3 className="text-lg md:text-xl font-semibold text-gray-800">Zona Horaria</h3>
               </div>
               <div className="space-y-4">
                 <div>
@@ -438,6 +448,143 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Rendimiento y Optimización */}
+          <Card className="hover:shadow-lg transition-shadow col-span-1 md:col-span-2">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Gauge className="w-6 h-6 text-primary" />
+                <h3 className="text-xl font-semibold text-gray-800">Rendimiento y Optimización</h3>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Información de recursos del sistema */}
+                {systemResources && (
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Cpu className="w-4 h-4" />
+                      Recursos del Sistema Detectados
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <MemoryStick className="w-4 h-4 text-blue-500" />
+                        <div>
+                          <p className="text-gray-600">Memoria RAM</p>
+                          <p className="font-semibold text-gray-800">
+                            {systemResources.totalMemoryGB.toFixed(1)} GB
+                            {systemResources.isLowMemory && <span className="text-orange-600 ml-1">(Baja)</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Cpu className="w-4 h-4 text-green-500" />
+                        <div>
+                          <p className="text-gray-600">Núcleos CPU</p>
+                          <p className="font-semibold text-gray-800">
+                            {systemResources.cpuCount}
+                            {systemResources.isLowCPU && <span className="text-orange-600 ml-1">(Bajo)</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Info className="w-4 h-4 text-purple-500" />
+                        <div>
+                          <p className="text-gray-600">Arquitectura</p>
+                          <p className="font-semibold text-gray-800">
+                            {systemResources.arch === 'ia32' ? '32 bits' : '64 bits'}
+                            {systemResources.is32Bit && <span className="text-orange-600 ml-1">(⚠️)</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Cpu className="w-4 h-4 text-gray-500" />
+                        <div>
+                          <p className="text-gray-600">Modelo CPU</p>
+                          <p className="font-semibold text-gray-800 truncate" title={systemResources.cpuModel}>
+                            {systemResources.cpuModel.split(' ').slice(0, 3).join(' ')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Control del modo de rendimiento */}
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                    <Zap className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-blue-800 mb-1">Modo de Rendimiento Actual</p>
+                      <p className="text-xs text-blue-700">
+                        {useBasicMode ? (
+                          <>
+                            <strong>Modo Básico:</strong> Animaciones desactivadas para mejor rendimiento en equipos con recursos limitados.
+                          </>
+                        ) : (
+                          <>
+                            <strong>Modo Completo:</strong> Todas las animaciones y efectos visuales activados.
+                          </>
+                        )}
+                      </p>
+                      {isAutoDetected && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          ℹ️ Este modo fue configurado automáticamente según los recursos de tu sistema.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setBasicMode(true, false)}
+                      variant={useBasicMode ? "default" : "outline"}
+                      className="flex-1"
+                    >
+                      <Gauge className="w-4 h-4 mr-2" />
+                      Modo Básico
+                      {useBasicMode && <CheckCircle className="w-4 h-4 ml-2" />}
+                    </Button>
+                    <Button
+                      onClick={() => setBasicMode(false, false)}
+                      variant={!useBasicMode ? "default" : "outline"}
+                      className="flex-1"
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Modo Completo
+                      {!useBasicMode && <CheckCircle className="w-4 h-4 ml-2" />}
+                    </Button>
+                  </div>
+
+                  <Button
+                    onClick={async () => {
+                      toast.info('Detectando recursos del sistema...');
+                      await detectSystemResources();
+                      toast.success('Recursos detectados', {
+                        description: 'El modo de rendimiento ha sido configurado automáticamente.'
+                      });
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Cpu className="w-4 h-4 mr-2" />
+                    Detectar Recursos Automáticamente
+                  </Button>
+                </div>
+
+                {/* Información adicional */}
+                <div className="text-xs text-gray-500 space-y-1 pt-2 border-t">
+                  <p className="font-semibold text-gray-700 mb-2">¿Cuándo usar Modo Básico?</p>
+                  <p>• Equipos con 2GB de RAM o menos</p>
+                  <p>• Sistemas de 32 bits</p>
+                  <p>• Procesadores de 1 núcleo o muy antiguos</p>
+                  <p>• Si notas que la aplicación está lenta</p>
+                  <p className="mt-2 text-green-600">
+                    ✅ El Modo Básico desactiva todas las animaciones CSS y transiciones, mejorando significativamente el rendimiento.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Ayuda */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
@@ -453,8 +600,8 @@ export default function SettingsPage() {
 
         {/* Modal de Actualizaciones */}
         {showUpdateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-96 overflow-y-auto">
+          <div className={`fixed inset-0 flex items-center justify-center z-50 ${useBasicMode ? 'bg-black/90' : 'bg-black/50'}`}>
+            <div className={`bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-96 overflow-y-auto ${useBasicMode ? '' : 'animate-in fade-in zoom-in-95 duration-200'}`}>
               <div className="p-6">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -561,8 +708,8 @@ export default function SettingsPage() {
 
         {/* Modal de Cambio de Contraseña */}
         {showPasswordModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <Card className="w-full max-w-md mx-4">
+          <div className={`fixed inset-0 flex items-center justify-center z-50 ${useBasicMode ? 'bg-black/90' : 'bg-black/50'}`}>
+            <Card className={`w-full max-w-md mx-4 ${useBasicMode ? '' : 'animate-in fade-in zoom-in-95 duration-200'}`}>
               <CardContent className="p-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-1">Cambiar Contraseña</h2>
                 <p className="text-gray-600 text-sm mb-6">Actualiza tu contraseña para mantener tu cuenta segura</p>

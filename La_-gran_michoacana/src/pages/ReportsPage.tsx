@@ -641,23 +641,23 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
   };
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
+    <div className="h-full overflow-y-auto p-3 md:p-4 lg:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-100 rounded-lg">
-            <BarChart3 className="w-6 h-6 text-blue-600" />
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="p-2 md:p-3 bg-blue-100 rounded-lg">
+            <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
-            <p className="text-gray-500">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Reportes</h1>
+            <p className="text-sm md:text-base text-gray-500">
               Análisis de ventas y cortes de caja
             </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Usuario</p>
-          <p className="font-medium">{user?.username}</p>
+        <div className="text-left md:text-right">
+          <p className="text-xs md:text-sm text-gray-500">Usuario</p>
+          <p className="text-sm md:text-base font-medium">{user?.username}</p>
         </div>
       </div>
 

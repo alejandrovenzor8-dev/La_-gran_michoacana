@@ -15,12 +15,14 @@ import { MainLayout } from './components/MainLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 import { usePermissionsStore } from './stores/permissionsStore';
+import { usePerformanceStore } from './stores/performanceStore';
 import UpdateNotification from './components/UpdateNotification';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const initializeUserPermissions = usePermissionsStore((state) => state.initializeUserPermissions);
+  const initializePerformanceMode = usePerformanceStore((state) => state.initializePerformanceMode);
 
   // Cargar datos persistidos al iniciar
   useEffect(() => {
@@ -32,6 +34,11 @@ function App() {
       initializeUserPermissions(user.username, user.role.toLowerCase() as 'admin' | 'cajero' | 'gerente');
     }
   }, [user, initializeUserPermissions]);
+
+  // Inicializar modo de rendimiento al cargar la app
+  useEffect(() => {
+    initializePerformanceMode();
+  }, [initializePerformanceMode]);
 
   return (
     <HashRouter>

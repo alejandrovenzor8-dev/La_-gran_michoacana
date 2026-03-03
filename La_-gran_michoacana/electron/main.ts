@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen, ipcMain, session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import os from 'os';
 import { printTicket, TicketData } from './printer';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
@@ -196,14 +197,20 @@ function createLoginWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
   
+  // Adaptarse a la resolución de la pantalla, con soporte para 1024x768
+  const windowWidth = Math.max(1024, Math.min(primaryDisplay.bounds.width, 1920));
+  const windowHeight = Math.max(768, Math.min(primaryDisplay.bounds.height, 1080));
+  
   loginWindow = new BrowserWindow({
     x: primaryDisplay.bounds.x,
     y: primaryDisplay.bounds.y,
-    width: primaryDisplay.bounds.width,
-    height: primaryDisplay.bounds.height,
+    width: windowWidth,
+    height: windowHeight,
+    minWidth: 1024,
+    minHeight: 768,
     title: 'La Michoacana POS - Login',
     resizable: true,
-    fullscreen: true,
+    fullscreen: true, // Abrir en pantalla completa
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
@@ -228,12 +235,20 @@ function createLoginWindow() {
 
 function createMainWindow() {
   const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  
+  // Adaptarse a la resolución de la pantalla, con soporte para 1024x768
+  const windowWidth = Math.max(1024, Math.min(primaryDisplay.bounds.width, 1920));
+  const windowHeight = Math.max(768, Math.min(primaryDisplay.bounds.height, 1080));
   
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 1024,
+    width: windowWidth,
+    height: windowHeight,
+    minWidth: 1024,
+    minHeight: 768,
     title: 'La Gran Michoacana POS - Cajero',
-    fullscreen: true,
+    resizable: true,
+    fullscreen: true, // Abrir en pantalla completa
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
@@ -275,11 +290,14 @@ function createCustomerDisplay() {
   } else {
     // Abrir en la misma pantalla pero desplazado
     const primaryDisplay = screen.getPrimaryDisplay();
+    // Adaptar tamaño para resoluciones pequeñas
+    const customerWidth = Math.min(800, primaryDisplay.bounds.width - 100);
+    const customerHeight = Math.min(600, primaryDisplay.bounds.height - 100);
     displayBounds = {
       x: primaryDisplay.bounds.x + 50,
       y: primaryDisplay.bounds.y + 50,
-      width: 1280,
-      height: 720,
+      width: customerWidth,
+      height: customerHeight,
     };
   }
 
@@ -290,8 +308,11 @@ function createCustomerDisplay() {
     y: displayBounds.y,
     width: displayBounds.width,
     height: displayBounds.height,
+    minWidth: 640,
+    minHeight: 480,
     title: 'La Gran Michoacana - Pantalla Cliente',
-    fullscreen: !!externalDisplay,
+    resizable: true,
+    fullscreen: false, // No forzar fullscreen para mayor flexibilidad
     frame: !externalDisplay, // Con frame si es misma pantalla, sin frame si es externo
     alwaysOnTop: false,
     icon: iconPath,
@@ -543,28 +564,51 @@ ipcMain.handle('image:getPath', async (event, relativePath: string) => {
 });
 
 /**
- * Obtiene la ruta del logo como file:// URL
+ * Obtiene la ruta del logo como data URL (base64)
  */
 ipcMain.handle('asset:getLogoPath', async (event) => {
   try {
-    const appPath = app.getAppPath();
-    const logoPath = path.join(appPath, 'dist', 'logo.png');
+    let logoPath: string;
+    
+    if (isDev) {
+      // En desarrollo, el logo está en public/
+      logoPath = path.join(__dirname, '../public/logo.png');
+    } else {
+      // En producción, el logo está en dist/
+      const appPath = app.getAppPath(); 
+      logoPath = path.join(appPath, 'dist', 'logo.png');
+    }
     
     // Verificar si el archivo existe
     if (!fs.existsSync(logoPath)) {
       log.warn('Logo no encontrado en:', logoPath);
-      return {
-        success: false,
-        error: 'Logo no encontrado',
-      };
+      // Intentar ruta alternativa en desarrollo
+      if (isDev) {
+        const altPath = path.join(process.cwd(), 'public/logo.png');
+        if (fs.existsSync(altPath)) {
+          logoPath = altPath;
+        } else {
+          return {
+            success: false,
+            error: 'Logo no encontrado',
+          };
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Logo no encontrado',
+        };
+      }
     }
     
-    // Convertir a file:// URL
-    const fileUrl = `file://${logoPath.replace(/\\/g, '/')}`;
+    // Leer el archivo como buffer y convertir a base64
+    const imageBuffer = fs.readFileSync(logoPath);
+    const base64Image = imageBuffer.toString('base64');
+    const dataUrl = `data:image/png;base64,${base64Image}`;
     
     return {
       success: true,
-      path: fileUrl,
+      path: dataUrl,
     };
   } catch (error) {
     log.error('Error obteniendo ruta del logo:', error);
@@ -598,6 +642,120 @@ ipcMain.handle('image:delete', async (event, relativePath: string) => {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+// ============================================================
+// SISTEMA DE DETECCIÓN DE RECURSOS DEL SISTEMA
+// ============================================================
+
+/**
+ * Detecta los recursos del sistema para determinar si debe usar modo básico
+ * Criterios para modo básico:
+ * - RAM <= 2GB
+ * - Arquitectura de 32 bits
+ * - CPU con menos de 2 núcleos
+ */
+ipcMain.handle('system:getResources', async () => {
+  try {
+    const totalMemoryGB = os.totalmem() / (1024 ** 3); // Convertir bytes a GB
+    const freeMemoryGB = os.freemem() / (1024 ** 3);
+    const cpuCount = os.cpus().length;
+    const arch = os.arch(); // 'x64', 'ia32', 'arm', etc.
+    const platform = os.platform();
+    const cpuModel = os.cpus()[0]?.model || 'Unknown';
+    
+    // Determinar si debe usar modo básico (sin animaciones)
+    const shouldUseBasicMode = 
+      totalMemoryGB <= 2.5 ||  // 2GB o menos (con margen)
+      arch === 'ia32' ||       // 32 bits
+      cpuCount < 2;            // Menos de 2 núcleos
+    
+    const resources = {
+      totalMemoryGB: Math.round(totalMemoryGB * 100) / 100,
+      freeMemoryGB: Math.round(freeMemoryGB * 100) / 100,
+      cpuCount,
+      arch,
+      platform,
+      cpuModel,
+      shouldUseBasicMode,
+      is32Bit: arch === 'ia32',
+      isLowMemory: totalMemoryGB <= 2.5,
+      isLowCPU: cpuCount < 2
+    };
+    
+    log.info('Recursos del sistema detectados:', resources);
+    
+    return {
+      success: true,
+      resources
+    };
+  } catch (error) {
+    log.error('Error detectando recursos del sistema:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+      resources: {
+        totalMemoryGB: 0,
+        freeMemoryGB: 0,
+        cpuCount: 0,
+        arch: 'unknown',
+        platform: 'unknown',
+        cpuModel: 'Unknown',
+        shouldUseBasicMode: true, // Por defecto, usar modo básico si hay error
+        is32Bit: false,
+        isLowMemory: false,
+        isLowCPU: false
+      }
+    };
+  }
+});
+
+/**
+ * Guarda la configuración de rendimiento del usuario
+ */
+ipcMain.handle('system:savePerformanceConfig', async (event, config: { useBasicMode: boolean }) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const configPath = path.join(userDataPath, 'performance-config.json');
+    
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    log.info('Configuración de rendimiento guardada:', config);
+    
+    return { success: true };
+  } catch (error) {
+    log.error('Error guardando configuración de rendimiento:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    };
+  }
+});
+
+/**
+ * Carga la configuración de rendimiento del usuario
+ */
+ipcMain.handle('system:loadPerformanceConfig', async () => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const configPath = path.join(userDataPath, 'performance-config.json');
+    
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, 'utf-8');
+      const config = JSON.parse(configData);
+      log.info('Configuración de rendimiento cargada:', config);
+      return { success: true, config };
+    } else {
+      log.info('No existe configuración de rendimiento guardada');
+      return { success: true, config: null };
+    }
+  } catch (error) {
+    log.error('Error cargando configuración de rendimiento:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+      config: null
     };
   }
 });

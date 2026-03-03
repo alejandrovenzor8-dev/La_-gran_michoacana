@@ -5,6 +5,14 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
+    screens: {
+      'xs': '640px',
+      'sm': '768px',
+      'md': '1024px',    // Resolución mínima soportada
+      'lg': '1280px',
+      'xl': '1440px',
+      '2xl': '1920px',
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",

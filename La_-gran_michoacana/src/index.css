@@ -32,11 +32,78 @@
     @apply border-border;
   }
   html, body, #root {
-    @apply h-full w-full m-0 p-0;
+    @apply h-full w-full m-0 p-0 overflow-hidden;
   }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Clases responsive utility */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  /* Estilos para adaptarse a resoluciones pequeñas */
+  .text-responsive {
+    @apply text-sm md:text-base;
+  }
+  
+  .text-responsive-lg {
+    @apply text-base md:text-lg lg:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-lg md:text-xl lg:text-2xl;
+  }
+  
+  .padding-responsive {
+    @apply p-2 md:p-4 lg:p-6;
+  }
+  
+  .gap-responsive {
+    @apply gap-2 md:gap-3 lg:gap-4;
+  }
+}
+
+/* ============================================================ */
+/* SISTEMA DE MODO BÁSICO - Desactivar animaciones */
+/* ============================================================ */
+
+/* Cuando está en modo básico, desactivar TODAS las animaciones */
+html.basic-mode *,
+html.basic-mode *::before,
+html.basic-mode *::after,
+html.no-animations *,
+html.no-animations *::before,
+html.no-animations *::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Mantener transiciones de opacidad instantáneas pero desactivar otras */
+html.basic-mode * {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
 }
 
 /* Animaciones personalizadas */

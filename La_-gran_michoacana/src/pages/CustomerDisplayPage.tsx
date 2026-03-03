@@ -149,28 +149,28 @@ export default function CustomerDisplayPage() {
 
   return (
     <div className="h-full w-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 overflow-hidden flex flex-col">
-      {/* Header */}
-      <header className="bg-white/10 backdrop-blur-md p-6 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+      {/* Header - Totalmente responsive */}
+      <header className="bg-white/10 backdrop-blur-md p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 shadow-lg flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 min-w-0 flex-1">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-white rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
               <img 
                 src={logoImage} 
                 alt="La Gran Michoacana" 
-                className="w-20 h-20 object-cover"
+                className="w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28 object-cover"
               />
             </div>
-            <div>
-              <h1 className="text-4xl font-bold text-white">La Gran Michoacana</h1>
-              <p className="text-white/80 text-lg">Las mejores paletas y helados</p>
-              <p className="text-white/80 text-lg">Sucursal: {branchName}</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl md:text-3xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold text-white truncate">La Gran Michoacana</h1>
+              <p className="text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl 2xl:text-3xl text-white/80 truncate">Las mejores paletas y helados</p>
+              <p className="text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl 2xl:text-3xl text-white/80 truncate">Sucursal: {branchName}</p>
             </div>
           </div>
-          <div className="text-white text-2xl text-right">
+          <div className="text-white text-sm sm:text-base md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-right flex-shrink-0">
             <div className="font-semibold">
               {formatDateShort(new Date())}
             </div>
-            <div className="text-lg opacity-90">
+            <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl opacity-90">
               {formatDate(new Date(), true).split(' ').slice(-3).join(' ')}
             </div>
           </div>
@@ -178,7 +178,7 @@ export default function CustomerDisplayPage() {
       </header>
 
       {/* Contenido Principal */}
-      <div className="flex-1 flex flex-col p-8 overflow-auto">
+      <div className="flex-1 flex flex-col p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 2xl:p-10 overflow-auto min-h-0">
         <AnimatePresence mode="wait">
           {showAd ? (
             <Advertisement key="ad" />
@@ -223,25 +223,25 @@ function Advertisement() {
       exit={{ opacity: 0, scale: 0.9 }}
       className="flex-1 flex items-center justify-center"
     >
-      <div className="text-center text-white space-y-12">
+      <div className="text-center text-white space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-12 xl:space-y-16 px-4">
         <motion.div
           key={currentAd}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="space-y-6"
+          className="space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6 xl:space-y-8"
         >
-          <div className="text-9xl">{ads[currentAd].emoji}</div>
-          <h2 className="text-6xl font-bold">{ads[currentAd].text}</h2>
+          <div className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[10rem] 2xl:text-[12rem]">{ads[currentAd].emoji}</div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold">{ads[currentAd].text}</h2>
         </motion.div>
 
-        <div className="space-y-4 text-3xl opacity-90">
+        <div className="space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6 text-base sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl opacity-90">
           <p>✨ Ingredientes de Primera Calidad</p>
           <p>💯 100% Sabor Natural</p>
           <p>😊 Tu Satisfacción es Nuestra Prioridad</p>
         </div>
 
-        <div className="mt-8 text-2xl font-semibold">
+        <div className="mt-4 sm:mt-6 md:mt-8 lg:mt-12 text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-semibold">
           ¡Bienvenido a La Gran Michoacana!
         </div>
       </div>
@@ -303,10 +303,10 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
       className="flex-1 flex flex-col min-h-0"
     >
       {/* Lista de productos */}
-      <div className="flex-1 flex gap-2 mb-6 min-h-0 relative">
+      <div className="flex-1 flex gap-1 sm:gap-2 mb-2 sm:mb-3 md:mb-4 lg:mb-6 xl:mb-8 min-h-0 relative">
         <div 
           ref={scrollContainerRef}
-          className="flex-1 bg-white/95 rounded-3xl p-8 shadow-2xl overflow-y-scroll min-h-0" 
+          className="flex-1 bg-white/95 rounded-xl sm:rounded-2xl md:rounded-3xl p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 2xl:p-10 shadow-2xl overflow-y-scroll min-h-0" 
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {/* Ocultar scrollbar nativa */}
@@ -316,21 +316,21 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
             }
           `}</style>
           
-          <h2 className="text-5xl font-bold mb-8 text-gray-800 border-b-4 border-primary pb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold mb-2 sm:mb-3 md:mb-4 lg:mb-6 xl:mb-8 2xl:mb-10 text-gray-800 border-b-2 sm:border-b-2 md:border-b-3 lg:border-b-4 border-primary pb-2 sm:pb-2 md:pb-3 lg:pb-4">
             Tu Compra
           </h2>
 
-          <div className="space-y-4">
+          <div className="space-y-2 sm:space-y-2 md:space-y-3 lg:space-y-4 xl:space-y-6">
             {items.map((item, index) => (
               <motion.div
                 key={`${item.id}-${index}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center justify-between p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl hover:shadow-lg transition-shadow"
+                className="flex items-center justify-between p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg sm:rounded-xl md:rounded-2xl hover:shadow-lg transition-shadow"
               >
-                <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center text-5xl shadow-md overflow-hidden">
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 xl:gap-8 min-w-0 flex-1">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 2xl:w-40 2xl:h-40 bg-white rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl shadow-md overflow-hidden flex-shrink-0">
                     {item.imageUrl ? (
                       <img 
                         src={item.imageUrl} 
@@ -352,16 +352,16 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
                       {item.emoji || '🍦'}
                     </span>
                   </div>
-                  <div>
-                    <h3 className="text-4xl font-semibold text-gray-800">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-semibold text-gray-800 truncate">
                       {item.name}
                     </h3>
-                    <p className="text-2xl text-gray-600 mt-1">
+                    <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl 2xl:text-3xl text-gray-600 mt-0.5 sm:mt-0.5 md:mt-1">
                       {formatCurrency(item.price)} × {item.quantity}
                     </p>
                   </div>
                 </div>
-                <div className="text-5xl font-bold text-primary">
+                <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-primary flex-shrink-0 ml-2">
                   {formatCurrency(item.price * item.quantity)}
                 </div>
               </motion.div>
@@ -372,8 +372,8 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
         {/* Barra de scroll personalizada */}
         <div 
           ref={scrollbarRef}
-          className="w-6 bg-gray-200 rounded-full flex-shrink-0"
-          style={{ display: 'none', width: '24px', height: '100%' }}
+          className="w-3 sm:w-4 md:w-5 lg:w-6 xl:w-8 bg-gray-200 rounded-full flex-shrink-0"
+          style={{ display: 'none', height: '100%' }}
         >
           <div
             ref={scrollThumbRef}
@@ -393,55 +393,55 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
-        className="bg-white rounded-3xl p-8 shadow-2xl"
+        className="bg-white rounded-xl sm:rounded-2xl md:rounded-3xl p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 2xl:p-10 shadow-2xl"
       >
         {/* Método de Pago */}
         {paymentMethod && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-green-50 border-2 border-green-500 rounded-2xl flex items-center justify-between"
+            className="mb-2 sm:mb-3 md:mb-4 lg:mb-6 xl:mb-8 p-2 sm:p-3 md:p-4 lg:p-6 bg-green-50 border border-green-500 sm:border-2 rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-between gap-2"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-4xl">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 lg:gap-4 min-w-0">
+              <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl flex-shrink-0">
                 {paymentMethod === 'EFECTIVO' && '💵'}
                 {paymentMethod === 'TARJETA' && '💳'}
                 {paymentMethod === 'MIXTO' && '💰'}
               </span>
-              <div>
-                <p className="text-sm text-gray-600">Método de Pago</p>
-                <p className="text-3xl font-bold text-green-700">{paymentMethod}</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-xs md:text-sm lg:text-base text-gray-600">Método de Pago</p>
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-green-700 truncate">{paymentMethod}</p>
               </div>
             </div>
             {saleId && (
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Venta #</p>
-                <p className="text-2xl font-bold text-gray-800">{saleId.slice(0, 8)}</p>
+              <div className="text-right flex-shrink-0">
+                <p className="text-xs sm:text-xs md:text-sm lg:text-base text-gray-600">Venta #</p>
+                <p className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800">{saleId.slice(0, 8)}</p>
               </div>
             )}
           </motion.div>
         )}
         
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-3xl text-white">💰</span>
+        <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4 lg:mb-6 xl:mb-8 2xl:mb-10 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 xl:w-20 xl:h-20 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-xl sm:text-2xl md:text-2xl lg:text-3xl xl:text-4xl text-white">💰</span>
             </div>
-            <span className="text-5xl font-bold text-gray-800">TOTAL</span>
+            <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold text-gray-800">TOTAL</span>
           </div>
           <motion.div
             key={total}
             initial={{ scale: 1.2, color: '#10b981' }}
             animate={{ scale: 1, color: '#8b5cf6' }}
             transition={{ duration: 0.3 }}
-            className="text-7xl font-bold text-primary"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold text-primary flex-shrink-0"
           >
             {formatCurrency(total)}
           </motion.div>
         </div>
         
         {/* Botones de Acción */}
-        <div className="flex gap-4">
+        <div className="flex gap-2 sm:gap-3 md:gap-4 lg:gap-6">
           <motion.button
             whileHover={!isProcessing ? { scale: 1.05 } : {}}
             whileTap={!isProcessing ? { scale: 0.95 } : {}}
@@ -457,7 +457,7 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
               }
             }}
             disabled={items.length === 0 || isProcessing}
-            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-bold py-6 px-6 rounded-2xl text-4xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-bold py-2 sm:py-3 md:py-4 lg:py-5 xl:py-6 2xl:py-8 px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 rounded-lg sm:rounded-xl md:rounded-2xl text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
           >
             ✅ Aceptar
           </motion.button>
@@ -470,7 +470,7 @@ function CartDisplay({ items, total, paymentMethod, saleId, showSuccessMessage, 
               }
             }}
             disabled={isProcessing}
-            className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-bold py-6 px-6 rounded-2xl text-4xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+            className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-bold py-2 sm:py-3 md:py-4 lg:py-5 xl:py-6 2xl:py-8 px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 rounded-lg sm:rounded-xl md:rounded-2xl text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
           >
             ❌ Cancelar
           </motion.button>

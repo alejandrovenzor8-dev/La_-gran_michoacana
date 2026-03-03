@@ -7,10 +7,12 @@ import { branchService } from '@/lib/branchService';
 import { localImageService } from '@/lib/localImageService';
 import { LocalImage } from '@/components/LocalImage';
 import { useAuthStore } from '@/stores/authStore';
+import { usePerformanceStore } from '@/stores/performanceStore';
 import type { Branch } from '@/types/branch';
 
 export default function InventoryPage() {
   const user = useAuthStore((state) => state.user);
+  const { useBasicMode } = usePerformanceStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -408,25 +410,25 @@ export default function InventoryPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-50 to-purple-50">
-      <div className="max-w-7xl mx-auto p-6 pb-12">
+      <div className="max-w-7xl mx-auto p-3 md:p-4 lg:p-6 pb-8 md:pb-12">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <div className="flex items-center gap-3">
-            <Package className="w-8 h-8 text-primary" />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 md:mb-6">
+          <div className="flex items-center gap-2 md:gap-3">
+            <Package className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Inventario</h1>
-              <p className="text-gray-600">Gestiona tus productos</p>
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">Inventario</h1>
+              <p className="text-sm md:text-base text-gray-600">Gestiona tus productos</p>
             </div>
           </div>
 
           {/* Selector de sucursal para admin */}
           {user?.role === 'ADMIN' && branches.length > 0 && (
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-700">Sucursal:</label>
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+              <label className="text-xs md:text-sm font-medium text-gray-700">Sucursal:</label>
               <select
                 value={selectedBranchId || ''}
                 onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : undefined)}
-                className="px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="px-2 md:px-4 py-1.5 md:py-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="">Todas las sucursales</option>
                 {branches.map((branch) => (
@@ -441,8 +443,8 @@ export default function InventoryPage() {
 
         {/* Modal de edición */}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${useBasicMode ? 'bg-black/90' : 'bg-black/50'}`}>
+            <div className={`bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto ${useBasicMode ? '' : 'animate-in fade-in zoom-in-95 duration-200'}`}>
               <div className="sticky top-0 bg-gradient-to-r from-primary to-purple-600 p-6 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Editar Producto</h2>
                 <button

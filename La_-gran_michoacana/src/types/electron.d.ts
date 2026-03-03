@@ -1,5 +1,18 @@
 // Type definitions para la API de Electron expuesta al renderer
 
+interface SystemResources {
+  totalMemoryGB: number;
+  freeMemoryGB: number;
+  cpuCount: number;
+  arch: string;
+  platform: string;
+  cpuModel: string;
+  shouldUseBasicMode: boolean;
+  is32Bit: boolean;
+  isLowMemory: boolean;
+  isLowCPU: boolean;
+}
+
 export interface ElectronAPI {
   onLoginSuccess: () => Promise<{ success: boolean }>;
   updateCart: (data: any) => void;
@@ -25,6 +38,15 @@ export interface ElectronAPI {
   saveImage: (base64Data: string) => Promise<{ success: boolean; path?: string; fullPath?: string; error?: string }>;
   getImagePath: (relativePath: string) => Promise<{ success: boolean; path?: string; fullPath?: string; error?: string }>;
   deleteImage: (relativePath: string) => Promise<{ success: boolean; error?: string }>;
+  
+  // Sistema de detección de recursos y rendimiento
+  getSystemResources: () => Promise<{ 
+    success: boolean; 
+    resources?: SystemResources;
+    error?: string;
+  }>;
+  savePerformanceConfig: (config: { useBasicMode: boolean }) => Promise<{ success: boolean; error?: string }>;
+  loadPerformanceConfig: () => Promise<{ success: boolean; config?: { useBasicMode: boolean } | null; error?: string }>;
 }
 
 declare global {

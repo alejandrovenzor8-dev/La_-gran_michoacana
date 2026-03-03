@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCartStore } from '@/stores/cartStore';
 import { saleService } from '@/lib/saleService';
 import { useAuthStore } from '@/stores/authStore';
+import { usePerformanceStore } from '@/stores/performanceStore';
 import { eventBus } from '@/lib/eventBus';
 import { formatDate } from '@/lib/utils';
 
@@ -44,6 +45,7 @@ export function PaymentDialog({
 
   const { items, total, clearCart } = useCartStore();
   const { user } = useAuthStore();
+  const { useBasicMode } = usePerformanceStore();
 
   const getSelectedBranchId = () => {
     if (selectedBranchId) return selectedBranchId;
@@ -263,8 +265,8 @@ export function PaymentDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${useBasicMode ? 'bg-black/90' : 'bg-black/50'}`}>
+      <Card className={`w-full max-w-lg max-h-[90vh] overflow-y-auto ${useBasicMode ? '' : 'animate-in fade-in zoom-in-95 duration-200'}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl font-bold">Procesar Pago</CardTitle>
           <Button

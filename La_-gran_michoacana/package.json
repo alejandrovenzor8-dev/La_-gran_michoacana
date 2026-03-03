@@ -76,7 +76,8 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "ia32"
           ]
         }
       ],
@@ -89,7 +90,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "La Gran Michoacana",
       "allowElevation": true,
-      "perMachine": true
+      "perMachine": true,
+      "include": "scripts/installer.nsh"
     },
     "publish": {
       "provider": "github",

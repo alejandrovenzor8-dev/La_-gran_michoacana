@@ -142,14 +142,14 @@ export default function BranchesPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 md:p-4 lg:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Building className="h-8 w-8 text-blue-600" />
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          <Building className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-blue-600" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestión de Sucursales</h1>
-            <p className="text-gray-600 text-sm mt-1">Administra las sucursales del sistema</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">Gestión de Sucursales</h1>
+            <p className="text-xs md:text-sm text-gray-600 mt-1">Administra las sucursales del sistema</p>
           </div>
         </div>
         <Button
@@ -171,7 +171,7 @@ export default function BranchesPage() {
               setSuccess('');
             }
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 text-sm md:text-base"
         >
           {(showForm || editingId) ? (
             <>
@@ -189,12 +189,12 @@ export default function BranchesPage() {
 
       {/* Mensajes de éxito y error */}
       {success && (
-        <div className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-md">
+        <div className="p-3 md:p-4 bg-green-50 border border-green-200 text-green-800 rounded-md text-sm md:text-base">
           {success}
         </div>
       )}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
+        <div className="p-3 md:p-4 bg-red-50 border border-red-200 text-red-800 rounded-md text-sm md:text-base">
           {error}
         </div>
       )}

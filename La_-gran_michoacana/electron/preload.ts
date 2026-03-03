@@ -158,6 +158,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-not-available', listener);
     return () => ipcRenderer.removeListener('update-not-available', listener);
   },
+
+  // ============================================================
+  // SISTEMA DE DETECCIÓN DE RECURSOS
+  // ============================================================
+  
+  // Obtener recursos del sistema
+  getSystemResources: async () => {
+    return await ipcRenderer.invoke('system:getResources');
+  },
+  
+  // Guardar configuración de rendimiento
+  savePerformanceConfig: async (config: { useBasicMode: boolean }) => {
+    return await ipcRenderer.invoke('system:savePerformanceConfig', config);
+  },
+  
+  // Cargar configuración de rendimiento
+  loadPerformanceConfig: async () => {
+    return await ipcRenderer.invoke('system:loadPerformanceConfig');
+  },
 });
 
 // Type definitions para TypeScript
@@ -187,6 +206,26 @@ export interface ElectronAPI {
   
   // Gestión de activos
   getLogoPath: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  
+  // Sistema de recursos
+  getSystemResources: () => Promise<{ 
+    success: boolean; 
+    resources?: {
+      totalMemoryGB: number;
+      freeMemoryGB: number;
+      cpuCount: number;
+      arch: string;
+      platform: string;
+      cpuModel: string;
+      shouldUseBasicMode: boolean;
+      is32Bit: boolean;
+      isLowMemory: boolean;
+      isLowCPU: boolean;
+    };
+    error?: string;
+  }>;
+  savePerformanceConfig: (config: { useBasicMode: boolean }) => Promise<{ success: boolean; error?: string }>;
+  loadPerformanceConfig: () => Promise<{ success: boolean; config?: { useBasicMode: boolean } | null; error?: string }>;
 }
 
 declare global {

@@ -110,12 +110,12 @@ export default function PermissionsPage() {
   const availableModules = modulesList;
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
+    <div className="h-full overflow-y-auto p-3 md:p-4 lg:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-purple-100 rounded-lg">
-            <Shield className="w-6 h-6 text-purple-600" />
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="p-2 md:p-3 bg-purple-100 rounded-lg">
+            <Shield className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">

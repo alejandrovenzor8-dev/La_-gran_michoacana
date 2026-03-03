@@ -3,6 +3,7 @@ import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield, BarCha
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { usePermissionsStore } from '@/stores/permissionsStore';
+import { usePerformanceStore } from '@/stores/performanceStore';
 import { Button } from './ui/button';
 import type { ModuleType } from '@/types/permissions';
 
@@ -25,6 +26,7 @@ export function Sidebar() {
   }));
 
   const { hasPermission } = usePermissionsStore();
+  const { useBasicMode } = usePerformanceStore();
 
   // Cargar ruta del logo desde Electron
   useEffect(() => {
@@ -122,7 +124,8 @@ export function Sidebar() {
       {/* Botón para expandir/contraer en pantallas pequeñas */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-primary text-white lg:hidden"
+        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-primary text-white shadow-lg lg:hidden hover:bg-primary/90 transition-colors"
+        aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
       >
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
@@ -130,42 +133,45 @@ export function Sidebar() {
       {/* Overlay en móvil cuando está abierto */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/80 z-30 lg:hidden"
           onClick={() => setIsOpen(false)}
+          aria-label="Cerrar menú"
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - En modo básico usa display, en modo normal usa transform */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-primary to-primary/80 text-white shadow-xl transform transition-transform duration-300 z-40 lg:static lg:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-primary to-primary/80 text-white shadow-xl z-40 lg:static flex flex-col
+          ${useBasicMode 
+            ? `${isOpen ? 'block lg:block' : 'hidden lg:block'}` 
+            : `transform transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
+          }`}
       >
-        {/* Header del Sidebar */}
-        <div className="p-6 border-b border-white/20 flex flex-col items-center gap-3">
+        {/* Header del Sidebar - más compacto en pantallas pequeñas */}
+        <div className="p-4 md:p-6 border-b border-white/20 flex flex-col items-center gap-2 md:gap-3 flex-shrink-0">
           <img
             src={logoImage}
             alt="La Gran Michoacana"
-            className="w-16 h-16 rounded-lg object-cover"
+            className="w-12 h-12 md:w-16 md:h-16 rounded-lg object-cover"
           />
           <div className="text-center">
-            <h1 className="text-lg font-bold">La Gran</h1>
-            <h1 className="text-lg font-bold">Michoacana</h1>
-            <p className="text-xs text-white/70 mt-2">Sistema POS</p>
+            <h1 className="text-base md:text-lg font-bold">La Gran</h1>
+            <h1 className="text-base md:text-lg font-bold">Michoacana</h1>
+            <p className="text-xs text-white/70 mt-1 md:mt-2">Sistema POS</p>
           </div>
         </div>
 
-        {/* Usuario */}
+        {/* Usuario - más compacto */}
         {user && (
-          <div className="p-4 border-b border-white/20 bg-white/10">
-            <p className="text-sm text-white/70">Usuario actual</p>
-            <p className="font-semibold">{user.username}</p>
+          <div className="p-3 md:p-4 border-b border-white/20 bg-white/10 flex-shrink-0">
+            <p className="text-xs md:text-sm text-white/70">Usuario actual</p>
+            <p className="font-semibold text-sm md:text-base">{user.username}</p>
             <p className="text-xs text-white/70 capitalize">{user.role}</p>
           </div>
         )}
 
-        {/* Navegación */}
-        <nav className="flex-1 p-4 space-y-2">
+        {/* Navegación - con scroll */}
+        <nav className="flex-1 overflow-y-auto p-3 md:p-4 space-y-1.5 md:space-y-2">
           {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -175,24 +181,26 @@ export function Sidebar() {
                   navigate(item.path);
                   setIsOpen(false); // Cerrar sidebar en móvil
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 rounded-lg text-sm md:text-base ${
+                  useBasicMode ? '' : 'transition-all duration-200'
+                } ${
                   isActive
                     ? 'bg-white/25 border-l-4 border-white font-semibold'
                     : 'hover:bg-white/10'
                 }`}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span className="text-left">{item.label}</span>
               </button>
             );
           })}
         </nav>
 
         {/* Footer con Logout */}
-        <div className="p-4 border-t border-white/20">
+        <div className="p-3 md:p-4 border-t border-white/20 flex-shrink-0">
           <Button
             onClick={handleLogout}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold flex items-center justify-center gap-2"
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold flex items-center justify-center gap-2 text-sm md:text-base py-2 md:py-2.5"
           >
             <LogOut className="w-4 h-4" />
             Cerrar Sesión

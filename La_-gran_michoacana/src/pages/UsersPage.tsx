@@ -5,6 +5,7 @@ import { Users, Plus, Trash2, Edit2, Loader2, X, Lock } from 'lucide-react';
 import { formatDate, MEXICO_TIMEZONES, getConfiguredTimezone } from '@/lib/utils';
 import { userService, type User as ServiceUser } from '@/lib/userService';
 import { branchService } from '@/lib/branchService';
+import { usePerformanceStore } from '@/stores/performanceStore';
 import type { Branch } from '@/types/branch';
 import { toast } from 'sonner';
 
@@ -17,6 +18,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
+  const { useBasicMode } = usePerformanceStore();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -398,19 +400,19 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="h-full overflow-auto p-6">
+    <div className="h-full overflow-auto p-3 md:p-4 lg:p-6">
       <div className="max-w-6xl">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-4 md:mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3 mb-2">
-              <Users className="w-8 h-8 text-primary" />
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 flex items-center gap-2 md:gap-3 mb-2">
+              <Users className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-primary" />
               Gestión de Usuarios
             </h1>
-            <p className="text-gray-600">Administra los usuarios del sistema POS</p>
+            <p className="text-sm md:text-base text-gray-600">Administra los usuarios del sistema POS</p>
           </div>
           <Button
             onClick={() => setShowForm(!showForm)}
-            className="gap-2 flex items-center"
+            className="gap-2 flex items-center text-sm md:text-base"
             disabled={loading || editingId !== null}
           >
             <Plus className="w-4 h-4" />
@@ -848,8 +850,8 @@ export default function UsersPage() {
 
       {/* Modal de Cambio de Contraseña */}
       {showChangePasswordModal && selectedUserForPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
+        <div className={`fixed inset-0 flex items-center justify-center z-50 ${useBasicMode ? 'bg-black/90' : 'bg-black/50'}`}>
+          <Card className={`w-full max-w-md mx-4 ${useBasicMode ? '' : 'animate-in fade-in zoom-in-95 duration-200'}`}>
             <CardContent className="p-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-1">Cambiar Contraseña</h2>
               <p className="text-gray-600 text-sm mb-4">
