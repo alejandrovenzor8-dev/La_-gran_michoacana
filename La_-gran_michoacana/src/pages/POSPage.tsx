@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { productService, Product } from '@/lib/productService';
 import { saleService, Sale, SaleItem } from '@/lib/saleService';
@@ -135,6 +135,25 @@ export default function POSPage() {
     }
   }, []);
 
+  const handleOpenCashDrawer = async () => {
+    try {
+      if (!window.electronAPI?.openCashDrawer) {
+        alert('⚠️ La caja registradora no está disponible en esta versión de la aplicación');
+        return;
+      }
+
+      const result = await window.electronAPI.openCashDrawer();
+      
+      if (result.success) {
+        alert('✅ Caja registradora abierta correctamente');
+      } else {
+        alert(`❌ Error: ${result.message}`);
+      }
+    } catch (error) {
+      alert(`❌ Error al abrir la caja registradora: ${error}`);
+    }
+  };
+
   const handleAddProduct = (product: Product) => {
     addItem({
       id: String(product.id),
@@ -238,29 +257,29 @@ export default function POSPage() {
   }
 
   return (
-    <div className="h-full flex bg-gray-50">
+    <div className="h-full flex flex-col lg:flex-row bg-gray-50">
       {/* Panel de Productos */}
-      <div className="flex-1 p-6 overflow-auto">
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
+      <div className="flex-1 p-3 lg:p-6 overflow-auto">
+        <div className="mb-4 lg:mb-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-0 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                <Package className="w-8 h-8 text-primary" />
+              <h1 className="text-xl lg:text-3xl font-bold text-gray-800 flex items-center gap-2 lg:gap-3">
+                <Package className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                 Punto de Venta
               </h1>
-              <p className="text-gray-600 mt-1">Selecciona los productos para agregar al carrito</p>
+              <p className="text-xs lg:text-sm text-gray-600 mt-1">Selecciona productos para añadir</p>
             </div>
 
             {/* Selector de sucursal para admin */}
             {user?.role === 'ADMIN' && branches.length > 0 && (
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">Sucursal:</label>
+              <div className="flex items-center gap-2 lg:gap-3 w-full lg:w-auto">
+                <label className="text-xs lg:text-sm font-medium text-gray-700 whitespace-nowrap">Sucursal:</label>
                 <select
                   value={selectedBranchId || ''}
                   onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : undefined)}
-                  className="px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="flex-1 lg:flex-none px-2 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="">Todas las sucursales</option>
+                  <option value="">Todas</option>
                   {branches.map((branch) => (
                     <option key={branch.id} value={branch.id}>
                       {branch.name}
@@ -272,28 +291,28 @@ export default function POSPage() {
           </div>
 
           {user && (
-            <div className="mt-3 space-y-1">
-              <p className="text-sm text-gray-500">
+            <div className="mt-2 lg:mt-3 space-y-0.5 text-xs lg:text-sm">
+              <p className="text-gray-500">
                 Conectado como: <span className="font-semibold">{user.username}</span> ({user.role})
               </p>
               {user.role === 'ADMIN' ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-gray-500">
                   Sucursal: <span className="font-semibold">{getAdminBranchName()}</span>
                 </p>
               ) : user.branch ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-gray-500">
                   Sucursal: <span className="font-semibold">{user.branch.name}</span>
                 </p>
               ) : (
-                <p className="text-sm text-red-600 font-semibold bg-red-50 px-3 py-2 rounded border border-red-200">
-                  ⚠️ Sin sucursal asignada - No se pueden registrar ventas
+                <p className="text-red-600 font-semibold bg-red-50 px-2 lg:px-3 py-1 lg:py-2 rounded border border-red-200">
+                  ⚠️ Sin sucursal - No se pueden registrar ventas
                 </p>
               )}
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 lg:gap-4">
           {error ? (
             <div className="col-span-full text-center py-12">
               <Package className="w-16 h-16 mx-auto text-red-300 mb-3" />
@@ -312,32 +331,31 @@ export default function POSPage() {
             products.map((product) => (
               <Card
                 key={product.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
+                className="cursor-pointer hover:shadow-lg transition-shadow h-full"
                 onClick={() => handleAddProduct(product)}
               >
-                <CardContent className="p-6 text-center">
+                <CardContent className="p-2 lg:p-6 text-center h-full flex flex-col">
                   {product.imageUrl ? (
-                    <div className="w-full h-32 mb-3 flex items-center justify-center">
+                    <div className="w-full h-16 lg:h-32 mb-1 lg:mb-3 flex items-center justify-center flex-shrink-0">
                       <img
                         src={product.imageUrl}
                         alt={product.name}
                         className="max-h-full max-w-full object-contain rounded"
                         onError={(e) => {
-                          // Fallback si la imagen falla al cargar
                           e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement!.innerHTML = '<div class="text-6xl">🛍️</div>';
+                          e.currentTarget.parentElement!.innerHTML = '<div class="text-4xl lg:text-6xl">🛍️</div>';
                         }}
                       />
                     </div>
                   ) : (
-                    <div className="text-6xl mb-3">{product.emoji || '🛍️'}</div>
+                    <div className="text-4xl lg:text-6xl mb-1 lg:mb-3 flex-shrink-0">{product.emoji || '🛍️'}</div>
                   )}
-                  <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{product.category}</p>
-                  <p className="text-2xl font-bold text-primary">
+                  <h3 className="font-semibold text-xs lg:text-lg mb-1 lg:mb-2 line-clamp-2">{product.name}</h3>
+                  <p className="text-xs text-gray-600 mb-2 hidden lg:block">{product.category}</p>
+                  <p className="text-lg lg:text-2xl font-bold text-primary mb-1">
                     {formatCurrency(product.price)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">Stock: {product.quantity}</p>
+                  <p className="text-xs text-gray-500">Stock: {product.quantity}</p>
                 </CardContent>
               </Card>
             ))
@@ -346,49 +364,49 @@ export default function POSPage() {
       </div>
 
       {/* Panel del Carrito */}
-      <div className="w-96 bg-white border-l shadow-xl flex flex-col">
-        <div className="p-6 border-b bg-primary text-white">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <ShoppingCart className="w-6 h-6" />
+      <div className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l shadow-xl flex flex-col order-last lg:order-none max-h-96 lg:max-h-none h-auto lg:h-full">
+        <div className="p-3 lg:p-6 border-b bg-primary text-white flex-shrink-0">
+          <h2 className="text-lg lg:text-2xl font-bold flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6" />
             Carrito
           </h2>
-          <p className="text-sm opacity-90 mt-1">{items.length} productos</p>
+          <p className="text-xs lg:text-sm opacity-90 mt-1">{items.length} productos</p>
         </div>
 
-        {/* Items del Carrito */}
-        <div className="flex-1 overflow-auto p-4 space-y-3">
+        {/* Items del Carrito - Scrolleable */}
+        <div className="flex-1 overflow-y-auto p-2 lg:p-4 space-y-2 lg:space-y-3 min-h-0">
           {items.length === 0 ? (
-            <div className="text-center py-12">
-              <ShoppingCart className="w-16 h-16 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">El carrito está vacío</p>
-              <p className="text-sm text-gray-400 mt-1">
+            <div className="text-center py-8 lg:py-12">
+              <ShoppingCart className="w-12 h-12 lg:w-16 lg:h-16 mx-auto text-gray-300 mb-2 lg:mb-3" />
+              <p className="text-sm lg:text-base text-gray-500">El carrito está vacío</p>
+              <p className="text-xs text-gray-400 mt-1">
                 Selecciona productos para comenzar
               </p>
             </div>
           ) : (
             items.map((item) => (
-              <Card key={item.id} className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
+              <Card key={item.id} className="overflow-hidden flex-shrink-0">
+                <CardContent className="p-2 lg:p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2 lg:mb-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       {item.imageUrl ? (
-                        <div className="w-12 h-12 flex items-center justify-center">
+                        <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
                           <img
                             src={item.imageUrl}
                             alt={item.name}
                             className="max-h-full max-w-full object-contain rounded"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
-                              e.currentTarget.parentElement!.innerHTML = '<div class="text-3xl">🛒</div>';
+                              e.currentTarget.parentElement!.innerHTML = '<div class="text-2xl lg:text-3xl">🛒</div>';
                             }}
                           />
                         </div>
                       ) : (
-                        <div className="text-3xl">{item.emoji || '🛒'}</div>
+                        <div className="text-2xl lg:text-3xl flex-shrink-0">{item.emoji || '🛒'}</div>
                       )}
-                      <div>
-                        <h4 className="font-semibold">{item.name}</h4>
-                        <p className="text-sm text-gray-600">
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-xs lg:text-base line-clamp-1">{item.name}</h4>
+                        <p className="text-xs text-gray-600">
                           {formatCurrency(item.price)}
                         </p>
                       </div>
@@ -397,34 +415,36 @@ export default function POSPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => removeItem(item.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-1 lg:gap-2 text-xs lg:text-base">
+                    <div className="flex items-center gap-1 lg:gap-2">
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         disabled={item.quantity <= 1}
+                        className="h-7 w-7 lg:h-9 lg:w-9"
                       >
-                        <Minus className="w-4 h-4" />
+                        <Minus className="w-3 h-3 lg:w-4 lg:h-4" />
                       </Button>
-                      <span className="w-12 text-center font-semibold">
+                      <span className="w-8 text-center font-semibold text-xs lg:text-base">
                         {item.quantity}
                       </span>
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="h-7 w-7 lg:h-9 lg:w-9"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-3 h-3 lg:w-4 lg:h-4" />
                       </Button>
                     </div>
-                    <div className="text-lg font-bold text-primary">
+                    <div className="text-sm lg:text-lg font-bold text-primary">
                       {formatCurrency(item.price * item.quantity)}
                     </div>
                   </div>
@@ -434,31 +454,39 @@ export default function POSPage() {
           )}
         </div>
 
-        {/* Total y Acciones */}
-        <div className="border-t p-6 space-y-4 bg-gray-50">
-          <div className="flex items-center justify-between text-2xl font-bold">
+        {/* Total y Acciones - Fijo en la parte inferior */}
+        <div className="border-t p-3 lg:p-6 space-y-2 lg:space-y-4 bg-gray-50 flex-shrink-0">
+          <div className="flex items-center justify-between text-lg lg:text-2xl font-bold">
             <span>Total:</span>
             <span className="text-primary">{formatCurrency(total)}</span>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1 lg:space-y-2">
             <Button
               onClick={handleFinalizeSale}
               disabled={items.length === 0 || isProcessing}
               size="lg"
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-6 text-lg"
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 lg:py-6 text-sm lg:text-lg"
             >
-              <DollarSign className="mr-2 h-6 w-6" />
-              Finalizar Venta (${total.toFixed(2)})
+              <DollarSign className="mr-1 lg:mr-2 h-4 w-4 lg:w-6 lg:h-6" />
+              Finalizar Venta
             </Button>
             <Button
               onClick={clearCart}
               variant="outline"
               disabled={items.length === 0}
-              className="w-full"
+              className="w-full text-xs lg:text-base py-2 lg:py-3"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Limpiar Carrito
+              <Trash2 className="mr-1 lg:mr-2 h-3 w-3 lg:w-4 lg:h-4" />
+              Limpiar
+            </Button>
+            <Button
+              onClick={handleOpenCashDrawer}
+              variant="outline"
+              className="w-full bg-blue-50 hover:bg-blue-100 border-blue-200 text-xs lg:text-base py-2 lg:py-3"
+            >
+              <Wallet className="mr-1 lg:mr-2 h-3 w-3 lg:w-4 lg:h-4" />
+              Caja
             </Button>
           </div>
         </div>

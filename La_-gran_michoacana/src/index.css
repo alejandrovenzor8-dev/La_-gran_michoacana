@@ -115,6 +115,21 @@
     animation-delay: 2s;
   }
 }
+
+/* ============================================================
+   MODO SIN ANIMACIONES PARA SISTEMAS 32-BIT
+   Desactiva todas las animaciones para optimizar rendimiento
+============================================================ */
+html.no-animations * {
+  animation: none !important;
+  transition: none !important;
+}
+
+html.no-animations,
+html.no-animations body {
+  scroll-behavior: auto !important;
+}
+
 /* Estilos para scroll en pantalla del cliente */
 .customer-scroll {
   scrollbar-width: thick !important;

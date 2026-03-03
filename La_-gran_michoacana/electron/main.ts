@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { printTicket, TicketData } from './printer';
+import { openCashDrawer, detectCashDrawerPort } from './cashDrawer';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 
@@ -44,7 +45,7 @@ function setupAutoUpdater() {
   // Esto evita problemas con la API de GitHub y funciona con repos públicos
   autoUpdater.setFeedURL({
     provider: 'generic',
-    url: 'https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/latest/download',
+    url: 'https://raw.githubusercontent.com/alejandrovenzor8-dev/La_-gran_michoacana/main/La_-gran_michoacana/release',
     useMultipleRangeRequest: false
   });
 
@@ -421,6 +422,37 @@ ipcMain.handle('print-ticket', async (event, ticketData: TicketData) => {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+// ============================================================
+// CAJA REGISTRADORA
+// ============================================================
+
+// IPC Handler para abrir caja registradora
+ipcMain.handle('cashDrawer:open', async (event, portConfig?: { port: string }) => {
+  try {
+    // Si no se especifica puerto, intentar detectarlo automáticamente
+    let port = portConfig?.port;
+    
+    if (!port) {
+      port = await detectCashDrawerPort();
+    }
+    
+    if (!port) {
+      return {
+        success: false,
+        message: 'No se encontró puerto serial disponible. Verifica que la caja registradora esté conectada.',
+      };
+    }
+    
+    const result = await openCashDrawer({ port, baudRate: 9600 });
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Error al abrir la caja registradora',
     };
   }
 });

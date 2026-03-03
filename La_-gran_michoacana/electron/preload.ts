@@ -64,6 +64,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke('print-ticket', ticketData);
   },
 
+  // Abrir caja registradora
+  openCashDrawer: async (portConfig?: { port: string }) => {
+    return await ipcRenderer.invoke('cashDrawer:open', portConfig);
+  },
+
   // Cerrar la aplicación completamente
   closeApp: () => {
     ipcRenderer.send('app:close');
@@ -158,6 +163,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-not-available', listener);
     return () => ipcRenderer.removeListener('update-not-available', listener);
   },
+
+  // ============================================================
+  // INFORMACIÓN DEL SISTEMA
+  // ============================================================
+  
+  // Obtener arquitectura del sistema (ia32 o x64)
+  getSystemArchitecture: () => {
+    return process.arch;
+  },
+
+  // Verificar si es sistema 32-bit
+  is32Bit: () => {
+    return process.arch === 'ia32';
+  },
+
+  // Verificar si es sistema 64-bit
+  is64Bit: () => {
+    return process.arch === 'x64';
+  },
 });
 
 // Type definitions para TypeScript
@@ -187,6 +211,11 @@ export interface ElectronAPI {
   
   // Gestión de activos
   getLogoPath: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  
+  // Sistema
+  getSystemArchitecture: () => string;
+  is32Bit: () => boolean;
+  is64Bit: () => boolean;
 }
 
 declare global {

@@ -33,6 +33,13 @@ function App() {
     }
   }, [user, initializeUserPermissions]);
 
+  // Detectar si es sistema 32-bit y aplicar estilos sin animaciones
+  useEffect(() => {
+    if (window.electronAPI?.is32Bit?.()) {
+      document.documentElement.classList.add('no-animations');
+    }
+  }, []);
+
   return (
     <HashRouter>
       <Routes>
