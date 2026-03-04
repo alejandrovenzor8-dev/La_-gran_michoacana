@@ -46,6 +46,15 @@ export default function SettingsPage() {
     detectSystemResources 
   } = usePerformanceStore();
 
+  // Estados para impresoras
+  const [printers, setPrinters] = useState<Array<{ name: string; displayName: string; isDefault: boolean }>>([]);
+  const [selectedPrinter, setSelectedPrinter] = useState<string>('');
+  const [loadingPrinters, setLoadingPrinters] = useState(true);
+  const [loadingSavedPrinter, setLoadingSavedPrinter] = useState(false);
+  const [savingPrinter, setSavingPrinter] = useState(false);
+  const [printerMessage, setPrinterMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [hasSavedPrinter, setHasSavedPrinter] = useState(false);
+
   // Estados para cambio de contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -64,6 +73,114 @@ export default function SettingsPage() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
+
+  // Cargar impresoras disponibles
+  useEffect(() => {
+    const loadPrinters = async () => {
+      try {
+        // Validar que existe la API de Electron
+        if (typeof window === 'undefined' || !window.electronAPI?.getPrinters) {
+          setLoadingPrinters(false);
+          return;
+        }
+
+        // Validar que el usuario tiene una sucursal asignada
+        if (!user?.branchId || user.branchId < 1) {
+          setLoadingPrinters(false);
+          setSelectedPrinter('');
+          setHasSavedPrinter(false);
+          return;
+        }
+
+        // Cargar lista de impresoras del sistema
+        let printersList: Array<{ name: string; displayName: string; isDefault: boolean }> = [];
+        try {
+          printersList = await window.electronAPI.getPrinters();
+          
+          // Validar que es un array válido
+          if (!Array.isArray(printersList)) {
+            console.warn('getPrinters() no retornó un array válido');
+            printersList = [];
+          }
+        } catch (systemError) {
+          console.error('Error obteniendo impresoras del sistema:', systemError);
+          setPrinterMessage({
+            type: 'error',
+            text: 'No se pudieron detectar las impresoras del sistema'
+          });
+          printersList = [];
+        }
+
+        setPrinters(printersList || []);
+
+        // Cargar impresora guardada si existe
+        if (printersList && printersList.length > 0) {
+          setLoadingSavedPrinter(true);
+          try {
+            const savedPrinter = await window.electronAPI.getSavedPrinter(user.branchId);
+
+            // Validar respuesta
+            if (
+              savedPrinter &&
+              typeof savedPrinter === 'object' &&
+              'printerName' in savedPrinter &&
+              savedPrinter.printerName
+            ) {
+              // Verificar que la impresora guardada existe en la lista
+              const printerExists = printersList.some(
+                p => p.name === savedPrinter.printerName
+              );
+
+              if (printerExists) {
+                setSelectedPrinter(String(savedPrinter.printerName));
+                setHasSavedPrinter(true);
+              } else {
+                // Impresora guardada no existe en el sistema actual
+                console.warn(
+                  `Impresora guardada "${savedPrinter.printerName}" no encontrada en el sistema`
+                );
+                setSelectedPrinter('');
+                setHasSavedPrinter(false);
+              }
+            } else {
+              // No hay impresora guardada
+              setSelectedPrinter('');
+              setHasSavedPrinter(false);
+            }
+          } catch (savedError) {
+            // Error cargando impresora guardada (probablemente null en BD)
+            console.info('No hay impresora guardada para esta sucursal:', savedError);
+            setSelectedPrinter('');
+            setHasSavedPrinter(false);
+          } finally {
+            setLoadingSavedPrinter(false);
+          }
+        } else {
+          setSelectedPrinter('');
+          setHasSavedPrinter(false);
+          setLoadingSavedPrinter(false);
+        }
+      } catch (error) {
+        console.error('Error en loadPrinters:', error);
+        setPrinterMessage({
+          type: 'error',
+          text: 'Error al cargar la configuración de impresoras'
+        });
+        setPrinters([]);
+        setSelectedPrinter('');
+        setHasSavedPrinter(false);
+      } finally {
+        setLoadingPrinters(false);
+      }
+    };
+
+    // Solo cargar si el usuario está disponible
+    if (user?.branchId) {
+      loadPrinters();
+    } else {
+      setLoadingPrinters(false);
+    }
+  }, [user?.branchId]);
 
   // Actualizar la hora cada segundo para mostrar el preview
   useEffect(() => {
@@ -221,6 +338,71 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSavePrinter = async () => {
+    // Validaciones
+    if (!selectedPrinter || typeof selectedPrinter !== 'string' || selectedPrinter.trim() === '') {
+      setPrinterMessage({ type: 'error', text: 'Selecciona una impresora válida' });
+      return;
+    }
+
+    if (!user?.branchId || user.branchId < 1) {
+      setPrinterMessage({ type: 'error', text: 'Usuario sin sucursal asignada' });
+      return;
+    }
+
+    // Verificar que la impresora seleccionada existe en la lista
+    const selectedPrinterExists = printers.some(p => p.name === selectedPrinter);
+    if (!selectedPrinterExists) {
+      setPrinterMessage({ type: 'error', text: 'La impresora seleccionada no existe' });
+      return;
+    }
+
+    setSavingPrinter(true);
+    setPrinterMessage(null);
+
+    try {
+      // Validar que existe la API de Electron
+      if (!window.electronAPI?.savePrinter) {
+        throw new Error('API de Electron no disponible');
+      }
+
+      const result = await window.electronAPI.savePrinter(selectedPrinter, user.branchId);
+
+      // Validar respuesta
+      if (!result || typeof result !== 'object') {
+        throw new Error('Respuesta inválida del servidor');
+      }
+
+      if (result.success === true) {
+        setHasSavedPrinter(true);
+        setPrinterMessage({
+          type: 'success',
+          text: `✓ Impresora guardada: ${selectedPrinter}`
+        });
+        
+        // Limpiar mensaje después de 4 segundos
+        setTimeout(() => setPrinterMessage(null), 4000);
+      } else {
+        const errorMsg = result.error || 'Error desconocido al guardar la impresora';
+        setPrinterMessage({
+          type: 'error',
+          text: `✗ ${errorMsg}`
+        });
+      }
+    } catch (error) {
+      console.error('Error guardando impresora:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error al guardar la impresora';
+      
+      setPrinterMessage({
+        type: 'error',
+        text: `✗ ${errorMessage}`
+      });
+    } finally {
+      setSavingPrinter(false);
+    }
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
@@ -330,6 +512,124 @@ export default function SettingsPage() {
                     <p>• {user ? 'Guardado en tu cuenta' : 'Solo en este navegador'}</p>
                   )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Configuración de Impresoras */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <h3 className="text-lg md:text-xl font-semibold text-gray-800">🖨️ Impresoras</h3>
+                {loadingSavedPrinter && (
+                  <span className="text-xs text-gray-500 animate-pulse">(cargando...)</span>
+                )}
+              </div>
+              <div className="space-y-4">
+                {loadingPrinters ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Detectando impresoras del sistema...</p>
+                    <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : printers.length > 0 ? (
+                  <>
+                    {/* Info de impresora guardada */}
+                    {hasSavedPrinter && selectedPrinter && (
+                      <div className="bg-green-50 p-3 rounded-md border border-green-200">
+                        <p className="text-xs text-green-700 font-semibold">
+                          ✓ Impresora configurada para esta sucursal:
+                        </p>
+                        <p className="text-sm text-green-900 font-bold mt-1">
+                          {printers.find(p => p.name === selectedPrinter)?.displayName || selectedPrinter}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Selector de impresora */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">
+                        Selecciona una impresora {printers.length > 0 && `(${printers.length} disponible${printers.length !== 1 ? 's' : ''})`}
+                      </label>
+                      <select
+                        value={selectedPrinter || ''}
+                        onChange={(e) => {
+                          setSelectedPrinter(e.target.value);
+                          setPrinterMessage(null);
+                        }}
+                        disabled={savingPrinter || loadingSavedPrinter}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">-- Seleccionar impresora --</option>
+                        {printers.map((printer) => (
+                          <option key={printer.name} value={printer.name}>
+                            {printer.displayName}
+                            {printer.isDefault ? ' (predeterminada del sistema)' : ''}
+                            {selectedPrinter === printer.name ? ' ✓' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Vista previa de selección */}
+                    {selectedPrinter && (
+                      <div className="bg-blue-50 p-3 rounded-md border border-blue-200 text-xs text-blue-700">
+                        <strong>Seleccionada:</strong> {printers.find(p => p.name === selectedPrinter)?.displayName || selectedPrinter}
+                      </div>
+                    )}
+
+                    {/* Botón guardar */}
+                    <Button
+                      onClick={handleSavePrinter}
+                      disabled={savingPrinter || !selectedPrinter || loadingSavedPrinter}
+                      className="w-full"
+                    >
+                      {savingPrinter ? (
+                        <>
+                          <span className="animate-spin mr-2">⏳</span>
+                          Guardando configuración...
+                        </>
+                      ) : hasSavedPrinter && selectedPrinter === (printers.find(p => p.name === selectedPrinter)?.name) ? (
+                        '✓ Impresora Configurada'
+                      ) : (
+                        '💾 Guardar Impresora'
+                      )}
+                    </Button>
+
+                    {/* Mensajes */}
+                    {printerMessage && (
+                      <div
+                        className={`p-3 rounded-md text-sm ${
+                          printerMessage.type === 'success'
+                            ? 'bg-green-100 text-green-800 border border-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300'
+                        }`}
+                      >
+                        {printerMessage.text}
+                      </div>
+                    )}
+
+                    {/* Instrucciones */}
+                    {!hasSavedPrinter && (
+                      <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+                        📌 Selecciona una impresora y haz clic en "Guardar" para configurarla como predeterminada en esta sucursal.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600">
+                      ⚠️ No hay impresoras disponibles en tu sistema
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Verifica que:
+                    </p>
+                    <ul className="text-xs text-gray-500 space-y-1 ml-4">
+                      <li>• Hay impresoras conectadas a tu equipo</li>
+                      <li>• Los drivers están instalados correctamente</li>
+                      <li>• Recarga la página para reintentar la detección</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -7,9 +7,6 @@ import { AppError } from '../middlewares/errorHandler.js';
 
 const router = Router();
 
-// Middleware de autenticación para todas las rutas
-router.use(authenticateToken);
-
 /**
  * PUT /api/settings/timezone
  * Actualiza la zona horaria para TODOS los usuarios del sistema
@@ -17,6 +14,7 @@ router.use(authenticateToken);
  */
 router.put(
   '/timezone',
+  authenticateToken,
   asyncHandler(async (req, res) => {
     try {
       // Verificar que el usuario es admin
@@ -59,6 +57,104 @@ router.put(
       logger.error('Error actualizando zona horaria global:', error);
       throw error;
     }
+  })
+);
+
+/**
+ * PUT /api/settings/printer/:branchId
+ * Guarda la impresora por defecto para una sucursal
+ * No requiere autenticación (acceso público para Electron)
+ */
+router.put(
+  '/printer/:branchId',
+  asyncHandler(async (req, res) => {
+    const { branchId } = req.params;
+    const { printerName } = req.body;
+
+    if (!branchId || isNaN(Number(branchId))) {
+      throw new AppError('ID de sucursal inválido', 400);
+    }
+
+    if (!printerName || typeof printerName !== 'string') {
+      throw new AppError('Nombre de impresora es requerido', 400);
+    }
+
+    logger.info('Guardando impresora para sucursal', { 
+      branchId: Number(branchId),
+      printerName 
+    });
+
+    // Verificar que la sucursal existe
+    const branch = await prisma.branch.findUnique({
+      where: { id: Number(branchId) },
+    });
+
+    if (!branch) {
+      throw new AppError('Sucursal no encontrada', 404);
+    }
+
+    // Actualizar la impresora de la sucursal
+    const updatedBranch = await prisma.branch.update({
+      where: { id: Number(branchId) },
+      data: { defaultPrinter: printerName },
+    });
+
+    logger.info('Impresora guardada exitosamente', { 
+      branchId: Number(branchId),
+      printerName 
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Impresora guardada exitosamente',
+      data: {
+        branchId: updatedBranch.id,
+        printerName: updatedBranch.defaultPrinter,
+      },
+    });
+  })
+);
+
+/**
+ * GET /api/settings/printer/:branchId
+ * Obtiene la impresora por defecto para una sucursal
+ * No requiere autenticación (acceso público para Electron)
+ */
+router.get(
+  '/printer/:branchId',
+  asyncHandler(async (req, res) => {
+    const { branchId } = req.params;
+
+    if (!branchId || isNaN(Number(branchId))) {
+      throw new AppError('ID de sucursal inválido', 400);
+    }
+
+    logger.info('Obteniendo impresora para sucursal', { 
+      branchId: Number(branchId)
+    });
+
+    // Obtener la sucursal y su impresora
+    const branch = await prisma.branch.findUnique({
+      where: { id: Number(branchId) },
+      select: { id: true, defaultPrinter: true },
+    });
+
+    if (!branch) {
+      throw new AppError('Sucursal no encontrada', 404);
+    }
+
+    logger.info('Impresora obtenida exitosamente', { 
+      branchId: Number(branchId),
+      printerName: branch.defaultPrinter
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        branchId: branch.id,
+        printerName: branch.defaultPrinter || null,
+      },
+    });
   })
 );
 

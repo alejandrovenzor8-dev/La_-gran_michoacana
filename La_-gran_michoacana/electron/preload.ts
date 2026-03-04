@@ -177,6 +177,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadPerformanceConfig: async () => {
     return await ipcRenderer.invoke('system:loadPerformanceConfig');
   },
+
+  // ============================================================
+  // FUNCIONES DE IMPRESORAS
+  // ============================================================
+  
+  // Obtener lista de impresoras disponibles
+  getPrinters: async () => {
+    return await ipcRenderer.invoke('printers:list');
+  },
+  
+  // Guardar impresora seleccionada
+  savePrinter: async (printerName: string, branchId: number) => {
+    return await ipcRenderer.invoke('printer:save', printerName, branchId);
+  },
+  
+  // Obtener impresora guardada
+  getSavedPrinter: async (branchId: number) => {
+    return await ipcRenderer.invoke('printer:get', branchId);
+  },
 });
 
 // Type definitions para TypeScript
@@ -226,6 +245,11 @@ export interface ElectronAPI {
   }>;
   savePerformanceConfig: (config: { useBasicMode: boolean }) => Promise<{ success: boolean; error?: string }>;
   loadPerformanceConfig: () => Promise<{ success: boolean; config?: { useBasicMode: boolean } | null; error?: string }>;
+  
+  // Impresoras
+  getPrinters: () => Promise<Array<{ name: string; displayName: string; isDefault: boolean }>>;
+  savePrinter: (printerName: string, branchId: number) => Promise<{ success: boolean; error?: string }>;
+  getSavedPrinter: (branchId: number) => Promise<{ printerName: string | null }>;
 }
 
 declare global {

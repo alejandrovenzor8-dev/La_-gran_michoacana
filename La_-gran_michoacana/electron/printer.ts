@@ -18,160 +18,251 @@ export interface TicketData {
   cashier: string;
   date: string;
   notes?: string;
+  branchName?: string;
+  printerName?: string;
 }
 
 function generateTicketHTML(data: TicketData): string {
-  const baseStyles = `
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    max-width: 300px;
-    margin: 0 auto;
-    line-height: 1.4;
-  `;
+  console.log('📝 Datos del ticket recibidos:', {
+    subtotal: data.subtotal,
+    total: data.total,
+    tax: data.tax,
+    amountReceived: data.amountReceived,
+    change: data.change
+  });
 
-  const headerStyles = `${baseStyles} text-align: center; font-weight: bold;`;
-  const leftAlignStyles = `${baseStyles} text-align: left;`;
-  const centerStyles = `${baseStyles} text-align: center;`;
-  const separatorLine = '----------------------------';
+  const subtotal = Number(data.subtotal || 0);
+  const total = Number(data.total || 0);
+  const tax = Number(data.tax || 0);
+  const amountReceived = Number(data.amountReceived || 0);
+  const change = Number(data.change || 0);
 
-  // Convertir precios a números si son strings
+  console.log('📝 Valores convertidos a números:', {
+    subtotal,
+    total,
+    tax,
+    amountReceived,
+    change
+  });
+
   const itemsHTML = data.items
-    .map(
-      (item) => {
-        const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-        const subtotal = typeof item.subtotal === 'string' ? parseFloat(item.subtotal) : item.subtotal;
-        
-        return `<div style="${leftAlignStyles}">
-          ${item.name.padEnd(15)} ${item.quantity.toString().padStart(3)}x $${price.toFixed(2).padStart(7)} $${subtotal.toFixed(2).padStart(7)}
-        </div>`;
-      }
-    )
+    .map((item) => {
+      const price = Number(item.price || 0);
+      const lineSubtotal = Number(item.subtotal || 0);
+      return `<b>${item.name}</b><br>${item.quantity} x $${price.toFixed(2)} = $${lineSubtotal.toFixed(2)}<br><br>`;
+    })
     .join('');
 
-  const taxLine = data.tax
-    ? `<div style="${centerStyles}">IVA: $${(typeof data.tax === 'string' ? parseFloat(data.tax) : data.tax).toFixed(2)}</div>`
+  const paymentInfo = data.paymentMethod === 'EFECTIVO' 
+    ? `Recibido: $${amountReceived.toFixed(2)}<br>Cambio: $${change.toFixed(2)}<br>`
     : '';
 
-  const paymentDetails =
-    data.paymentMethod === 'EFECTIVO'
-      ? `<div style="${leftAlignStyles}">Recibido: $${(typeof data.amountReceived === 'string' ? parseFloat(data.amountReceived) : data.amountReceived).toFixed(2)}</div>
-         <div style="${leftAlignStyles}">Cambio: $${(typeof data.change === 'string' ? parseFloat(data.change) : data.change).toFixed(2)}</div>`
-      : '';
-
-  const notesLine = data.notes
-    ? `<div style="${centerStyles}">Notas: ${data.notes}</div>`
-    : '';
-
-  const html = `
+  return `
     <!DOCTYPE html>
     <html>
       <head>
-        <meta charset="UTF-8">
-        <title>Ticket de Venta</title>
+        <meta charset="UTF-8" />
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+          body {
+            font-family: monospace;
+            font-size: 13px;
+            width: 260px;
+            margin: 0;
+            padding: 6px;
+            line-height: 1.4;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .line { border-top: 1px dashed black; margin: 8px 0; }
+          .small { font-size: 11px; }
+          b { font-weight: bold; }
+        </style>
       </head>
-      <body style="margin: 0; padding: 10px;">
-        <div style="${headerStyles}">
-          🍦 La Michoacana
-        </div>
-        <div style="${centerStyles}">
-          La Gran Michoacana
+      <body>
+        <div class="center bold" style="font-size: 15px;">LA GRAN</div>
+        <div class="center bold" style="font-size: 15px;">MICHOACANA</div>
+        <div class="center small">Ticket de Venta</div>
+        <div class="line"></div>
+        
+        <div class="small">
+          Folio: ${data.saleId}<br>
+          Fecha: ${data.date}<br>
+          Cajero: ${data.cashier}<br>
+          ${data.branchName ? `Sucursal: ${data.branchName}<br>` : ''}
+          Pago: ${data.paymentMethod}
         </div>
         
-        <div style="${centerStyles}">
-          Av. Principal #123
-          <br>
-          Tel: (123) 456-7890
-        </div>
-
-        <div style="${centerStyles}">
-          ${separatorLine}
-        </div>
-
-        <div style="${leftAlignStyles}">
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px;">
-            <span>Producto</span>
-            <span>Cant</span>
-            <span>Precio</span>
-            <span>Subtotal</span>
-          </div>
-        </div>
-
-        <div style="${centerStyles}">
-          ${separatorLine}
-        </div>
-
+        <div class="line"></div>
+        
         ${itemsHTML}
-
-        <div style="${centerStyles}">
-          ${separatorLine}
+        
+        <div class="line"></div>
+        
+        <b>Subtotal: $${subtotal.toFixed(2)}</b><br>
+        <b>Impuesto: $${tax.toFixed(2)}</b><br>
+        <b style="font-size: 16px;">TOTAL: $${total.toFixed(2)}</b><br>
+        ${paymentInfo}
+        
+        ${data.notes ? `<div class="line"></div>${data.notes}<br>` : ''}
+        
+        <div class="line"></div>
+        
+        <div class="center small">
+          Gracias por su compra<br>
+          Conserve su ticket
         </div>
-
-        <div style="${centerStyles}; font-weight: bold;">
-          Subtotal: $${(typeof data.subtotal === 'string' ? parseFloat(data.subtotal) : data.subtotal).toFixed(2)}
-        </div>
-        ${taxLine}
-        <div style="${centerStyles}; font-weight: bold; font-size: 14px;">
-          TOTAL: $${(typeof data.total === 'string' ? parseFloat(data.total) : data.total).toFixed(2)}
-        </div>
-
-        <div style="${centerStyles}">
-          Método de Pago: ${data.paymentMethod}
-        </div>
-        ${paymentDetails}
-
-        <div style="${centerStyles}">
-          ${separatorLine}
-        </div>
-
-        <div style="${centerStyles}; font-style: italic;">
-          ¡Gracias por su compra!
-        </div>
-
-        <div style="${centerStyles}">
-          ${data.date}
-        </div>
-
-        <div style="${centerStyles}">
-          Cajero: ${data.cashier}
-        </div>
-
-        <div style="${centerStyles}">
-          Folio: ${data.saleId}
-        </div>
-
-        ${notesLine}
       </body>
     </html>
   `;
+}
 
-  return html;
+async function nativeElectronPrintTicket(
+  ticketHTML: string,
+  printerName?: string,
+  silent: boolean = true
+): Promise<void> {
+  const printWindow = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      sandbox: true,
+    },
+  });
+
+  try {
+    const encodedHtml = `data:text/html;charset=UTF-8,${encodeURIComponent(ticketHTML)}`;
+    await printWindow.loadURL(encodedHtml);
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Timeout en impresión nativa de Electron'));
+      }, 20000);
+
+      printWindow.webContents.print(
+        {
+          silent,
+          printBackground: true,
+          deviceName: printerName || undefined,
+          margins: { marginType: 'none' },
+        },
+        (success, failureReason) => {
+          clearTimeout(timeout);
+          if (success) {
+            resolve();
+          } else {
+            reject(new Error(failureReason || 'Fallo de impresión nativa'));
+          }
+        }
+      );
+    });
+  } finally {
+    if (!printWindow.isDestroyed()) {
+      printWindow.close();
+    }
+  }
 }
 
 export async function printTicket(
   mainWindow: BrowserWindow,
   ticketData: TicketData
 ): Promise<void> {
+  console.log('🖨️ printTicket llamado con:', JSON.stringify(ticketData, null, 2));
+  let lastError: unknown = null;
+
   try {
     const ticketHTML = generateTicketHTML(ticketData);
 
     const printData: any = [{
-      type: 'raw',
-      format: 'html',
+      type: 'html',
       value: ticketHTML,
     }];
 
-    const printOptions: any = {
-      preview: true, // true para testing/preview, false para producción
-      width: '80mm',
-      margin: '0 0 0 0',
-      copies: 1,
-      printerName: undefined, // Usa la impresora predeterminada
-      timeOutPerLine: 400,
-      silent: true, // Sin diálogo de impresión
-    };
+    const configuredPrinter = ticketData.printerName?.trim() || undefined;
 
-    await PosPrinter.print(printData, printOptions);
+    const attempts: any[] = [
+      {
+        preview: false,
+        width: '80mm',
+        margin: '0 0 0 0',
+        copies: 1,
+        printerName: configuredPrinter,
+        timeOutPerLine: 1200,
+        silent: true,
+      },
+      {
+        preview: false,
+        width: '80mm',
+        margin: '0 0 0 0',
+        copies: 1,
+        printerName: undefined,
+        timeOutPerLine: 1500,
+        silent: true,
+      },
+    ];
+
+    // Solo usar silent=false cuando sí tenemos nombre de impresora
+    if (configuredPrinter) {
+      attempts.push({
+        preview: false,
+        width: '80mm',
+        margin: '0 0 0 0',
+        copies: 1,
+        printerName: configuredPrinter,
+        timeOutPerLine: 1800,
+        silent: false,
+      });
+    }
+
+    for (const attemptOptions of attempts) {
+      try {
+        await PosPrinter.print(printData, attemptOptions);
+        return;
+      } catch (attemptError) {
+        lastError = attemptError;
+      }
+    }
+
+    // Fallback para impresoras térmicas genéricas (ej. POS-5890C)
+    try {
+      await nativeElectronPrintTicket(ticketHTML, configuredPrinter, true);
+      return;
+    } catch (nativeSilentError) {
+      lastError = nativeSilentError;
+    }
+
+    if (configuredPrinter) {
+      try {
+        await nativeElectronPrintTicket(ticketHTML, configuredPrinter, false);
+        return;
+      } catch (nativeDialogError) {
+        lastError = nativeDialogError;
+      }
+    }
+
+    throw lastError || new Error('No se pudo imprimir en ningún intento');
   } catch (error) {
-    throw new Error(`Error al imprimir ticket: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    let detailedError = 'Error desconocido';
+
+    if (error instanceof Error) {
+      detailedError = error.message;
+      if (error.stack) {
+        detailedError = `${error.message} | ${error.stack}`;
+      }
+    } else if (typeof error === 'string') {
+      detailedError = error;
+    } else {
+      try {
+        detailedError = JSON.stringify(error);
+      } catch (jsonError) {
+        detailedError = String(error);
+      }
+    }
+
+    throw new Error(`Error al imprimir ticket: ${detailedError}`);
   }
 }

@@ -53,6 +53,7 @@ model Branch {
   name                  String
   address               String?
   phone                 String?
+  defaultPrinter        String?               // Nombre de la impresora por defecto
   active                Boolean               @default(true)
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt

@@ -12,21 +12,31 @@ import { saleService } from '@/lib/saleService';
 import { useAuthStore } from '@/stores/authStore';
 import { usePerformanceStore } from '@/stores/performanceStore';
 import { eventBus } from '@/lib/eventBus';
-import { formatDate } from '@/lib/utils';
 
-// Type definition para window.api (Electron)
-declare global {
-  interface Window {
-    api?: {
-      printTicket: (ticketData: any) => Promise<{ success: boolean; error?: string }>;
-    }
-  }
+interface PosTicketData {
+  saleId: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+  }>;
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: 'EFECTIVO' | 'TARJETA' | 'MIXTO';
+  amountReceived: number;
+  change: number;
+  cashier: string;
+  date: string;
+  notes?: string;
+  branchName?: string;
 }
 
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onPaymentComplete: (sale: any) => void;
+  onPaymentComplete: (sale: any, ticketData: PosTicketData) => void;
   selectedBranchId?: number;
 }
 
@@ -127,6 +137,10 @@ export function PaymentDialog({
         : (user?.branchId ?? undefined);
 
       // Preparar datos de la venta
+      // Calcular IVA (16% incluido en el precio)
+      const calculatedSubtotal = total / 1.16;
+      const calculatedTax = total - calculatedSubtotal;
+
       const saleData = {
         items: items.map(item => ({
           productId: item.id,
@@ -141,7 +155,7 @@ export function PaymentDialog({
         amountReceived: paymentMethod === 'EFECTIVO' ? parseFloat(amountReceived) : undefined,
         changeAmount: paymentMethod === 'EFECTIVO' ? changeAmount : undefined,
         discount: 0,
-        tax: 0,
+        tax: calculatedTax,
         notes: notes.trim() || undefined,
         source: 'DESKTOP'
       };
@@ -187,50 +201,42 @@ export function PaymentDialog({
       }
 
       // Callback con la venta
-      onPaymentComplete(sale);
+      const resolvedBranchName = user?.role === 'ADMIN'
+        ? (selectedBranchId
+            ? localStorage.getItem('pos_branch_name') || 'Sucursal'
+            : 'Todas las sucursales')
+        : (user?.branch?.name || 'Sucursal');
+
+      const ticketData: PosTicketData = {
+        saleId: String(sale.id || ''),
+        items: items.map(item => {
+          const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+          return {
+            name: item.name,
+            quantity: item.quantity,
+            price,
+            subtotal: price * item.quantity,
+          };
+        }),
+        subtotal: calculatedSubtotal,
+        tax: calculatedTax,
+        total: total,
+        paymentMethod,
+        amountReceived: paymentMethod === 'EFECTIVO' ? parseFloat(amountReceived) : total,
+        change: changeAmount,
+        cashier: user?.name || user?.username || 'Cajero',
+        date: new Date().toLocaleString('es-MX'),
+        notes: notes || undefined,
+        branchName: resolvedBranchName,
+      };
+
+      onPaymentComplete(sale, ticketData);
 
       // Limpiar carrito
       clearCart();
 
       // Notificar que el carrito se limpió
       eventBus.emit('CART_CLEARED', {});
-
-      // Imprimir ticket
-      try {
-        const ticketData = {
-          saleId: String(sale.id || ''),
-          items: items.map(item => {
-            const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-            return {
-              name: item.name,
-              quantity: item.quantity,
-              price: price,
-              subtotal: price * item.quantity
-            };
-          }),
-          subtotal: total,
-          tax: 0, // Puedes calcular IVA si aplica: total * 0.16
-          total: total,
-          paymentMethod: paymentMethod,
-          amountReceived: paymentMethod === 'EFECTIVO' ? parseFloat(amountReceived) : total,
-          change: changeAmount,
-          cashier: user?.name || 'Cajero',
-          date: formatDate(new Date()),
-          notes: notes || undefined
-        };
-
-        // Verificar si window.api existe (Electron)
-        if (window.api && window.api.printTicket) {
-          const result = await window.api.printTicket(ticketData);
-          if (!result.success) {
-            toast.error('Ticket guardado pero no se pudo imprimir');
-          } else {
-            toast.success('Ticket impreso correctamente');
-          }
-        }
-      } catch (printError) {
-        // No bloquear el flujo si falla la impresión
-      }
 
       // Cerrar diálogo
       onClose();

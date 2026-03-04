@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign, Printer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { productService, Product } from '@/lib/productService';
 import { saleService, Sale, SaleItem } from '@/lib/saleService';
@@ -11,6 +11,27 @@ import { PaymentDialog } from '@/components/pos/PaymentDialog';
 import { eventBus } from '@/lib/eventBus';
 import { branchService } from '@/lib/branchService';
 import type { Branch } from '@/types/branch';
+
+interface LastTicketData {
+  saleId: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+  }>;
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: 'EFECTIVO' | 'TARJETA' | 'MIXTO';
+  amountReceived: number;
+  change: number;
+  cashier: string;
+  date: string;
+  notes?: string;
+  branchName?: string;
+  printerName?: string;
+}
 
 export default function POSPage() {
   const { items, total, addItem, removeItem, updateQuantity, clearCart } = useCartStore();
@@ -22,6 +43,7 @@ export default function POSPage() {
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [lastTicketData, setLastTicketData] = useState<LastTicketData | null>(null);
 
   const getAdminBranchName = () => {
     if (!selectedBranchId) return 'Todas las sucursales';
@@ -167,7 +189,48 @@ export default function POSPage() {
     setIsPaymentDialogOpen(true);
   };
 
-  const handlePaymentComplete = (sale: any) => {
+  const printTicketData = async (ticketData: LastTicketData) => {
+    console.log('🎫 [POSPage] Iniciando impresión del ticket:', ticketData);
+    
+    if (!window.electronAPI?.printTicket) {
+      alert('La impresión solo está disponible en la app de escritorio.');
+      return false;
+    }
+
+    let resolvedPrinterName = ticketData.printerName;
+
+    try {
+      const branchIdToUse = user?.role === 'ADMIN'
+        ? selectedBranchId
+        : (user?.branchId ?? undefined);
+
+      if (!resolvedPrinterName && branchIdToUse && window.electronAPI.getSavedPrinter) {
+        const savedPrinter = await window.electronAPI.getSavedPrinter(branchIdToUse);
+        if (savedPrinter?.printerName && typeof savedPrinter.printerName === 'string') {
+          resolvedPrinterName = savedPrinter.printerName;
+        }
+      }
+    } catch (error) {
+      // Si falla obtener impresora guardada, continuar con configuración por defecto del sistema
+    }
+
+    const payload: LastTicketData = {
+      ...ticketData,
+      printerName: resolvedPrinterName,
+    };
+
+    console.log('🎫 [POSPage] Payload a enviar:', payload);
+    const result = await window.electronAPI.printTicket(payload);
+    console.log('🎫 [POSPage] Resultado de impresión:', result);
+    if (!result?.success) {
+      alert(`No se pudo imprimir el ticket: ${result?.error || 'Error desconocido'}`);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handlePaymentComplete = async (sale: any, ticketData?: LastTicketData) => {
     // El PaymentDialog ya limpia el carrito
     // Aquí solo recargamos los productos para la siguiente venta
     loadProducts();
@@ -178,6 +241,55 @@ export default function POSPage() {
     if (window.electronAPI) {
       window.electronAPI.onCheckoutComplete?.();
     }
+
+    if (ticketData) {
+      const branchIdToUse = user?.role === 'ADMIN'
+        ? selectedBranchId
+        : (user?.branchId ?? undefined);
+
+      let enrichedTicket: LastTicketData = ticketData;
+
+      if (branchIdToUse && window.electronAPI?.getSavedPrinter) {
+        try {
+          const savedPrinter = await window.electronAPI.getSavedPrinter(branchIdToUse);
+          if (savedPrinter?.printerName && typeof savedPrinter.printerName === 'string') {
+            enrichedTicket = {
+              ...ticketData,
+              printerName: savedPrinter.printerName,
+            };
+          }
+        } catch (error) {
+          // Continuar aunque no se pueda resolver impresora guardada
+        }
+      }
+
+      setLastTicketData(enrichedTicket);
+      localStorage.setItem('last_pos_ticket', JSON.stringify(enrichedTicket));
+      await printTicketData(enrichedTicket);
+    }
+  };
+
+  const handlePrintLastTicket = async () => {
+    let ticket = lastTicketData;
+
+    if (!ticket) {
+      const storedTicket = localStorage.getItem('last_pos_ticket');
+      if (storedTicket) {
+        try {
+          ticket = JSON.parse(storedTicket) as LastTicketData;
+          setLastTicketData(ticket);
+        } catch (error) {
+          ticket = null;
+        }
+      }
+    }
+
+    if (!ticket) {
+      alert('No hay ticket reciente para imprimir.');
+      return;
+    }
+
+    await printTicketData(ticket);
   };
 
   const handleCheckout = async () => {
@@ -461,6 +573,14 @@ export default function POSPage() {
             >
               <Trash2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
               Limpiar Carrito
+            </Button>
+            <Button
+              onClick={handlePrintLastTicket}
+              variant="outline"
+              className="w-full text-xs md:text-sm lg:text-base"
+            >
+              <Printer className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              Imprimir Último Ticket
             </Button>
           </div>
         </div>

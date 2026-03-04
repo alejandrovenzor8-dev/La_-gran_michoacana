@@ -1,9 +1,13 @@
-import { app, BrowserWindow, screen, ipcMain, session } from 'electron';
+import { app, BrowserWindow, screen, ipcMain, session, systemPreferences } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import http from 'http';
+import https from 'https';
 import os from 'os';
+import { URL } from 'url';
 import { printTicket, TicketData } from './printer';
+import { openCashDrawer, detectCashDrawerPort } from './cashDrawer';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 
@@ -43,9 +47,12 @@ function setupAutoUpdater() {
 
   // Configurar para descargar desde GitHub releases usando URL genérica
   // Esto evita problemas con la API de GitHub y funciona con repos públicos
+  const feedUrl = 'https://raw.githubusercontent.com/alejandrovenzor8-dev/La_-gran_michoacana/main/La_-gran_michoacana/release';
+  log.info(`🔄 Configurando auto-updater con URL: ${feedUrl}`);
+  
   autoUpdater.setFeedURL({
     provider: 'generic',
-    url: 'https://github.com/alejandrovenzor8-dev/La_-gran_michoacana/releases/latest/download',
+    url: feedUrl,
     useMultipleRangeRequest: false
   });
 
@@ -57,24 +64,25 @@ function setupAutoUpdater() {
   
   // Verificar actualizaciones al iniciar (después de 3 segundos)
   setTimeout(() => {
-    log.info('Verificando actualizaciones...');
+    log.info('⏰ Iniciando verificación de actualizaciones...');
     autoUpdater.checkForUpdates();
   }, 3000);
 
   // Verificar actualizaciones cada 4 horas
   setInterval(() => {
-    log.info('Verificación periódica de actualizaciones');
+    log.info('⏰ Verificación periódica de actualizaciones');
     autoUpdater.checkForUpdates();
   }, 4 * 60 * 60 * 1000);
 
   // Eventos del auto-updater
   autoUpdater.on('checking-for-update', () => {
-    log.info('Buscando actualizaciones...');
+    log.info('🔍 Buscando actualizaciones en:', feedUrl);
     sendUpdateStatusToWindows('checking');
   });
 
   autoUpdater.on('update-available', (info: any) => {
-    log.info('Actualización disponible:', info.version);
+    log.info('✅ Actualización disponible:', info.version);
+    log.info('📜 Release notes:', info.releaseNotes);
     sendUpdateStatusToWindows('available', info);
     
     // Enviar evento específico a todas las ventanas
@@ -90,7 +98,7 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('update-not-available', (info: any) => {
-    log.info('Sistema actualizado:', info.version);
+    log.info('✔️ Sistema actualizado - Versión actual:', info.version);
     sendUpdateStatusToWindows('not-available', info);
     
     // Enviar evento específico a todas las ventanas
@@ -103,12 +111,15 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('error', (err: Error) => {
-    log.error('Error en actualización:', err);
+    log.error('❌ Error en actualización:', err.message);
+    log.error('Stack:', err.stack);
+    
     // Si es 404, el servidor no tiene releases aún → tratar como no disponible
     if (err.message.includes('404') || err.message.includes('ERR_CONNECTION_REFUSED')) {
-      log.info('Servidor de actualizaciones no disponible (404), omitiendo...');
+      log.warn('⚠️ Servidor de actualizaciones no disponible (404 o conexión rechazada), omitiendo...');
       return;
     }
+    
     sendUpdateStatusToWindows('error', { message: err.message });
     
     // Enviar evento específico de error a todas las ventanas
@@ -197,20 +208,14 @@ function createLoginWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
   
-  // Adaptarse a la resolución de la pantalla, con soporte para 1024x768
-  const windowWidth = Math.max(1024, Math.min(primaryDisplay.bounds.width, 1920));
-  const windowHeight = Math.max(768, Math.min(primaryDisplay.bounds.height, 1080));
-  
   loginWindow = new BrowserWindow({
     x: primaryDisplay.bounds.x,
     y: primaryDisplay.bounds.y,
-    width: windowWidth,
-    height: windowHeight,
-    minWidth: 1024,
-    minHeight: 768,
+    width: primaryDisplay.bounds.width,
+    height: primaryDisplay.bounds.height,
     title: 'La Michoacana POS - Login',
     resizable: true,
-    fullscreen: true, // Abrir en pantalla completa
+    fullscreen: true,
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
@@ -235,20 +240,12 @@ function createLoginWindow() {
 
 function createMainWindow() {
   const iconPath = isDev ? path.join(__dirname, '../public/app-icon.png') : path.join(app.getAppPath(), 'app-icon.png');
-  const primaryDisplay = screen.getPrimaryDisplay();
-  
-  // Adaptarse a la resolución de la pantalla, con soporte para 1024x768
-  const windowWidth = Math.max(1024, Math.min(primaryDisplay.bounds.width, 1920));
-  const windowHeight = Math.max(768, Math.min(primaryDisplay.bounds.height, 1080));
   
   mainWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
-    minWidth: 1024,
-    minHeight: 768,
+    width: 1280,
+    height: 1024,
     title: 'La Gran Michoacana POS - Cajero',
-    resizable: true,
-    fullscreen: true, // Abrir en pantalla completa
+    fullscreen: true,
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
@@ -290,14 +287,11 @@ function createCustomerDisplay() {
   } else {
     // Abrir en la misma pantalla pero desplazado
     const primaryDisplay = screen.getPrimaryDisplay();
-    // Adaptar tamaño para resoluciones pequeñas
-    const customerWidth = Math.min(800, primaryDisplay.bounds.width - 100);
-    const customerHeight = Math.min(600, primaryDisplay.bounds.height - 100);
     displayBounds = {
       x: primaryDisplay.bounds.x + 50,
       y: primaryDisplay.bounds.y + 50,
-      width: customerWidth,
-      height: customerHeight,
+      width: 1280,
+      height: 720,
     };
   }
 
@@ -308,11 +302,8 @@ function createCustomerDisplay() {
     y: displayBounds.y,
     width: displayBounds.width,
     height: displayBounds.height,
-    minWidth: 640,
-    minHeight: 480,
     title: 'La Gran Michoacana - Pantalla Cliente',
-    resizable: true,
-    fullscreen: false, // No forzar fullscreen para mayor flexibilidad
+    fullscreen: !!externalDisplay,
     frame: !externalDisplay, // Con frame si es misma pantalla, sin frame si es externo
     alwaysOnTop: false,
     icon: iconPath,
@@ -372,7 +363,7 @@ ipcMain.handle('login:success', () => {
   
   // Crear las dos ventanas principales
   createMainWindow();
-  createCustomerDisplay();
+  //createCustomerDisplay();
   
   return { success: true };
 });
@@ -431,17 +422,105 @@ ipcMain.handle('logout', async () => {
 
 // IPC Handler para imprimir ticket
 ipcMain.handle('print-ticket', async (event, ticketData: TicketData) => {
+  console.log('🎫 [IPC Handler] Recibido print-ticket:', ticketData);
   try {
     const window = BrowserWindow.getFocusedWindow();
     if (!window) {
       throw new Error('No hay ventana activa');
     }
+    console.log('🎫 [IPC Handler] Llamando a printTicket...');
     await printTicket(window, ticketData);
+    console.log('🎫 [IPC Handler] Impresión exitosa');
+    return { success: true };
+  } catch (error) {
+    console.error('🎫 [IPC Handler] Error en impresión:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+// ============================================================
+// GESTIÓN DE IMPRESORAS
+// ============================================================
+
+// IPC Handler para obtener impresora predefinida
+ipcMain.handle('printers:getDefault', async (event) => {
+  try {
+    const printerName = loadPrinterConfig();
+    return { printerName: printerName || null };
+  } catch (error) {
+    return { error: 'Error al obtener impresora predefinida' };
+  }
+});
+
+// IPC Handler para establecer impresora predefinida
+ipcMain.handle('printers:setDefault', async (event, printerName: string) => {
+  try {
+    // Guardar usando localStorage de Electron (en la app data)
+    const appPath = app.getPath('userData');
+    const configPath = path.join(appPath, 'printer-config.json');
+    
+    const config = {
+      defaultPrinter: printerName,
+      savedAt: new Date().toISOString(),
+    };
+    
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     return { success: true };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido',
+      error: error instanceof Error ? error.message : 'Error al guardar impresora',
+    };
+  }
+});
+
+// Cargar configuración de impresora al iniciar
+function loadPrinterConfig() {
+  try {
+    const appPath = app.getPath('userData');
+    const configPath = path.join(appPath, 'printer-config.json');
+    
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      return config.defaultPrinter;
+    }
+  } catch (error) {
+    console.error('Error al cargar configuración de impresora:', error);
+  }
+  return null;
+}
+
+
+// ============================================================
+// CAJA REGISTRADORA
+// ============================================================
+
+// IPC Handler para abrir caja registradora
+ipcMain.handle('cashDrawer:open', async (event, portConfig?: { port: string }) => {
+  try {
+    // Si no se especifica puerto, intentar detectarlo automáticamente
+    let port = portConfig?.port;
+    
+    if (!port) {
+      port = await detectCashDrawerPort();
+    }
+    
+    if (!port) {
+      return {
+        success: false,
+        message: 'No se encontró puerto serial disponible. Verifica que la caja registradora esté conectada.',
+      };
+    }
+    
+    const result = await openCashDrawer({ port, baudRate: 9600 });
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Error al abrir la caja registradora',
     };
   }
 });
@@ -564,48 +643,32 @@ ipcMain.handle('image:getPath', async (event, relativePath: string) => {
 });
 
 /**
- * Obtiene la ruta del logo como data URL (base64)
+ * Obtiene el logo como data URL para evitar bloqueos de file:// en renderer
  */
 ipcMain.handle('asset:getLogoPath', async (event) => {
   try {
-    let logoPath: string;
-    
-    if (isDev) {
-      // En desarrollo, el logo está en public/
-      logoPath = path.join(__dirname, '../public/logo.png');
-    } else {
-      // En producción, el logo está en dist/
-      const appPath = app.getAppPath(); 
-      logoPath = path.join(appPath, 'dist', 'logo.png');
+    const appPath = app.getAppPath();
+    const possibleLogoPaths = [
+      path.join(appPath, 'dist', 'logo.png'),
+      path.join(appPath, 'public', 'logo.png'),
+      path.join(process.cwd(), 'dist', 'logo.png'),
+      path.join(process.cwd(), 'public', 'logo.png'),
+    ];
+
+    const logoPath = possibleLogoPaths.find((candidate) => fs.existsSync(candidate));
+
+    if (!logoPath) {
+      log.warn('Logo no encontrado en rutas conocidas', { possibleLogoPaths });
+      return {
+        success: false,
+        error: 'Logo no encontrado',
+      };
     }
-    
-    // Verificar si el archivo existe
-    if (!fs.existsSync(logoPath)) {
-      log.warn('Logo no encontrado en:', logoPath);
-      // Intentar ruta alternativa en desarrollo
-      if (isDev) {
-        const altPath = path.join(process.cwd(), 'public/logo.png');
-        if (fs.existsSync(altPath)) {
-          logoPath = altPath;
-        } else {
-          return {
-            success: false,
-            error: 'Logo no encontrado',
-          };
-        }
-      } else {
-        return {
-          success: false,
-          error: 'Logo no encontrado',
-        };
-      }
-    }
-    
-    // Leer el archivo como buffer y convertir a base64
+
     const imageBuffer = fs.readFileSync(logoPath);
-    const base64Image = imageBuffer.toString('base64');
-    const dataUrl = `data:image/png;base64,${base64Image}`;
-    
+    const mimeType = path.extname(logoPath).toLowerCase() === '.png' ? 'image/png' : 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+
     return {
       success: true,
       path: dataUrl,
@@ -647,116 +710,228 @@ ipcMain.handle('image:delete', async (event, relativePath: string) => {
 });
 
 // ============================================================
-// SISTEMA DE DETECCIÓN DE RECURSOS DEL SISTEMA
+// UTILIDADES PARA REQUESTS HTTP
 // ============================================================
 
-/**
- * Detecta los recursos del sistema para determinar si debe usar modo básico
- * Criterios para modo básico:
- * - RAM <= 2GB
- * - Arquitectura de 32 bits
- * - CPU con menos de 2 núcleos
- */
+async function makeHttpRequest(
+  method: 'GET' | 'PUT',
+  url: string,
+  body?: any
+): Promise<{ status: number; data: any }> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const requestModule = parsedUrl.protocol === 'http:' ? http : https;
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const req = requestModule.request(url, options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const jsonData = data ? JSON.parse(data) : {};
+          resolve({ status: res.statusCode || 500, data: jsonData });
+        } catch (error) {
+          resolve({ status: res.statusCode || 500, data: { error: 'Invalid JSON' } });
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    if (body) {
+      req.write(JSON.stringify(body));
+    }
+
+    req.end();
+  });
+}
+
+// ============================================================
+// RENDIMIENTO DEL SISTEMA
+// ============================================================
+
+type PerformanceConfig = {
+  useBasicMode: boolean;
+};
+
+function getPerformanceConfigPath() {
+  return path.join(app.getPath('userData'), 'performance-config.json');
+}
+
 ipcMain.handle('system:getResources', async () => {
   try {
-    const totalMemoryGB = os.totalmem() / (1024 ** 3); // Convertir bytes a GB
-    const freeMemoryGB = os.freemem() / (1024 ** 3);
-    const cpuCount = os.cpus().length;
-    const arch = os.arch(); // 'x64', 'ia32', 'arm', etc.
+    const totalMemoryGB = Number((os.totalmem() / (1024 ** 3)).toFixed(2));
+    const freeMemoryGB = Number((os.freemem() / (1024 ** 3)).toFixed(2));
+    const cpuInfo = os.cpus();
+    const cpuCount = cpuInfo.length;
+    const cpuModel = cpuInfo[0]?.model || 'Desconocido';
+    const arch = os.arch();
     const platform = os.platform();
-    const cpuModel = os.cpus()[0]?.model || 'Unknown';
-    
-    // Determinar si debe usar modo básico (sin animaciones)
-    const shouldUseBasicMode = 
-      totalMemoryGB <= 2.5 ||  // 2GB o menos (con margen)
-      arch === 'ia32' ||       // 32 bits
-      cpuCount < 2;            // Menos de 2 núcleos
-    
-    const resources = {
-      totalMemoryGB: Math.round(totalMemoryGB * 100) / 100,
-      freeMemoryGB: Math.round(freeMemoryGB * 100) / 100,
-      cpuCount,
-      arch,
-      platform,
-      cpuModel,
-      shouldUseBasicMode,
-      is32Bit: arch === 'ia32',
-      isLowMemory: totalMemoryGB <= 2.5,
-      isLowCPU: cpuCount < 2
-    };
-    
-    log.info('Recursos del sistema detectados:', resources);
-    
+
+    const is32Bit = arch === 'ia32';
+    const isLowMemory = totalMemoryGB <= 2.5;
+    const isLowCPU = cpuCount < 2;
+    const shouldUseBasicMode = is32Bit || isLowMemory || isLowCPU;
+
     return {
       success: true,
-      resources
+      resources: {
+        totalMemoryGB,
+        freeMemoryGB,
+        cpuCount,
+        arch,
+        platform,
+        cpuModel,
+        shouldUseBasicMode,
+        is32Bit,
+        isLowMemory,
+        isLowCPU,
+      },
     };
   } catch (error) {
-    log.error('Error detectando recursos del sistema:', error);
+    log.error('Error obteniendo recursos del sistema:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
-      resources: {
-        totalMemoryGB: 0,
-        freeMemoryGB: 0,
-        cpuCount: 0,
-        arch: 'unknown',
-        platform: 'unknown',
-        cpuModel: 'Unknown',
-        shouldUseBasicMode: true, // Por defecto, usar modo básico si hay error
-        is32Bit: false,
-        isLowMemory: false,
-        isLowCPU: false
-      }
     };
   }
 });
 
-/**
- * Guarda la configuración de rendimiento del usuario
- */
-ipcMain.handle('system:savePerformanceConfig', async (event, config: { useBasicMode: boolean }) => {
+ipcMain.handle('system:savePerformanceConfig', async (_event, config: PerformanceConfig) => {
   try {
-    const userDataPath = app.getPath('userData');
-    const configPath = path.join(userDataPath, 'performance-config.json');
-    
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    log.info('Configuración de rendimiento guardada:', config);
-    
+    const configPath = getPerformanceConfigPath();
+    const payload: PerformanceConfig = {
+      useBasicMode: Boolean(config?.useBasicMode),
+    };
+
+    fs.writeFileSync(configPath, JSON.stringify(payload, null, 2), 'utf-8');
     return { success: true };
   } catch (error) {
     log.error('Error guardando configuración de rendimiento:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      error: error instanceof Error ? error.message : 'Error desconocido',
     };
   }
 });
 
-/**
- * Carga la configuración de rendimiento del usuario
- */
 ipcMain.handle('system:loadPerformanceConfig', async () => {
   try {
-    const userDataPath = app.getPath('userData');
-    const configPath = path.join(userDataPath, 'performance-config.json');
-    
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, 'utf-8');
-      const config = JSON.parse(configData);
-      log.info('Configuración de rendimiento cargada:', config);
-      return { success: true, config };
-    } else {
-      log.info('No existe configuración de rendimiento guardada');
+    const configPath = getPerformanceConfigPath();
+
+    if (!fs.existsSync(configPath)) {
       return { success: true, config: null };
     }
+
+    const rawConfig = fs.readFileSync(configPath, 'utf-8');
+    const parsedConfig = JSON.parse(rawConfig);
+
+    return {
+      success: true,
+      config: {
+        useBasicMode: Boolean(parsedConfig?.useBasicMode),
+      },
+    };
   } catch (error) {
     log.error('Error cargando configuración de rendimiento:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
-      config: null
     };
+  }
+});
+
+// ============================================================
+// GESTIÓN DE IMPRESORAS
+// ============================================================
+
+/**
+ * Obtiene la lista de impresoras disponibles en el sistema
+ */
+ipcMain.handle('printers:list', async (event) => {
+  try {
+    // event.sender es el webContents que invocó el handler
+    // Funciona con Electron v22+ (getPrintersAsync) y anteriores (getPrinters)
+    let printers: Electron.PrinterInfo[] = [];
+
+    if (typeof event.sender.getPrintersAsync === 'function') {
+      // Electron v22+
+      printers = await event.sender.getPrintersAsync();
+    } else {
+      // Electron < v22 (síncrono)
+      printers = (event.sender as any).getPrinters();
+    }
+
+    log.info(`Impresoras detectadas: ${printers.length}`);
+
+    // Mapear al formato esperado por el renderer
+    return printers.map((p) => ({
+      name: p.name,
+      displayName: p.displayName || p.name,
+    }));
+  } catch (error) {
+    log.error('Error obteniendo impresoras:', error);
+    throw error;
+  }
+});
+
+/**
+ * Guarda la impresora seleccionada por sucursal
+ */
+
+// Guardar impresora seleccionada en Railway backend
+ipcMain.handle('printer:save', async (_event, printerName: string, branchId: number) => {
+  try {
+    // En desarrollo usar localhost, en producción usar Railway
+    const apiUrl = !app.isPackaged
+      ? 'http://localhost:3000/api'
+      : (process.env.API_URL || 'https://la-granmichoacana-production.up.railway.app/api');
+    const response = await makeHttpRequest('PUT', `${apiUrl}/settings/printer/${branchId}`, {
+      printerName,
+    });
+
+    if (response.status < 200 || response.status >= 300) {
+      log.error(`Error guardando impresora: ${response.status}`, response.data);
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    log.info('Impresora guardada exitosamente:', response.data);
+    return { success: true };
+  } catch (error) {
+    log.error('Error guardando impresora:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+// Obtener impresora guardada desde Railway backend
+ipcMain.handle('printer:get', async (_event, branchId: number) => {
+  try {
+    // En desarrollo usar localhost, en producción usar Railway
+    const apiUrl = !app.isPackaged
+      ? 'http://localhost:3000/api'
+      : (process.env.API_URL || 'https://la-granmichoacana-production.up.railway.app/api');
+    const response = await makeHttpRequest('GET', `${apiUrl}/settings/printer/${branchId}`);
+
+    if (response.status < 200 || response.status >= 300) {
+      log.error(`Error obteniendo impresora: ${response.status}`, response.data);
+      return { printerName: null };
+    }
+
+    return { printerName: response.data.data?.printerName || null };
+  } catch (error) {
+    log.error('Error obteniendo impresora guardada:', error);
+    return { printerName: null };
   }
 });
 

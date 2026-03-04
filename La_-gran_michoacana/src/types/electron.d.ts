@@ -23,6 +23,7 @@ export interface ElectronAPI {
   removeCartListeners: () => void;
   clearSession: () => Promise<{ success: boolean }>;
   logout: () => Promise<{ success: boolean }>;
+  printTicket: (ticketData: any) => Promise<{ success: boolean; error?: string }>;
   closeApp: () => void;
   
   // Auto-actualización
@@ -47,6 +48,12 @@ export interface ElectronAPI {
   }>;
   savePerformanceConfig: (config: { useBasicMode: boolean }) => Promise<{ success: boolean; error?: string }>;
   loadPerformanceConfig: () => Promise<{ success: boolean; config?: { useBasicMode: boolean } | null; error?: string }>;
+
+  // Impresión y configuración de impresoras
+  printTicket: (ticketData: any) => Promise<{ success: boolean; error?: string }>;
+  getPrinters: () => Promise<Array<{ name: string; displayName: string; isDefault?: boolean }>>;
+  savePrinter: (printerName: string, branchId: number) => Promise<{ success: boolean; error?: string }>;
+  getSavedPrinter: (branchId: number) => Promise<{ printerName: string | null }>;
 }
 
 declare global {
