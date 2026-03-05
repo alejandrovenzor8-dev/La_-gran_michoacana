@@ -29,6 +29,10 @@ router.post(
     .optional()
     .isLength({ max: 20 })
     .withMessage('Teléfono muy largo'),
+  body('initialCash')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Caja inicial debe ser un número positivo'),
   body('active')
     .optional()
     .isBoolean()
@@ -92,6 +96,10 @@ router.put(
     .optional()
     .isLength({ max: 20 })
     .withMessage('Teléfono muy largo'),
+  body('initialCash')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Caja inicial debe ser un número positivo'),
   body('active')
     .optional()
     .isBoolean()
@@ -117,6 +125,25 @@ router.patch(
     .withMessage('Estado activo requerido y debe ser booleano'),
   validate,
   asyncHandler(branchController.toggleBranchStatus.bind(branchController))
+);
+
+/**
+ * PATCH /api/branches/:id/initial-cash
+ * Actualizar la caja inicial de una sucursal
+ * Requiere: autenticación, permisos de ADMIN o GERENTE
+ */
+router.patch(
+  '/:id/initial-cash',
+  authenticateToken,
+  requireRole('ADMIN', 'GERENTE'),
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('ID de sucursal inválido'),
+  body('initialCash')
+    .isFloat({ min: 0 })
+    .withMessage('Caja inicial requerida y debe ser un número positivo'),
+  validate,
+  asyncHandler(branchController.updateInitialCash.bind(branchController))
 );
 
 /**

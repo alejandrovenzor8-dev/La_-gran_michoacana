@@ -44,6 +44,16 @@ enum InventoryMovementType {
   VENTA
 }
 
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  OPEN_CASH_REGISTER
+  CLOSE_CASH_REGISTER
+}
+
 // ============================================================
 // MODELOS
 // ============================================================
@@ -54,6 +64,7 @@ model Branch {
   address               String?
   phone                 String?
   defaultPrinter        String?               // Nombre de la impresora por defecto
+  initialCash           Decimal               @default(0) @db.Decimal(10, 2) // Monto de caja inicial
   active                Boolean               @default(true)
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
@@ -63,6 +74,7 @@ model Branch {
   sales                 Sale[]
   products              Product[]
   inventoryMovements    InventoryMovement[]
+  auditLogs             AuditLog[]
 
   @@index([active])
 }
@@ -85,6 +97,7 @@ model User {
   sales                 Sale[]
   inventoryMovements    InventoryMovement[]
   permissions           Permission[]
+  auditLogs             AuditLog[]
 
   @@index([username])
   @@index([email])
@@ -214,4 +227,27 @@ model Permission {
   @@unique([userId, moduleId])
   @@index([userId])
   @@index([moduleId])
+}
+
+model AuditLog {
+  id                    Int                   @id @default(autoincrement())
+  userId                Int?
+  user                  User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branchId              Int?
+  branch                Branch?               @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  action                AuditAction           // Tipo de acción realizada
+  entity                String                // Nombre de la entidad afectada (Branch, Product, Sale, etc.)
+  entityId              Int?                  // ID del registro afectado
+  description           String                // Descripción de la acción
+  oldValues             String?               @db.Text // JSON con valores anteriores
+  newValues             String?               @db.Text // JSON con valores nuevos
+  ipAddress             String?               // IP desde donde se realizó la acción
+  userAgent             String?               // Navegador/dispositivo usado
+  createdAt             DateTime              @default(now())
+
+  @@index([userId])
+  @@index([branchId])
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
 }

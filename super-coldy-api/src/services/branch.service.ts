@@ -1,6 +1,7 @@
 ﻿import prisma from '../config/database.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { createAuditLog, AuditAction } from '../utils/auditLogger.js';
 
 /**
  * Interface para crear una sucursal
@@ -9,7 +10,11 @@ export interface BranchCreateInput {
   name: string;
   address?: string;
   phone?: string;
+  initialCash?: number;
   active?: boolean;
+  userId?: number; // Para auditoría
+  ipAddress?: string; // Para auditoría
+  userAgent?: string; // Para auditoría
 }
 
 /**
@@ -19,7 +24,11 @@ export interface BranchUpdateInput {
   name?: string;
   address?: string;
   phone?: string;
+  initialCash?: number;
   active?: boolean;
+  userId?: number; // Para auditoría
+  ipAddress?: string; // Para auditoría
+  userAgent?: string; // Para auditoría
 }
 
 /**
@@ -48,9 +57,30 @@ class BranchService {
           name: data.name,
           address: data.address,
           phone: data.phone,
+          initialCash: data.initialCash || 0,
           active: data.active ?? true,
         },
       });
+
+      // Registrar auditoría
+      if (data.userId) {
+        await createAuditLog({
+          userId: data.userId,
+          branchId: branch.id,
+          action: AuditAction.CREATE,
+          entity: 'Branch',
+          entityId: branch.id,
+          description: `Sucursal creada: ${branch.name}`,
+          newValues: {
+            name: branch.name,
+            address: branch.address,
+            phone: branch.phone,
+            initialCash: branch.initialCash,
+          },
+          ipAddress: data.ipAddress,
+          userAgent: data.userAgent,
+        });
+      }
 
       logger.info('Sucursal creada exitosamente:', branch.id);
       return branch;
@@ -145,18 +175,55 @@ class BranchService {
     try {
       logger.info('Actualizando sucursal:', id);
 
-      // Verificar que la sucursal existe
-      await this.getBranchById(id);
+      // Verificar que la sucursal existe y obtener valores anteriores
+      const oldBranch = await this.getBranchById(id);
+
+      const updateData: any = {};
+      if (data.name) updateData.name = data.name;
+      if (data.address !== undefined) updateData.address = data.address;
+      if (data.phone !== undefined) updateData.phone = data.phone;
+      if (data.initialCash !== undefined) updateData.initialCash = data.initialCash;
+      if (data.active !== undefined) updateData.active = data.active;
 
       const branch = await prisma.branch.update({
         where: { id },
-        data: {
-          ...(data.name && { name: data.name }),
-          ...(data.address !== undefined && { address: data.address }),
-          ...(data.phone !== undefined && { phone: data.phone }),
-          ...(data.active !== undefined && { active: data.active }),
-        },
+        data: updateData,
       });
+
+      // Registrar auditoría
+      if (data.userId) {
+        const changes: string[] = [];
+        if (data.name && data.name !== oldBranch.name) changes.push('nombre');
+        if (data.address !== undefined && data.address !== oldBranch.address) changes.push('dirección');
+        if (data.phone !== undefined && data.phone !== oldBranch.phone) changes.push('teléfono');
+        if (data.initialCash !== undefined && data.initialCash !== oldBranch.initialCash) changes.push('caja inicial');
+        if (data.active !== undefined && data.active !== oldBranch.active) changes.push('estado');
+
+        await createAuditLog({
+          userId: data.userId,
+          branchId: id,
+          action: AuditAction.UPDATE,
+          entity: 'Branch',
+          entityId: id,
+          description: `Sucursal actualizada: ${branch.name} (${changes.join(', ')})`,
+          oldValues: {
+            name: oldBranch.name,
+            address: oldBranch.address,
+            phone: oldBranch.phone,
+            initialCash: oldBranch.initialCash,
+            active: oldBranch.active,
+          },
+          newValues: {
+            name: branch.name,
+            address: branch.address,
+            phone: branch.phone,
+            initialCash: branch.initialCash,
+            active: branch.active,
+          },
+          ipAddress: data.ipAddress,
+          userAgent: data.userAgent,
+        });
+      }
 
       logger.info('Sucursal actualizada exitosamente:', id);
       return branch;
@@ -197,13 +264,14 @@ class BranchService {
   /**
    * Eliminar una sucursal (soft delete cambiando active a false)
    * @param id - ID de la sucursal
+   * @param userId - ID del usuario que realiza la acción (para auditoría)
    */
-  async deleteBranch(id: number): Promise<void> {
+  async deleteBranch(id: number, userId?: number, ipAddress?: string, userAgent?: string): Promise<void> {
     try {
       logger.info('Eliminando sucursal:', id);
 
       // Verificar que la sucursal existe
-      await this.getBranchById(id);
+      const branch = await this.getBranchById(id);
 
       // Verificar que no tenga usuarios activos
       const usersCount = await prisma.user.count({
@@ -226,11 +294,85 @@ class BranchService {
         data: { active: false },
       });
 
+      // Registrar auditoría
+      if (userId) {
+        await createAuditLog({
+          userId,
+          branchId: id,
+          action: AuditAction.DELETE,
+          entity: 'Branch',
+          entityId: id,
+          description: `Sucursal desactivada: ${branch.name}`,
+          oldValues: {
+            active: true,
+          },
+          newValues: {
+            active: false,
+          },
+          ipAddress,
+          userAgent,
+        });
+      }
+
       logger.info('Sucursal eliminada exitosamente:', id);
     } catch (error) {
       if (error instanceof AppError) throw error;
       logger.error('Error al eliminar sucursal:', error);
       throw new AppError('Error al eliminar la sucursal', 500);
+    }
+  }
+
+  /**
+   * Actualizar la caja inicial de una sucursal
+   * @param id - ID de la sucursal
+   * @param initialCash - Nuevo monto de caja inicial
+   * @param userId - ID del usuario que realiza la acción
+   * @returns Sucursal actualizada
+   */
+  async updateInitialCash(
+    id: number,
+    initialCash: number,
+    userId?: number,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<any> {
+    try {
+      logger.info('Actualizando caja inicial de sucursal:', { id, initialCash });
+
+      // Verificar que la sucursal existe
+      const oldBranch = await this.getBranchById(id);
+
+      const branch = await prisma.branch.update({
+        where: { id },
+        data: { initialCash },
+      });
+
+      // Registrar auditoría
+      if (userId) {
+        await createAuditLog({
+          userId,
+          branchId: id,
+          action: AuditAction.UPDATE,
+          entity: 'Branch',
+          entityId: id,
+          description: `Caja inicial actualizada en ${branch.name}: $${oldBranch.initialCash} → $${initialCash}`,
+          oldValues: {
+            initialCash: oldBranch.initialCash,
+          },
+          newValues: {
+            initialCash: branch.initialCash,
+          },
+          ipAddress,
+          userAgent,
+        });
+      }
+
+      logger.info('Caja inicial actualizada exitosamente:', id);
+      return branch;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error al actualizar caja inicial:', error);
+      throw new AppError('Error al actualizar la caja inicial', 500);
     }
   }
 }
