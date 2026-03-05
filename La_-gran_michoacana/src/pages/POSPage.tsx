@@ -311,15 +311,17 @@ export default function POSPage() {
       setIsProcessing(true);
 
       const saleItems: SaleItem[] = items.map((item) => ({
-        productId: parseInt(item.id),
+        productId: item.id,
+        productName: item.name,
         quantity: item.quantity,
-        price: item.price,
+        unitPrice: item.price,
+        subtotal: item.price * item.quantity,
       }));
 
       const sale: Sale = {
         total,
         items: saleItems,
-        paymentMethod: 'cash',
+        paymentMethod: 'EFECTIVO',
         branchId: branchIdToUse,
       };
 
