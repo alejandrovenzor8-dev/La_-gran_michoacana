@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building, Plus, Edit2, Loader2, X, Power } from 'lucide-react';
+import { Building, Plus, Edit2, Loader2, X, Power, DollarSign } from 'lucide-react';
 import { branchService } from '@/lib/branchService';
 import { Branch, BranchCreateInput } from '@/types/branch';
 
@@ -10,6 +10,8 @@ export default function BranchesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingCashId, setEditingCashId] = useState<number | null>(null);
+  const [editingCashValue, setEditingCashValue] = useState<string>('');
   
   const [formData, setFormData] = useState<BranchCreateInput>({
     name: '',
@@ -139,6 +141,36 @@ export default function BranchesPage() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al cambiar el estado. Intenta de nuevo.');
     }
+  };
+
+  const handleEditCash = (branch: Branch) => {
+    setEditingCashId(branch.id);
+    setEditingCashValue((branch.initialCash || 0).toString());
+  };
+
+  const handleSaveCash = async (branchId: number) => {
+    try {
+      const cashValue = parseFloat(editingCashValue);
+      
+      if (isNaN(cashValue) || cashValue < 0) {
+        setError('El monto de caja inicial debe ser un número positivo.');
+        return;
+      }
+
+      setError('');
+      await branchService.updateInitialCash(branchId, cashValue);
+      setSuccess('Monto de caja inicial actualizado exitosamente.');
+      setEditingCashId(null);
+      setEditingCashValue('');
+      await loadBranches();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al actualizar la caja inicial. Intenta de nuevo.');
+    }
+  };
+
+  const handleCancelCashEdit = () => {
+    setEditingCashId(null);
+    setEditingCashValue('');
   };
 
   return (
@@ -298,6 +330,7 @@ export default function BranchesPage() {
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Nombre</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Dirección</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Teléfono</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Caja Inicial</th>
                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Usuarios</th>
                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Ventas</th>
                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Estado</th>
@@ -310,6 +343,53 @@ export default function BranchesPage() {
                       <td className="py-3 px-4 font-medium">{branch.name}</td>
                       <td className="py-3 px-4 text-gray-600">{branch.address || '-'}</td>
                       <td className="py-3 px-4 text-gray-600">{branch.phone || '-'}</td>
+                      <td className="py-3 px-4">
+                        {editingCashId === branch.id ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editingCashValue}
+                              onChange={(e) => setEditingCashValue(e.target.value)}
+                              className="w-24 p-1 border border-gray-300 rounded text-center"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveCash(branch.id);
+                                } else if (e.key === 'Escape') {
+                                  handleCancelCashEdit();
+                                }
+                              }}
+                            />
+                            <Button
+                              onClick={() => handleSaveCash(branch.id)}
+                              size="sm"
+                              className="px-2 py-1 h-7"
+                            >
+                              ✓
+                            </Button>
+                            <Button
+                              onClick={handleCancelCashEdit}
+                              variant="outline"
+                              size="sm"
+                              className="px-2 py-1 h-7"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ) : (
+                          <div 
+                            className="flex items-center justify-center gap-1 cursor-pointer hover:bg-gray-100 rounded px-2 py-1"
+                            onClick={() => handleEditCash(branch)}
+                          >
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <span className="font-medium text-gray-700">
+                              {(branch.initialCash || 0).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-center">{branch._count?.users || 0}</td>
                       <td className="py-3 px-4 text-center">{branch._count?.sales || 0}</td>
                       <td className="py-3 px-4">

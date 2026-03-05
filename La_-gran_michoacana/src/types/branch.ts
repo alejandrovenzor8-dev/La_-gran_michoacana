@@ -6,6 +6,7 @@ export interface Branch {
   address?: string | null;
   phone?: string | null;
   active: boolean;
+  initialCash?: number;
   createdAt: string;
   updatedAt: string;
   _count?: {

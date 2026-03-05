@@ -126,6 +126,24 @@ class BranchService {
   }
 
   /**
+   * Actualizar el monto de caja inicial de una sucursal
+   * @param id - ID de la sucursal
+   * @param initialCash - Monto de caja inicial
+   * @returns Sucursal actualizada
+   */
+  async updateInitialCash(id: number, initialCash: number): Promise<Branch> {
+    try {
+      const response = await apiClient.patch<UpdateBranchResponse>(
+        `/branches/${id}/initial-cash`,
+        { initialCash }
+      );
+      return response.data.branch;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Eliminar una sucursal
    * @param id - ID de la sucursal
    */
