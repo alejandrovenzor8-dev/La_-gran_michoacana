@@ -304,9 +304,38 @@ GET /api/audit/branches/8?limit=50
 ## 🔐 Seguridad
 
 - Los logs de auditoría son **inmutables** (no se pueden editar ni eliminar)
-- Solo usuarios ADMIN pueden ver todos los logs
-- Los GERENTES solo pueden ver logs de sus sucursales
+- Solo usuarios con permiso del módulo 'audit' pueden ver logs
+- Los ADMIN siempre tienen acceso completo
 - La IP y User-Agent se guardan para trazabilidad completa
+
+### Sistema de Permisos
+
+El acceso a auditoría se controla mediante el sistema de módulos:
+
+1. **Módulo 'audit'**: Los usuarios necesitan tener permiso explícito para este módulo
+2. **Rol ADMIN**: Siempre tiene acceso sin necesidad de permisos explícitos
+3. **Otros roles**: Necesitan que un ADMIN les asigne el permiso del módulo 'audit'
+
+### Asignar Permiso de Auditoría a un Usuario
+
+```http
+POST /api/permissions
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "userId": 2,
+  "moduleKey": "audit",
+  "granted": true
+}
+```
+
+### Verificar Permisos de un Usuario
+
+```http
+GET /api/permissions/user/:userId
+Authorization: Bearer <admin-token>
+```
 
 ---
 
