@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { param, query } from 'express-validator';
 import { auditController } from '../controllers/audit.controller.js';
-import { authenticateToken, requireRole } from '../middlewares/auth.middleware.js';
+import { authenticateToken, requireModulePermission } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validation.middleware.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 
@@ -10,12 +10,12 @@ const router = Router();
 /**
  * GET /api/audit/logs
  * Obtener todos los logs de auditoría con filtros opcionales
- * Requiere: autenticación, permisos de ADMIN
+ * Requiere: autenticación y permiso del módulo 'audit'
  */
 router.get(
   '/logs',
   authenticateToken,
-  requireRole('ADMIN'),
+  requireModulePermission('audit'),
   query('userId')
     .optional()
     .isInt({ min: 1 })
@@ -55,12 +55,12 @@ router.get(
 /**
  * GET /api/audit/branches/:branchId
  * Obtener logs de auditoría de una sucursal específica
- * Requiere: autenticación, permisos de ADMIN o GERENTE
+ * Requiere: autenticación y permiso del módulo 'audit'
  */
 router.get(
   '/branches/:branchId',
   authenticateToken,
-  requireRole('ADMIN', 'GERENTE'),
+  requireModulePermission('audit'),
   param('branchId')
     .isInt({ min: 1 })
     .withMessage('ID de sucursal inválido'),
@@ -87,12 +87,12 @@ router.get(
 /**
  * GET /api/audit/users/:userId
  * Obtener logs de auditoría de un usuario específico
- * Requiere: autenticación, permisos de ADMIN
+ * Requiere: autenticación y permiso del módulo 'audit'
  */
 router.get(
   '/users/:userId',
   authenticateToken,
-  requireRole('ADMIN'),
+  requireModulePermission('audit'),
   param('userId')
     .isInt({ min: 1 })
     .withMessage('ID de usuario inválido'),

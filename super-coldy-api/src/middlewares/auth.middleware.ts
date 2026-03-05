@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt.js';
 import { logger } from '../utils/logger.js';
+import prisma from '../config/database.js';
 
 /**
  * Extender el tipo Request de Express para incluir la información del usuario autenticado
@@ -210,3 +211,97 @@ export const checkOwnership = (
 
 // Alias para compatibilidad
 export const authMiddleware = authenticateToken;
+
+/**
+ * Middleware para verificar que el usuario tenga permiso sobre un módulo específico
+ * Verifica tanto el rol (ADMIN siempre tiene acceso) como los permisos del módulo
+ * Debe usarse después de authenticateToken
+ *
+ * @param moduleKey - Clave del módulo a verificar (ej: 'audit', 'pos', 'inventory')
+ * @returns Middleware que verifica el permiso
+ *
+ * @example
+ * router.get('/audit/logs', authenticateToken, requireModulePermission('audit'), getLogs);
+ */
+export const requireModulePermission = (moduleKey: string) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Verificar que req.user exista
+      if (!req.user) {
+        logger.warn('Acceso a requireModulePermission sin usuario autenticado', {
+          ip: req.ip,
+          path: req.path,
+        });
+
+        res.status(401).json({
+          success: false,
+          error: 'No autorizado - Usuario no autenticado',
+        });
+        return;
+      }
+
+      // Los ADMIN siempre tienen acceso a todo
+      if (req.user.role === 'ADMIN') {
+        logger.debug('Acceso concedido por rol ADMIN', {
+          userId: req.user.userId,
+          module: moduleKey,
+        });
+        next();
+        return;
+      }
+
+      // Buscar el módulo
+      const module = await prisma.module.findUnique({
+        where: { key: moduleKey },
+      });
+
+      if (!module) {
+        logger.error('Módulo no encontrado', { moduleKey });
+        res.status(500).json({
+          success: false,
+          error: 'Error de configuración - Módulo no encontrado',
+        });
+        return;
+      }
+
+      // Verificar si el usuario tiene permiso para este módulo
+      const permission = await prisma.permission.findUnique({
+        where: {
+          userId_moduleId: {
+            userId: req.user.userId,
+            moduleId: module.id,
+          },
+        },
+      });
+
+      if (!permission || !permission.granted) {
+        logger.warn('Acceso denegado por falta de permisos de módulo', {
+          userId: req.user.userId,
+          module: moduleKey,
+          ip: req.ip,
+          path: req.path,
+        });
+
+        res.status(403).json({
+          success: false,
+          error: 'Acceso denegado - No tiene permisos para este módulo',
+        });
+        return;
+      }
+
+      logger.debug('Verificación de permiso de módulo exitosa', {
+        userId: req.user.userId,
+        module: moduleKey,
+      });
+
+      next();
+    } catch (error) {
+      logger.error('Error verificando permiso de módulo:', error);
+
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor',
+      });
+    }
+  };
+};

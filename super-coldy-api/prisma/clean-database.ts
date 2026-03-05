@@ -142,6 +142,15 @@ async function main() {
         active: true,
       },
     }),
+    prisma.module.create({
+      data: {
+        key: 'audit',
+        name: 'Auditoría',
+        description: 'Historial de cambios y seguimiento de acciones',
+        icon: 'FileText',
+        active: true,
+      },
+    }),
   ]);
   console.log(`✅ ${modules.length} módulos creados`);
 
