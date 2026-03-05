@@ -58,6 +58,7 @@ export default function ReportsPage() {
   const [editingFondo, setEditingFondo] = useState(false);
   const [fondoValue, setFondoValue] = useState<string>('');
   const [savingFondo, setSavingFondo] = useState(false);
+  const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
 
   const getReportBranchId = () => {
     if (user?.role === 'ADMIN') {
@@ -283,8 +284,18 @@ export default function ReportsPage() {
         if (data?.summary?.fondoInicial) {
           setFondoValue(data.summary.fondoInicial.toString());
         }
+        
+        // Cargar información de la sucursal actual
+        if (branchIdToUse) {
+          const branch = await branchService.getBranchById(branchIdToUse);
+          setCurrentBranch(branch);
+        } else if (user?.branchId) {
+          const branch = await branchService.getBranchById(user.branchId);
+          setCurrentBranch(branch);
+        }
       } catch (error) {
         setCashierCutData(null);
+        setCurrentBranch(null);
       } finally {
         setLoading(false);
       }
@@ -614,11 +625,13 @@ export default function ReportsPage() {
       Período: ${periodLabel}
       Generado: ${formatDate(new Date())}
       Usuario: ${user?.username || 'N/A'}
+      ${currentBranch ? `Sucursal: ${currentBranch.name}` : ''}
       
       ========================================
           RESUMEN DE EFECTIVO
       ========================================
-      
+      ${currentBranch?.initialCash !== undefined ? `
+      Caja Inicial (Sucursal): $${currentBranch.initialCash.toFixed(2)}` : ''}
       Fondo Inicial:           $${cashierCutData.summary.fondoInicial.toFixed(2)}
       Ingresos del Turno:      $${cashierCutData.summary.ingresosTurno.toFixed(2)}
       Egresos/Retiros:         -$${cashierCutData.summary.egresos.toFixed(2)}
@@ -1442,6 +1455,19 @@ export default function ReportsPage() {
                     <h3 className="font-semibold text-lg">Resumen de Efectivo</h3>
                     
                     <div className="space-y-3">
+                      {/* Caja Inicial de la Sucursal (solo informativo) */}
+                      {currentBranch?.initialCash !== undefined && (
+                        <div className="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span className="text-blue-700">💰 Caja Inicial de la Sucursal</span>
+                            <span className="text-xs text-blue-600 italic">(referencia)</span>
+                          </div>
+                          <span className="font-semibold text-blue-900">
+                            ${currentBranch.initialCash.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                         <span className="text-gray-700">Fondo Inicial</span>
                         {editingFondo ? (
