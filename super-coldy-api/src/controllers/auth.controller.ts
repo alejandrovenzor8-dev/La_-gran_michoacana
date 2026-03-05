@@ -72,7 +72,7 @@ class AuthController {
       const { generateAccessToken, generateRefreshToken } = await import(
         '../utils/jwt.js'
       );
-      const accessToken = generateAccessToken(user.id, user.role);
+      const accessToken = generateAccessToken(user.id, user.username, user.role);
       const refreshToken = generateRefreshToken(user.id);
 
       logger.info('Usuario registrado y autenticado', { userId: user.id });

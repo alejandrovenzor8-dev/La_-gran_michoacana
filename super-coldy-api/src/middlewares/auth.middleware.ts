@@ -11,6 +11,7 @@ declare global {
     interface Request {
       user?: {
         userId: number;
+        username: string;
         role: string;
       };
     }
@@ -57,6 +58,7 @@ export const authenticateToken = (
     // Agregar información del usuario al request
     req.user = {
       userId: payload.userId,
+      username: payload.username,
       role: payload.role,
     };
 

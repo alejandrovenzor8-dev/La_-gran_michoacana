@@ -6,6 +6,7 @@ import { logger } from './logger.js';
  */
 export interface JWTPayload {
   userId: number;
+  username: string;
   role: string;
 }
 
@@ -38,12 +39,13 @@ const getJWTConfig = () => {
  * @param role - Rol del usuario
  * @returns Token JWT firmado
  */
-export const generateAccessToken = (userId: number, role: string): string => {
+export const generateAccessToken = (userId: number, username: string, role: string): string => {
   try {
     const { secret, expiresIn } = getJWTConfig();
 
     const payload: JWTPayload = {
       userId,
+      username,
       role,
     };
 

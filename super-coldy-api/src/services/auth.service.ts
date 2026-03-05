@@ -187,7 +187,7 @@ class AuthService {
       }
 
       // Generar tokens
-      const accessToken = generateAccessToken(user.id, user.role);
+      const accessToken = generateAccessToken(user.id, user.username, user.role);
       const refreshToken = generateRefreshToken(user.id);
 
       logger.info('Usuario logueado exitosamente', {
@@ -244,7 +244,7 @@ class AuthService {
       }
 
       // Generar nuevo access token
-      const accessToken = generateAccessToken(user.id, user.role);
+      const accessToken = generateAccessToken(user.id, user.username, user.role);
 
       logger.info('Token refrescado exitosamente', { userId: user.id });
 
