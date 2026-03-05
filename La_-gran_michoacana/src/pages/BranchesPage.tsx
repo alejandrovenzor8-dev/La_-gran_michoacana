@@ -145,7 +145,7 @@ export default function BranchesPage() {
 
   const handleEditCash = (branch: Branch) => {
     setEditingCashId(branch.id);
-    setEditingCashValue((branch.initialCash || 0).toString());
+    setEditingCashValue((Number(branch.initialCash) || 0).toString());
   };
 
   const handleSaveCash = async (branchId: number) => {
@@ -385,7 +385,7 @@ export default function BranchesPage() {
                           >
                             <DollarSign className="h-4 w-4 text-green-600" />
                             <span className="font-medium text-gray-700">
-                              {(branch.initialCash || 0).toFixed(2)}
+                              {(Number(branch.initialCash) || 0).toFixed(2)}
                             </span>
                           </div>
                         )}
