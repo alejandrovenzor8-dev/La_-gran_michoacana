@@ -630,8 +630,8 @@ export default function ReportsPage() {
       ========================================
           RESUMEN DE EFECTIVO
       ========================================
-      ${currentBranch?.initialCash !== undefined ? `
-      Caja Inicial (Sucursal): $${currentBranch.initialCash.toFixed(2)}` : ''}
+      ${currentBranch?.initialCash !== undefined && currentBranch?.initialCash !== null ? `
+      Caja Inicial (Sucursal): $${(Number(currentBranch.initialCash) || 0).toFixed(2)}` : ''}
       Fondo Inicial:           $${cashierCutData.summary.fondoInicial.toFixed(2)}
       Ingresos del Turno:      $${cashierCutData.summary.ingresosTurno.toFixed(2)}
       Egresos/Retiros:         -$${cashierCutData.summary.egresos.toFixed(2)}
@@ -1456,14 +1456,14 @@ export default function ReportsPage() {
                     
                     <div className="space-y-3">
                       {/* Caja Inicial de la Sucursal (solo informativo) */}
-                      {currentBranch?.initialCash !== undefined && (
+                      {currentBranch?.initialCash !== undefined && currentBranch?.initialCash !== null && (
                         <div className="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <div className="flex items-center gap-2">
                             <span className="text-blue-700">💰 Caja Inicial de la Sucursal</span>
                             <span className="text-xs text-blue-600 italic">(referencia)</span>
                           </div>
                           <span className="font-semibold text-blue-900">
-                            ${currentBranch.initialCash.toFixed(2)}
+                            ${(Number(currentBranch.initialCash) || 0).toFixed(2)}
                           </span>
                         </div>
                       )}
