@@ -6,7 +6,7 @@ import http from 'http';
 import https from 'https';
 import os from 'os';
 import { URL } from 'url';
-import { printTicket, TicketData } from './printer';
+import { printTicket, TicketData, printCashierCut, CashierCutData } from './printer';
 import { openCashDrawer, detectCashDrawerPort } from './cashDrawer';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
@@ -363,7 +363,7 @@ ipcMain.handle('login:success', () => {
   
   // Crear las dos ventanas principales
   createMainWindow();
-  //createCustomerDisplay();
+  //createCustomerDisplay(); Descomentar para mostrar pantalle del cliente
   
   return { success: true };
 });
@@ -434,6 +434,27 @@ ipcMain.handle('print-ticket', async (event, ticketData: TicketData) => {
     return { success: true };
   } catch (error) {
     console.error('🎫 [IPC Handler] Error en impresión:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+});
+
+// IPC Handler para imprimir corte de caja
+ipcMain.handle('print-cashier-cut', async (event, cutData: CashierCutData, username: string, branchName?: string) => {
+  console.log('💰 [IPC Handler] Recibido print-cashier-cut:', cutData);
+  try {
+    const window = BrowserWindow.getFocusedWindow();
+    if (!window) {
+      throw new Error('No hay ventana activa');
+    }
+    console.log('💰 [IPC Handler] Llamando a printCashierCut...');
+    await printCashierCut(window, cutData, username, branchName);
+    console.log('💰 [IPC Handler] Impresión del corte exitosa');
+    return { success: true };
+  } catch (error) {
+    console.error('💰 [IPC Handler] Error en impresión del corte:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',

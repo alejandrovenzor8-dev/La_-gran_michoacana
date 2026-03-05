@@ -55,6 +55,9 @@ export default function ReportsPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
   const [salesList, setSalesList] = useState<any[]>([]);
+  const [editingFondo, setEditingFondo] = useState(false);
+  const [fondoValue, setFondoValue] = useState<string>('');
+  const [savingFondo, setSavingFondo] = useState(false);
 
   const getReportBranchId = () => {
     if (user?.role === 'ADMIN') {
@@ -277,6 +280,9 @@ export default function ReportsPage() {
         const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         const data = await saleService.getCashierCut(queryParams);
         setCashierCutData(data);
+        if (data?.summary?.fondoInicial) {
+          setFondoValue(data.summary.fondoInicial.toString());
+        }
       } catch (error) {
         setCashierCutData(null);
       } finally {
@@ -288,6 +294,40 @@ export default function ReportsPage() {
       loadCashierCut();
     }
   }, [activeTab, selectedBranchId, user?.branchId, user?.role]);
+
+  // Función para guardar el fondo inicial
+  const handleSaveFondo = async () => {
+    try {
+      setSavingFondo(true);
+      const nuevoFondo = parseFloat(fondoValue);
+      
+      if (isNaN(nuevoFondo) || nuevoFondo < 0) {
+        alert('❌ Por favor ingresa un valor válido (número positivo)');
+        return;
+      }
+
+      // Actualizar el estado local
+      if (cashierCutData) {
+        const newTotal = nuevoFondo + cashierCutData.summary.ingresosTurno - cashierCutData.summary.egresos;
+        
+        setCashierCutData({
+          ...cashierCutData,
+          summary: {
+            ...cashierCutData.summary,
+            fondoInicial: nuevoFondo,
+            totalEnCaja: newTotal,
+          },
+        });
+      }
+
+      setEditingFondo(false);
+      alert('✅ Fondo inicial actualizado correctamente');
+    } catch (error) {
+      alert('❌ Error al guardar el fondo inicial');
+    } finally {
+      setSavingFondo(false);
+    }
+  };
 
   // Función para cambiar ordenamiento
   const handleSort = (field: 'id' | 'date' | 'total' | 'items' | 'paymentMethod') => {
@@ -525,73 +565,117 @@ export default function ReportsPage() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
-  const handlePrintCut = () => {
-    const periodLabel = {
-      day: 'HOY',
-      week: 'ESTA SEMANA',
-      month: 'ESTE MES',
-      year: 'ESTE AÑO',
-    }[selectedPeriod];
+  const handlePrintCut = async () => {
+    try {
+      if (!cashierCutData) {
+        alert('❌ No hay datos de corte de caja para imprimir');
+        return;
+      }
 
-    // Crear contenido para imprimir con datos reales
-    const printContent = `
+      // Validar que tenemos los datos necesarios
+      if (!cashierCutData.summary || !cashierCutData.paymentMethods) {
+        alert('❌ Datos de corte incompletos');
+        return;
+      }
+
+      // Si estamos en Electron, usar IPC
+      if (window.electron && window.electron.ipcRenderer) {
+        try {
+          const result = await window.electron.ipcRenderer.invoke('print-cashier-cut', 
+            cashierCutData, 
+            user?.username || 'Usuario',
+            user?.branchName
+          );
+
+          if (result.success) {
+            alert('✅ Corte de caja impreso exitosamente');
+          } else {
+            alert(`❌ Error al imprimir: ${result.error}`);
+          }
+        } catch (error) {
+          console.error('Error en IPC:', error);
+          alert(`❌ Error en la impresión: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
+      } else {
+        // Fallback: imprimir con window.print() si no está disponible Electron
+        const periodLabel = {
+          day: 'HOY',
+          week: 'ESTA SEMANA',
+          month: 'ESTE MES',
+          year: 'ESTE AÑO',
+        }[selectedPeriod];
+
+        const printContent = `
       ========================================
             LA GRAN MICHOACANA
-              REPORTE DE VENTAS
+              CORTE DE CAJA
       ========================================
       
       Período: ${periodLabel}
-      ${dateRange.start ? `Del: ${formatDateShort(new Date(dateRange.start))}` : ''}
-      ${dateRange.end ? `Al:  ${formatDateShort(new Date(dateRange.end))}` : ''}
-      
       Generado: ${formatDate(new Date())}
       Usuario: ${user?.username || 'N/A'}
       
       ========================================
-              RESUMEN DE VENTAS
+          RESUMEN DE EFECTIVO
       ========================================
       
-      Total de Ventas:         $${currentData.total.toFixed(2)}
-      Número de Transacciones:        ${currentData.transactions}
-      Ticket Promedio:         $${currentData.avgTicket.toFixed(2)}
+      Fondo Inicial:           $${cashierCutData.summary.fondoInicial.toFixed(2)}
+      Ingresos del Turno:      $${cashierCutData.summary.ingresosTurno.toFixed(2)}
+      Egresos/Retiros:         -$${cashierCutData.summary.egresos.toFixed(2)}
+      
+      Total en Caja:           $${cashierCutData.summary.totalEnCaja.toFixed(2)}
+      
+      Ticket Promedio:         $${cashierCutData.totals.averageTicket.toFixed(2)}
       
       ========================================
-         PRODUCTOS MÁS VENDIDOS
+          FORMAS DE PAGO
       ========================================
-${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
-      ${i + 1}. ${p.productName}
-         Cantidad: ${p.quantity}
-         Ingresos: $${p.revenue.toFixed(2)}`).join('') || '      Sin datos disponibles'}
+      
+      Efectivo:
+         Total: $${cashierCutData.paymentMethods.efectivo.total.toFixed(2)}
+         Transacciones: ${cashierCutData.paymentMethods.efectivo.transactions}
+      
+      Tarjeta:
+         Total: $${cashierCutData.paymentMethods.tarjeta.total.toFixed(2)}
+         Transacciones: ${cashierCutData.paymentMethods.tarjeta.transactions}
+      
+      Mixto:
+         Total: $${cashierCutData.paymentMethods.mixto.total.toFixed(2)}
+         Transacciones: ${cashierCutData.paymentMethods.mixto.transactions}
       
       ========================================
-                FIN DEL REPORTE
+                FIN DEL CORTE
       ========================================
     `;
-    
-    // Crear ventana de impresión
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Reporte de Ventas - ${periodLabel}</title>
-            <style>
-              body { 
-                font-family: 'Courier New', monospace; 
-                padding: 20px; 
-                white-space: pre;
-                font-size: 12px;
-              }
-              @media print {
-                body { padding: 10px; }
-              }
-            </style>
-          </head>
-          <body>${printContent}</body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
+        
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        if (printWindow) {
+          printWindow.document.write(`
+          <html>
+            <head>
+              <title>Corte de Caja</title>
+              <style>
+                body { 
+                  font-family: 'Courier New', monospace; 
+                  padding: 20px; 
+                  white-space: pre;
+                  font-size: 12px;
+                }
+                @media print {
+                  body { padding: 10px; }
+                }
+              </style>
+            </head>
+            <body>${printContent}</body>
+          </html>
+        `);
+          printWindow.document.close();
+          printWindow.print();
+        }
+      }
+    } catch (error) {
+      console.error('Error en handlePrintCut:', error);
+      alert(`❌ Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 
@@ -1360,7 +1444,57 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                     <div className="space-y-3">
                       <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                         <span className="text-gray-700">Fondo Inicial</span>
-                        <span className="font-semibold">${cashierCutData.summary.fondoInicial.toFixed(2)}</span>
+                        {editingFondo ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={fondoValue}
+                              onChange={(e) => setFondoValue(e.target.value)}
+                              className="w-32 px-3 py-1 border-2 border-primary rounded text-right font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50"
+                              placeholder="0.00"
+                              disabled={savingFondo}
+                            />
+                            <div className="flex gap-1">
+                              <button
+                                onClick={handleSaveFondo}
+                                disabled={savingFondo}
+                                className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
+                              >
+                                {savingFondo ? '🔄' : '✓'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingFondo(false);
+                                  if (cashierCutData) {
+                                    setFondoValue(cashierCutData.summary.fondoInicial.toString());
+                                  }
+                                }}
+                                disabled={savingFondo}
+                                className="px-2 py-1 bg-gray-400 text-white text-xs font-medium rounded hover:bg-gray-500 disabled:opacity-50 transition-colors"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 group">
+                            <span className="font-semibold">${cashierCutData?.summary.fondoInicial.toFixed(2)}</span>
+                            <button
+                              onClick={() => {
+                                setEditingFondo(true);
+                                if (cashierCutData) {
+                                  setFondoValue(cashierCutData.summary.fondoInicial.toString());
+                                }
+                              }}
+                              className="p-1 text-gray-500 hover:text-primary hover:bg-primary/10 rounded opacity-0 group-hover:opacity-100 transition-all"
+                              title="Editar fondo inicial"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
@@ -1382,7 +1516,10 @@ ${statsData?.topProducts?.slice(0, 5).map((p: any, i: number) => `
                           Total en Caja
                         </span>
                         <span className="text-2xl font-bold text-primary">
-                          ${cashierCutData.summary.totalEnCaja.toFixed(2)}
+                          ${(editingFondo 
+                            ? (parseFloat(fondoValue) || 0) + (cashierCutData?.summary.ingresosTurno || 0) - (cashierCutData?.summary.egresos || 0)
+                            : cashierCutData?.summary.totalEnCaja || 0
+                          ).toFixed(2)}
                         </span>
                       </div>
                       
