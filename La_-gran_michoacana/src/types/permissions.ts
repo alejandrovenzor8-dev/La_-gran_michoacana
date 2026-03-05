@@ -1,5 +1,5 @@
 // Tipos de módulos disponibles en el sistema
-export type ModuleType = 'pos' | 'inventory' | 'users' | 'branches' | 'settings' | 'permissions' | 'reports';
+export type ModuleType = 'pos' | 'inventory' | 'users' | 'branches' | 'settings' | 'permissions' | 'reports' | 'audit';
 
 // Interfaz de permisos de usuario (simple - solo acceso/no acceso)
 export interface UserPermissions {
@@ -15,6 +15,7 @@ export interface RolePermissions {
   settings: boolean;
   permissions: boolean;
   reports: boolean;
+  audit: boolean;
 }
 
 // Información completa del módulo
@@ -60,5 +61,10 @@ export const AVAILABLE_MODULES: ModuleInfo[] = [
     id: 'reports',
     label: 'Reportes',
     description: 'Reportes de ventas y cortes de caja',
+  },
+  {
+    id: 'audit',
+    label: 'Auditoría',
+    description: 'Historial de cambios y seguimiento de acciones',
   },
 ];

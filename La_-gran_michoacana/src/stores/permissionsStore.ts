@@ -33,6 +33,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
     settings: true,
     permissions: true,
     reports: true,
+    audit: true,
   },
   gerente: {
     pos: true,
@@ -42,6 +43,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
     settings: true,
     permissions: false,
     reports: true,
+    audit: true,
   },
   cajero: {
     pos: true,
@@ -51,6 +53,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<'admin' | 'cajero' | 'gerente', UserPermi
     settings: false,
     permissions: false,
     reports: true,
+    audit: false,
   },
 };
 
@@ -88,6 +91,7 @@ export const usePermissionsStore = create<PermissionsStore>()(
 
       initializeUserPermissions: (username: string, role: 'admin' | 'cajero' | 'gerente') => {
         const existingPermissions = get().userPermissions[username];
+        const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[role];
         
         // Verificar si los permisos están vacíos o todos son false
         const arePermissionsEmpty = !existingPermissions || 
@@ -95,14 +99,32 @@ export const usePermissionsStore = create<PermissionsStore>()(
         
         // Si no existen permisos o están vacíos, inicializar con valores por defecto
         if (arePermissionsEmpty) {
-          const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[role];
-          
           set((state) => ({
             userPermissions: {
               ...state.userPermissions,
               [username]: defaultPermissions,
             },
           }));
+        } else {
+          // Si ya existen permisos, agregar permisos faltantes para nuevos módulos
+          const updatedPermissions = { ...existingPermissions };
+          let hasChanges = false;
+          
+          AVAILABLE_MODULES.forEach((module) => {
+            if (!(module.id in updatedPermissions)) {
+              updatedPermissions[module.id] = defaultPermissions[module.id] || false;
+              hasChanges = true;
+            }
+          });
+          
+          if (hasChanges) {
+            set((state) => ({
+              userPermissions: {
+                ...state.userPermissions,
+                [username]: updatedPermissions,
+              },
+            }));
+          }
         }
       },
     }),

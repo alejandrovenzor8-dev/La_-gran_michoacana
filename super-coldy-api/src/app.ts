@@ -57,6 +57,7 @@ logger.info('✅ Rutas registradas:', {
   '/api/permissions': 'Permisos y módulos (protegido)',
   '/api/settings': 'Configuración del sistema (admin)',
   '/api/branches': 'Gestión de sucursales (admin)',
+  '/api/audit': 'Logs de auditoría (admin/gerente)',
 });
 
 // ============================================================

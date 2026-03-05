@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield, BarChart3, Building } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, Menu, X, Users, Package, Shield, BarChart3, Building, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { usePermissionsStore } from '@/stores/permissionsStore';
@@ -88,6 +88,13 @@ export function Sidebar() {
       path: '/permissions',
       icon: <Shield className="w-5 h-5" />,
       module: 'permissions' as ModuleType,
+    },
+    {
+      id: 'audit',
+      label: 'Auditoría',
+      path: '/audit',
+      icon: <FileText className="w-5 h-5" />,
+      module: 'audit' as ModuleType,
     },
     {
       id: 'settings',
