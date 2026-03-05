@@ -60,13 +60,23 @@ export default function AuditPage() {
       if (filterEntity) url += `&entity=${filterEntity}`;
       if (filterAction) url += `&action=${filterAction}`;
       
-      const response = await apiClient.get<{ logs: AuditLog[], total: number }>(url);
+      const response = await apiClient.get<{ 
+        status: string;
+        data: {
+          logs: AuditLog[];
+          total: number;
+          limit: number;
+          offset: number;
+        };
+      }>(url);
 
-      setLogs(response.logs);
-      setTotal(response.total);
+      setLogs(response.data?.logs || []);
+      setTotal(response.data?.total || 0);
     } catch (error: any) {
       console.error('Error al obtener logs de auditoría:', error);
       toast.error(error.response?.data?.error || 'Error al cargar los logs de auditoría');
+      setLogs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -101,7 +111,7 @@ export default function AuditPage() {
     }
   };
 
-  const filteredLogs = logs.filter(log =>
+  const filteredLogs = (logs || []).filter(log =>
     log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.user?.username.toLowerCase().includes(searchTerm.toLowerCase())
