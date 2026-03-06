@@ -64,6 +64,12 @@ export interface CreateSaleInput {
   /** Monto de cambio (se calcula automáticamente) */
   changeAmount?: number;
 
+  /** Monto pagado en efectivo (para MIXTO) */
+  cashAmount?: number;
+
+  /** Monto pagado en tarjeta (para MIXTO) */
+  cardAmount?: number;
+
   /** Descuento total aplicado a la venta */
   discount?: number;
 

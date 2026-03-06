@@ -178,7 +178,7 @@ export default function UsersPage() {
       const updatedUser = await userService.updateUser(editingId, {
         email: editFormData.email,
         fullName: editFormData.fullName || undefined,
-        role: editFormData.role as 'ADMIN' | 'CAJERO' | 'GERENTE',
+        role: (editFormData.role as 'ADMIN' | 'CAJERO' | 'GERENTE').toUpperCase() as 'ADMIN' | 'CAJERO' | 'GERENTE',
         active: editFormData.active,
         timezone: editFormData.timezone,
         branchId: editFormData.branchId ? parseInt(editFormData.branchId) : null,

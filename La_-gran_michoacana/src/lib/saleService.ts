@@ -2,21 +2,32 @@ import { apiClient } from './apiClient';
 
 export interface SaleItem {
   id?: number;
-  productId: number;
+  productId: number | string;
+  productName?: string;
   quantity: number;
-  price: number;
+  price?: number;
+  unitPrice?: number;
   subtotal?: number;
+  discount?: number;
 }
 
 export interface Sale {
   id?: number;
   userId?: number;
   date?: string;
-  total: number;
+  total?: number;
   paymentMethod?: string;
   items: SaleItem[];
   status?: string;
   branchId?: number;
+  amountReceived?: number;
+  changeAmount?: number;
+  cashAmount?: number;
+  cardAmount?: number;
+  discount?: number;
+  tax?: number;
+  notes?: string;
+  source?: 'DESKTOP' | 'MOBILE';
 }
 
 export interface SaleResponse {
@@ -66,7 +77,34 @@ class SaleService {
    */
   async createSale(sale: Sale): Promise<Sale> {
     try {
-      const response = await apiClient.post<SaleResponse>('/sales', sale);
+      const payload = {
+        items: (sale.items || []).map((item) => {
+          const quantity = Number(item.quantity || 0);
+          const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
+          const subtotal = Number(item.subtotal ?? quantity * unitPrice);
+
+          return {
+            productId: String(item.productId),
+            productName: item.productName || `Producto ${item.productId}`,
+            quantity,
+            unitPrice,
+            subtotal,
+            discount: Number(item.discount ?? 0),
+          };
+        }),
+        paymentMethod: sale.paymentMethod,
+        branchId: sale.branchId,
+        amountReceived: sale.amountReceived,
+        changeAmount: sale.changeAmount,
+        cashAmount: sale.cashAmount,
+        cardAmount: sale.cardAmount,
+        discount: Number(sale.discount ?? 0),
+        tax: Number(sale.tax ?? 0),
+        notes: sale.notes,
+        source: sale.source || 'DESKTOP',
+      };
+
+      const response = await apiClient.post<SaleResponse>('/sales', payload);
       return Array.isArray(response.data) ? response.data[0] : response.data;
     } catch (error) {
       throw error;

@@ -24,7 +24,7 @@ class SaleController {
         throw new AppError('Usuario no autenticado', 401);
       }
 
-      const { items, paymentMethod, amountReceived, discount, tax, notes, source, branchId } = req.body;
+      const { items, paymentMethod, amountReceived, discount, tax, notes, source, branchId, cashAmount, cardAmount } = req.body;
       const parsedBranchId = branchId !== undefined ? Number(branchId) : undefined;
       const requesterRole = (req.user?.role || '').toUpperCase().trim();
 
@@ -46,6 +46,8 @@ class SaleController {
         items,
         paymentMethod,
         amountReceived,
+        cashAmount,
+        cardAmount,
         discount,
         tax,
         notes,

@@ -62,8 +62,9 @@ router.post(
     .trim(),
   body('role')
     .optional()
-    .isIn(['admin', 'cajero', 'gerente'])
-    .withMessage('Rol inválido'),
+    .isIn(['ADMIN', 'CAJERO', 'GERENTE', 'admin', 'cajero', 'gerente'])
+    .withMessage('Rol inválido debe ser: ADMIN, CAJERO, GERENTE')
+    .customSanitizer((value) => value ? value.toUpperCase() : value),
   validate,
   asyncHandler((req, res, next) => authController.register(req, res, next))
 );

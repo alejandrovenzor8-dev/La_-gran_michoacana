@@ -210,6 +210,8 @@ class SaleService {
             paymentMethod: (data.paymentMethod as PaymentMethod),
             amountReceived: data.amountReceived ? new Prisma.Decimal(data.amountReceived) : undefined,
             changeAmount: changeAmount ? new Prisma.Decimal(changeAmount) : undefined,
+            cashAmount: data.cashAmount ? new Prisma.Decimal(data.cashAmount) : undefined,
+            cardAmount: data.cardAmount ? new Prisma.Decimal(data.cardAmount) : undefined,
             status: SaleStatus.COMPLETED,
             notes: data.notes,
             source: (data.source as Source) || Source.DESKTOP,
@@ -940,6 +942,8 @@ class SaleService {
           id: true,
           total: true,
           paymentMethod: true,
+          cashAmount: true,
+          cardAmount: true,
           createdAt: true,
           user: {
             select: {
@@ -954,9 +958,23 @@ class SaleService {
       const tarjetaSales = sales.filter((s) => s.paymentMethod === 'TARJETA');
       const mixtoSales = sales.filter((s) => s.paymentMethod === 'MIXTO');
 
+      console.log('🔍 Mixto sales:', mixtoSales);
+      console.log('🔍 First mixto sale:', mixtoSales[0]);
+
       const efectivoTotal = efectivoSales.reduce((sum, s) => sum + Number(s.total), 0);
       const tarjetaTotal = tarjetaSales.reduce((sum, s) => sum + Number(s.total), 0);
       const mixtoTotal = mixtoSales.reduce((sum, s) => sum + Number(s.total), 0);
+
+      // Calcular el efectivo real recolectado (EFECTIVO completo + cashAmount de MIXTO)
+      const efectivoCashFromMixto = mixtoSales.reduce((sum, s) => sum + Number(s.cashAmount || 0), 0);
+      const efectivoRealTotal = efectivoTotal + efectivoCashFromMixto;
+
+      console.log('💰 efectivoCashFromMixto:', efectivoCashFromMixto);
+      console.log('💰 efectivoRealTotal:', efectivoRealTotal);
+
+      // Calcular tarjeta real (TARJETA completa + cardAmount de MIXTO)
+      const tarjetaCardFromMixto = mixtoSales.reduce((sum, s) => sum + Number(s.cardAmount || 0), 0);
+      const tarjetaRealTotal = tarjetaTotal + tarjetaCardFromMixto;
 
       const totalIngresos = efectivoTotal + tarjetaTotal + mixtoTotal;
       const totalTransactions = sales.length;
@@ -974,14 +992,18 @@ class SaleService {
           efectivo: {
             total: efectivoTotal,
             transactions: efectivoSales.length,
+            realTotal: efectivoRealTotal, // Incluye cashAmount de MIXTO
           },
           tarjeta: {
             total: tarjetaTotal,
             transactions: tarjetaSales.length,
+            realTotal: tarjetaRealTotal, // Incluye cardAmount de MIXTO
           },
           mixto: {
             total: mixtoTotal,
             transactions: mixtoSales.length,
+            cashAmount: efectivoCashFromMixto,
+            cardAmount: tarjetaCardFromMixto,
           },
         },
         summary: {

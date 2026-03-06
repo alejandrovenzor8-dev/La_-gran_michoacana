@@ -52,6 +52,8 @@ export function PaymentDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [changeAmount, setChangeAmount] = useState(0);
+  const [cashAmount, setCashAmount] = useState('');
+  const [cardAmount, setCardAmount] = useState('');
 
   const { items, total, clearCart } = useCartStore();
   const { user } = useAuthStore();
@@ -63,7 +65,7 @@ export function PaymentDialog({
     return storedBranchId ? Number(storedBranchId) : undefined;
   };
 
-  // Calcular cambio automáticamente
+  // Calcular cambio automáticamente y validar montos en MIXTO
   useEffect(() => {
     if (paymentMethod === 'EFECTIVO' && amountReceived) {
       const received = parseFloat(amountReceived);
@@ -72,10 +74,16 @@ export function PaymentDialog({
       } else {
         setChangeAmount(0);
       }
+    } else if (paymentMethod === 'MIXTO') {
+      // En MIXTO no hay cambio, solo vista previa de la suma
+      const cash = parseFloat(cashAmount) || 0;
+      const card = parseFloat(cardAmount) || 0;
+      // Validación visual pero no se calcula cambio en MIXTO
+      setChangeAmount(0);
     } else {
       setChangeAmount(0);
     }
-  }, [amountReceived, total, paymentMethod]);
+  }, [amountReceived, cashAmount, cardAmount, total, paymentMethod]);
 
   // Validar pago
   const validatePayment = (): boolean => {
@@ -118,6 +126,30 @@ export function PaymentDialog({
         setError(`El monto recibido debe ser al menos $${total.toFixed(2)}`);
         return false;
       }
+    } else if (paymentMethod === 'MIXTO') {
+      if (!cashAmount || cashAmount.trim() === '') {
+        setError('Ingresa el monto en efectivo');
+        return false;
+      }
+      if (!cardAmount || cardAmount.trim() === '') {
+        setError('Ingresa el monto en tarjeta');
+        return false;
+      }
+      const cash = parseFloat(cashAmount);
+      const card = parseFloat(cardAmount);
+      if (isNaN(cash) || cash < 0) {
+        setError('Monto en efectivo inválido');
+        return false;
+      }
+      if (isNaN(card) || card < 0) {
+        setError('Monto en tarjeta inválido');
+        return false;
+      }
+      const totalMixto = cash + card;
+      if (Math.abs(totalMixto - total) > 0.01) {
+        setError(`La suma de efectivo ($${cash.toFixed(2)}) + tarjeta ($${card.toFixed(2)}) debe ser exactamente $${total.toFixed(2)}`);
+        return false;
+      }
     }
 
     return true;
@@ -141,24 +173,35 @@ export function PaymentDialog({
       const calculatedSubtotal = total / 1.16;
       const calculatedTax = total - calculatedSubtotal;
 
-      const saleData = {
+      let salePayload: any = {
         items: items.map(item => ({
           productId: item.id,
           productName: item.name,
           quantity: item.quantity,
           unitPrice: item.price,
-          subtotal: item.price * item.quantity,
+          subtotal: (item.price * item.quantity) / 1.16, // Subtotal sin IVA
           discount: 0
         })),
         branchId: branchIdToUse,
         paymentMethod,
-        amountReceived: paymentMethod === 'EFECTIVO' ? parseFloat(amountReceived) : undefined,
-        changeAmount: paymentMethod === 'EFECTIVO' ? changeAmount : undefined,
         discount: 0,
         tax: calculatedTax,
         notes: notes.trim() || undefined,
         source: 'DESKTOP'
       };
+
+      if (paymentMethod === 'EFECTIVO') {
+        salePayload.amountReceived = parseFloat(amountReceived);
+        salePayload.changeAmount = changeAmount;
+      } else if (paymentMethod === 'MIXTO') {
+        // Para pago mixto, guardar los montos desglosados
+        salePayload.amountReceived = parseFloat(cashAmount) + parseFloat(cardAmount);
+        salePayload.cashAmount = parseFloat(cashAmount);
+        salePayload.cardAmount = parseFloat(cardAmount);
+      }
+      // Para TARJETA pura no se agrega amountReceived
+
+      const saleData = salePayload;
 
       // Llamar al servicio de ventas
       const sale = await saleService.createSale(saleData);
@@ -244,10 +287,15 @@ export function PaymentDialog({
       // Resetear formulario
       setPaymentMethod('EFECTIVO');
       setAmountReceived('');
+      setCashAmount('');
+      setCardAmount('');
       setNotes('');
       setError(null);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Error al procesar el pago. Intenta de nuevo.';
+      const errorMessage =
+        err?.data?.message ||
+        err?.message ||
+        'Error al procesar el pago. Intenta de nuevo.';
       toast.error('Error en el pago', {
         description: errorMessage
       });
@@ -262,6 +310,8 @@ export function PaymentDialog({
     if (!loading) {
       setPaymentMethod('EFECTIVO');
       setAmountReceived('');
+      setCashAmount('');
+      setCardAmount('');
       setNotes('');
       setError(null);
       onClose();
@@ -364,6 +414,100 @@ export function PaymentDialog({
                       ${changeAmount.toFixed(2)}
                     </span>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Input para pago mixto (efectivo + tarjeta) */}
+          {paymentMethod === 'MIXTO' && (
+            <div className="space-y-4">
+              <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
+                <p className="text-sm font-medium text-purple-900 mb-3">Desglose de Pago Mixto</p>
+                
+                <div className="space-y-3">
+                  {/* Monto en efectivo */}
+                  <div>
+                    <Label htmlFor="cashAmount" className="text-sm font-semibold text-purple-900">
+                      💵 Monto en Efectivo
+                    </Label>
+                    <Input
+                      id="cashAmount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={cashAmount}
+                      onChange={(e) => {
+                        setCashAmount(e.target.value);
+                        // Auto-completar tarjeta
+                        const cash = parseFloat(e.target.value) || 0;
+                        const card = total - cash;
+                        setCardAmount(card >= 0 ? card.toFixed(2) : '');
+                        setError(null);
+                      }}
+                      disabled={loading}
+                      className="text-lg mt-1"
+                    />
+                  </div>
+
+                  {/* Monto en tarjeta */}
+                  <div>
+                    <Label htmlFor="cardAmount" className="text-sm font-semibold text-purple-900">
+                      💳 Monto en Tarjeta
+                    </Label>
+                    <Input
+                      id="cardAmount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={cardAmount}
+                      onChange={(e) => {
+                        setCardAmount(e.target.value);
+                        // Auto-completar efectivo
+                        const card = parseFloat(e.target.value) || 0;
+                        const cash = total - card;
+                        setCashAmount(cash >= 0 ? cash.toFixed(2) : '');
+                        setError(null);
+                      }}
+                      disabled={loading}
+                      className="text-lg mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Validación visual de suma */}
+              {cashAmount && cardAmount && (
+                <div className={`p-3 rounded-lg border-2 ${
+                  Math.abs((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0) - total) < 0.01
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-orange-50 border-orange-200'
+                }`}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className={`font-medium ${
+                      Math.abs((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0) - total) < 0.01
+                        ? 'text-green-700'
+                        : 'text-orange-700'
+                    }`}>
+                      Total: ${((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0)).toFixed(2)}
+                    </span>
+                    <span className={`font-bold text-lg ${
+                      Math.abs((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0) - total) < 0.01
+                        ? 'text-green-700'
+                        : 'text-orange-700'
+                    }`}>
+                      {Math.abs((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0) - total) < 0.01 ? '✓' : '✗'}
+                    </span>
+                  </div>
+                  <p className={`text-xs ${
+                    Math.abs((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0) - total) < 0.01
+                      ? 'text-green-700'
+                      : 'text-orange-700'
+                  }`}>
+                    Debe ser exactamente ${total.toFixed(2)}
+                  </p>
                 </div>
               )}
             </div>

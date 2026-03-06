@@ -144,6 +144,8 @@ model Sale {
   paymentMethod         PaymentMethod
   amountReceived        Decimal?              @db.Decimal(12, 2)
   changeAmount          Decimal?              @db.Decimal(12, 2)
+  cashAmount            Decimal?              @db.Decimal(12, 2) // Monto pagado en efectivo (para MIXTO)
+  cardAmount            Decimal?              @db.Decimal(12, 2) // Monto pagado en tarjeta (para MIXTO)
   status                SaleStatus            @default(COMPLETED)
   notes                 String?
   source                Source                @default(DESKTOP)

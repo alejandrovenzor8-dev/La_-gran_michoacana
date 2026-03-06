@@ -118,7 +118,11 @@ class UserService {
    */
   async createUser(data: CreateUserData): Promise<User> {
     try {
-      const response = await apiClient.post<CreateUserResponse>('/auth/register', data);
+      const payload = {
+        ...data,
+        role: data.role.toLowerCase(), // Convertir a minúsculas para el backend
+      };
+      const response = await apiClient.post<CreateUserResponse>('/auth/register', payload);
       return response.data.user;
     } catch (error) {
       throw error;
@@ -132,9 +136,13 @@ class UserService {
    */
   async updateUser(userId: number, data: UpdateUserData): Promise<User> {
     try {
+      const payload = {
+        ...data,
+        role: data.role ? data.role.toUpperCase() : data.role, // Normalizar role a MAYÚSCULAS
+      };
       const response = await apiClient.put<UpdateUserResponse>(
         `/users/${userId}`,
-        data
+        payload
       );
       return response.data.user;
     } catch (error) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CashWithdrawalModal } from '@/components/modals/CashWithdrawalModal';
 import {
   BarChart3,
   Calendar,
@@ -55,10 +56,9 @@ export default function ReportsPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
   const [salesList, setSalesList] = useState<any[]>([]);
-  const [editingFondo, setEditingFondo] = useState(false);
-  const [fondoValue, setFondoValue] = useState<string>('');
-  const [savingFondo, setSavingFondo] = useState(false);
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
+  const [showCashWithdrawalModal, setShowCashWithdrawalModal] = useState(false);
+  const [cashierCutDataForWithdrawal, setCashierCutDataForWithdrawal] = useState<any>(null);
 
   const getReportBranchId = () => {
     if (user?.role === 'ADMIN') {
@@ -280,10 +280,11 @@ export default function ReportsPage() {
         const branchIdToUse = getReportBranchId();
         const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         const data = await saleService.getCashierCut(queryParams);
+        console.log('📊 Cashier Cut Data:', data);
+        console.log('💵 Efectivo realTotal:', data?.paymentMethods?.efectivo?.realTotal);
+        console.log('💵 Efectivo total:', data?.paymentMethods?.efectivo?.total);
+        console.log('💵 Mixto cashAmount:', data?.paymentMethods?.mixto?.cashAmount);
         setCashierCutData(data);
-        if (data?.summary?.fondoInicial) {
-          setFondoValue(data.summary.fondoInicial.toString());
-        }
         
         // Cargar información de la sucursal actual
         if (branchIdToUse) {
@@ -305,40 +306,6 @@ export default function ReportsPage() {
       loadCashierCut();
     }
   }, [activeTab, selectedBranchId, user?.branchId, user?.role]);
-
-  // Función para guardar el fondo inicial
-  const handleSaveFondo = async () => {
-    try {
-      setSavingFondo(true);
-      const nuevoFondo = parseFloat(fondoValue);
-      
-      if (isNaN(nuevoFondo) || nuevoFondo < 0) {
-        alert('❌ Por favor ingresa un valor válido (número positivo)');
-        return;
-      }
-
-      // Actualizar el estado local
-      if (cashierCutData) {
-        const newTotal = nuevoFondo + cashierCutData.summary.ingresosTurno - cashierCutData.summary.egresos;
-        
-        setCashierCutData({
-          ...cashierCutData,
-          summary: {
-            ...cashierCutData.summary,
-            fondoInicial: nuevoFondo,
-            totalEnCaja: newTotal,
-          },
-        });
-      }
-
-      setEditingFondo(false);
-      alert('✅ Fondo inicial actualizado correctamente');
-    } catch (error) {
-      alert('❌ Error al guardar el fondo inicial');
-    } finally {
-      setSavingFondo(false);
-    }
-  };
 
   // Función para cambiar ordenamiento
   const handleSort = (field: 'id' | 'date' | 'total' | 'items' | 'paymentMethod') => {
@@ -589,13 +556,24 @@ export default function ReportsPage() {
         return;
       }
 
+      // Mostrar modal de retiro de efectivo
+      setCashierCutDataForWithdrawal(cashierCutData);
+      setShowCashWithdrawalModal(true);
+    } catch (error) {
+      console.error('Error en handlePrintCut:', error);
+      alert(`❌ Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  };
+
+  const executeActualPrint = async () => {
+    try {
       // Si estamos en Electron, usar IPC
       if (window.electron && window.electron.ipcRenderer) {
         try {
           const result = await window.electron.ipcRenderer.invoke('print-cashier-cut', 
-            cashierCutData, 
+            cashierCutDataForWithdrawal || cashierCutData, 
             user?.username || 'Usuario',
-            user?.branchName
+            currentBranch?.name || 'Sucursal'
           );
 
           if (result.success) {
@@ -630,31 +608,36 @@ export default function ReportsPage() {
       ========================================
           RESUMEN DE EFECTIVO
       ========================================
-      ${currentBranch?.initialCash !== undefined && currentBranch?.initialCash !== null ? `
-      Caja Inicial (Sucursal): $${(Number(currentBranch.initialCash) || 0).toFixed(2)}` : ''}
-      Fondo Inicial:           $${cashierCutData.summary.fondoInicial.toFixed(2)}
-      Ingresos del Turno:      $${cashierCutData.summary.ingresosTurno.toFixed(2)}
-      Egresos/Retiros:         -$${cashierCutData.summary.egresos.toFixed(2)}
       
-      Total en Caja:           $${cashierCutData.summary.totalEnCaja.toFixed(2)}
+      Caja Inicial:            $${(Number(currentBranch?.initialCash) || 0).toFixed(2)}
+      Ingresos del Turno:      $${(cashierCutDataForWithdrawal || cashierCutData).summary.ingresosTurno.toFixed(2)}
+      Egresos/Retiros:         -$${(cashierCutDataForWithdrawal || cashierCutData).summary.egresos.toFixed(2)}
       
-      Ticket Promedio:         $${cashierCutData.totals.averageTicket.toFixed(2)}
+      Total en Caja:           $${(
+        (Number(currentBranch?.initialCash) || 0) + 
+        (cashierCutDataForWithdrawal || cashierCutData).summary.ingresosTurno - 
+        (cashierCutDataForWithdrawal || cashierCutData).summary.egresos
+      ).toFixed(2)}
+      
+      Ticket Promedio:         $${(cashierCutDataForWithdrawal || cashierCutData).totals.averageTicket.toFixed(2)}
       
       ========================================
           FORMAS DE PAGO
       ========================================
       
       Efectivo:
-         Total: $${cashierCutData.paymentMethods.efectivo.total.toFixed(2)}
-         Transacciones: ${cashierCutData.paymentMethods.efectivo.transactions}
+         Total: $${((cashierCutDataForWithdrawal || cashierCutData).paymentMethods.efectivo.realTotal || (cashierCutDataForWithdrawal || cashierCutData).paymentMethods.efectivo.total).toFixed(2)}
+         Transacciones: ${(cashierCutDataForWithdrawal || cashierCutData).paymentMethods.efectivo.transactions}
       
       Tarjeta:
-         Total: $${cashierCutData.paymentMethods.tarjeta.total.toFixed(2)}
-         Transacciones: ${cashierCutData.paymentMethods.tarjeta.transactions}
+         Total: $${((cashierCutDataForWithdrawal || cashierCutData).paymentMethods.tarjeta.realTotal || (cashierCutDataForWithdrawal || cashierCutData).paymentMethods.tarjeta.total).toFixed(2)}
+         Transacciones: ${(cashierCutDataForWithdrawal || cashierCutData).paymentMethods.tarjeta.transactions}
       
       Mixto:
-         Total: $${cashierCutData.paymentMethods.mixto.total.toFixed(2)}
-         Transacciones: ${cashierCutData.paymentMethods.mixto.transactions}
+         Total: $${(cashierCutDataForWithdrawal || cashierCutData).paymentMethods.mixto.total.toFixed(2)}
+         Transacciones: ${(cashierCutDataForWithdrawal || cashierCutData).paymentMethods.mixto.transactions}
+         Efectivo: $${((cashierCutDataForWithdrawal || cashierCutData).paymentMethods.mixto.cashAmount || 0).toFixed(2)}
+         Tarjeta: $${((cashierCutDataForWithdrawal || cashierCutData).paymentMethods.mixto.cardAmount || 0).toFixed(2)}
       
       ========================================
                 FIN DEL CORTE
@@ -687,7 +670,7 @@ export default function ReportsPage() {
         }
       }
     } catch (error) {
-      console.error('Error en handlePrintCut:', error);
+      console.error('Error en executeActualPrint:', error);
       alert(`❌ Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
@@ -1455,73 +1438,15 @@ export default function ReportsPage() {
                     <h3 className="font-semibold text-lg">Resumen de Efectivo</h3>
                     
                     <div className="space-y-3">
-                      {/* Caja Inicial de la Sucursal (solo informativo) */}
+                      {/* Caja Inicial de la Sucursal */}
                       {currentBranch?.initialCash !== undefined && currentBranch?.initialCash !== null && (
                         <div className="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <span className="text-blue-700">💰 Caja Inicial de la Sucursal</span>
-                            <span className="text-xs text-blue-600 italic">(referencia)</span>
-                          </div>
+                          <span className="text-blue-700 font-medium">Caja Inicial</span>
                           <span className="font-semibold text-blue-900">
                             ${(Number(currentBranch.initialCash) || 0).toFixed(2)}
                           </span>
                         </div>
                       )}
-                      
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-700">Fondo Inicial</span>
-                        {editingFondo ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={fondoValue}
-                              onChange={(e) => setFondoValue(e.target.value)}
-                              className="w-32 px-3 py-1 border-2 border-primary rounded text-right font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50"
-                              placeholder="0.00"
-                              disabled={savingFondo}
-                            />
-                            <div className="flex gap-1">
-                              <button
-                                onClick={handleSaveFondo}
-                                disabled={savingFondo}
-                                className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
-                              >
-                                {savingFondo ? '🔄' : '✓'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingFondo(false);
-                                  if (cashierCutData) {
-                                    setFondoValue(cashierCutData.summary.fondoInicial.toString());
-                                  }
-                                }}
-                                disabled={savingFondo}
-                                className="px-2 py-1 bg-gray-400 text-white text-xs font-medium rounded hover:bg-gray-500 disabled:opacity-50 transition-colors"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 group">
-                            <span className="font-semibold">${cashierCutData?.summary.fondoInicial.toFixed(2)}</span>
-                            <button
-                              onClick={() => {
-                                setEditingFondo(true);
-                                if (cashierCutData) {
-                                  setFondoValue(cashierCutData.summary.fondoInicial.toString());
-                                }
-                              }}
-                              className="p-1 text-gray-500 hover:text-primary hover:bg-primary/10 rounded opacity-0 group-hover:opacity-100 transition-all"
-                              title="Editar fondo inicial"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        )}
-                      </div>
                       
                       <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                         <span className="text-green-700">Ingresos del Turno</span>
@@ -1542,9 +1467,10 @@ export default function ReportsPage() {
                           Total en Caja
                         </span>
                         <span className="text-2xl font-bold text-primary">
-                          ${(editingFondo 
-                            ? (parseFloat(fondoValue) || 0) + (cashierCutData?.summary.ingresosTurno || 0) - (cashierCutData?.summary.egresos || 0)
-                            : cashierCutData?.summary.totalEnCaja || 0
+                          ${(
+                            (Number(currentBranch?.initialCash) || 0) + 
+                            (cashierCutData?.summary.ingresosTurno || 0) - 
+                            (cashierCutData?.summary.egresos || 0)
                           ).toFixed(2)}
                         </span>
                       </div>
@@ -1565,13 +1491,13 @@ export default function ReportsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="p-4 border-2 border-gray-200 rounded-lg">
                         <p className="text-sm text-gray-500 mb-1">Efectivo</p>
-                        <p className="text-xl font-bold">${cashierCutData.paymentMethods.efectivo.total.toFixed(2)}</p>
+                        <p className="text-xl font-bold">${(cashierCutData.paymentMethods.efectivo.realTotal || cashierCutData.paymentMethods.efectivo.total).toFixed(2)}</p>
                         <p className="text-sm text-gray-500">{cashierCutData.paymentMethods.efectivo.transactions} transacciones</p>
                       </div>
                       
                       <div className="p-4 border-2 border-gray-200 rounded-lg">
                         <p className="text-sm text-gray-500 mb-1">Tarjeta</p>
-                        <p className="text-xl font-bold">${cashierCutData.paymentMethods.tarjeta.total.toFixed(2)}</p>
+                        <p className="text-xl font-bold">${(cashierCutData.paymentMethods.tarjeta.realTotal || cashierCutData.paymentMethods.tarjeta.total).toFixed(2)}</p>
                         <p className="text-sm text-gray-500">{cashierCutData.paymentMethods.tarjeta.transactions} transacciones</p>
                       </div>
                       
@@ -1579,6 +1505,12 @@ export default function ReportsPage() {
                         <p className="text-sm text-gray-500 mb-1">Mixto</p>
                         <p className="text-xl font-bold">${cashierCutData.paymentMethods.mixto.total.toFixed(2)}</p>
                         <p className="text-sm text-gray-500">{cashierCutData.paymentMethods.mixto.transactions} transacciones</p>
+                        {cashierCutData.paymentMethods.mixto.cashAmount !== undefined && (
+                          <div className="mt-2 pt-2 border-t text-xs text-gray-600">
+                            <div>💵 Efectivo: ${(cashierCutData.paymentMethods.mixto.cashAmount || 0).toFixed(2)}</div>
+                            <div>💳 Tarjeta: ${(cashierCutData.paymentMethods.mixto.cardAmount || 0).toFixed(2)}</div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1611,6 +1543,24 @@ export default function ReportsPage() {
           </Card>
         </div>
       )}
+
+      {/* Modal de retiro de efectivo */}
+      <CashWithdrawalModal
+        isOpen={showCashWithdrawalModal}
+        onClose={() => {
+          setShowCashWithdrawalModal(false);
+          setCashierCutDataForWithdrawal(null);
+        }}
+        cashierCutData={cashierCutDataForWithdrawal}
+        branchId={getReportBranchId()}
+        currentBranch={currentBranch}
+        onWithdrawalComplete={() => {
+          setShowCashWithdrawalModal(false);
+          setCashierCutDataForWithdrawal(null);
+          // Ejecutar la impresión después del retiro
+          executeActualPrint();
+        }}
+      />
     </div>
   );
 }

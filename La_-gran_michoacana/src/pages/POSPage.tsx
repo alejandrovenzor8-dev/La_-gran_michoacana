@@ -180,8 +180,13 @@ export default function POSPage() {
       return;
     }
 
-    // Validar que el usuario tenga sucursal asignada
-    if (user && !user.branchId) {
+    // Validar sucursal para registrar venta
+    if (user?.role === 'ADMIN' && !selectedBranchId) {
+      alert('⚠️ Selecciona una sucursal para registrar la venta.');
+      return;
+    }
+
+    if (user?.role !== 'ADMIN' && user && !user.branchId) {
       alert('⚠️ Tu usuario no tiene una sucursal asignada. Las ventas no se pueden registrar sin una sucursal. Contacta al administrador.');
       return;
     }
@@ -310,12 +315,16 @@ export default function POSPage() {
     try {
       setIsProcessing(true);
 
+      // Calcular IVA (16% incluido en el precio)
+      const calculatedSubtotal = total / 1.16;
+      const calculatedTax = total - calculatedSubtotal;
+
       const saleItems: SaleItem[] = items.map((item) => ({
         productId: item.id,
         productName: item.name,
         quantity: item.quantity,
         unitPrice: item.price,
-        subtotal: item.price * item.quantity,
+        subtotal: (item.price * item.quantity) / 1.16, // Subtotal sin IVA
       }));
 
       const sale: Sale = {
@@ -323,6 +332,8 @@ export default function POSPage() {
         items: saleItems,
         paymentMethod: 'EFECTIVO',
         branchId: branchIdToUse,
+        tax: calculatedTax,
+        discount: 0,
       };
 
       const createdSale = await saleService.createSale(sale);
