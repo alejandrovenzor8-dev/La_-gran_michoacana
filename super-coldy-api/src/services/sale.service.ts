@@ -958,9 +958,6 @@ class SaleService {
       const tarjetaSales = sales.filter((s) => s.paymentMethod === 'TARJETA');
       const mixtoSales = sales.filter((s) => s.paymentMethod === 'MIXTO');
 
-      console.log('🔍 Mixto sales:', mixtoSales);
-      console.log('🔍 First mixto sale:', mixtoSales[0]);
-
       const efectivoTotal = efectivoSales.reduce((sum, s) => sum + Number(s.total), 0);
       const tarjetaTotal = tarjetaSales.reduce((sum, s) => sum + Number(s.total), 0);
       const mixtoTotal = mixtoSales.reduce((sum, s) => sum + Number(s.total), 0);
@@ -968,9 +965,6 @@ class SaleService {
       // Calcular el efectivo real recolectado (EFECTIVO completo + cashAmount de MIXTO)
       const efectivoCashFromMixto = mixtoSales.reduce((sum, s) => sum + Number(s.cashAmount || 0), 0);
       const efectivoRealTotal = efectivoTotal + efectivoCashFromMixto;
-
-      console.log('💰 efectivoCashFromMixto:', efectivoCashFromMixto);
-      console.log('💰 efectivoRealTotal:', efectivoRealTotal);
 
       // Calcular tarjeta real (TARJETA completa + cardAmount de MIXTO)
       const tarjetaCardFromMixto = mixtoSales.reduce((sum, s) => sum + Number(s.cardAmount || 0), 0);

@@ -280,10 +280,6 @@ export default function ReportsPage() {
         const branchIdToUse = getReportBranchId();
         const queryParams = branchIdToUse ? `?branchId=${branchIdToUse}` : '';
         const data = await saleService.getCashierCut(queryParams);
-        console.log('📊 Cashier Cut Data:', data);
-        console.log('💵 Efectivo realTotal:', data?.paymentMethods?.efectivo?.realTotal);
-        console.log('💵 Efectivo total:', data?.paymentMethods?.efectivo?.total);
-        console.log('💵 Mixto cashAmount:', data?.paymentMethods?.mixto?.cashAmount);
         setCashierCutData(data);
         
         // Cargar información de la sucursal actual
