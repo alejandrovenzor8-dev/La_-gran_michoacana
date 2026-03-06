@@ -2,7 +2,7 @@
  * Configuración de la API
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://la-granmichoacana-production.up.railway.app/api';
 
 export const API_CONFIG = {
   baseURL: API_BASE_URL,
