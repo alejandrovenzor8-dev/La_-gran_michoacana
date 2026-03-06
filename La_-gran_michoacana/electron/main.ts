@@ -363,7 +363,7 @@ ipcMain.handle('login:success', () => {
   
   // Crear las dos ventanas principales
   createMainWindow();
-  //createCustomerDisplay(); Descomentar para mostrar pantalle del cliente
+  createCustomerDisplay();
   
   return { success: true };
 });
