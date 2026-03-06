@@ -123,12 +123,15 @@ class ProductService {
         price: product.price,
         stock: product.quantity || 0,  // Mapear quantity → stock
         category: product.category || '',
+        branchId: product.branchId,  // ✅ Incluir branchId
       };
       
       // Solo incluir imageUrl si la imagen fue proporcionada
       if (product.image) {
         payload.imageUrl = product.image;
       }
+      
+      console.log('🚀 ProductService - Enviando payload:', payload);
       
       const response = await apiClient.post<ProductDetailResponse>('/products', payload);
       // El servidor puede devolver {product: {...}} o directamente el Product
@@ -139,6 +142,7 @@ class ProductService {
         ...data,
         quantity: data.stock || 0,  // Mapear stock → quantity
         image: data.imageUrl || '',  // Mapear imageUrl → image
+        branchId: data.branchId,  // ✅ Incluir branchId en respuesta
       };
     } catch (error) {
       throw error;
@@ -159,6 +163,9 @@ class ProductService {
       if (product.quantity !== undefined) payload.stock = product.quantity;  // Mapear quantity → stock
       if (product.category !== undefined) payload.category = product.category;
       if ('image' in product && product.image !== undefined) payload.imageUrl = product.image;  // Mapear image → imageUrl
+      if (product.branchId !== undefined) payload.branchId = product.branchId;  // ✅ Incluir branchId
+      
+      console.log('🔄 ProductService - Actualizando producto con payload:', payload);
       
       const response = await apiClient.put<ProductDetailResponse>(`/products/${id}`, payload);
       
@@ -169,6 +176,7 @@ class ProductService {
         ...data,
         quantity: data.stock || data.quantity || 0,
         image: data.imageUrl || data.image || '',
+        branchId: data.branchId,  // ✅ Incluir branchId en respuesta
       };
       
       return mapped;

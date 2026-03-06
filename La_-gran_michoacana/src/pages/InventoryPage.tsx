@@ -48,17 +48,45 @@ export default function InventoryPage() {
     branchId: undefined
   });
 
+  // Estado para notificaciones toast
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    visible: boolean;
+  }>({ message: '', type: 'info', visible: false });
+
+  // Función para mostrar notificaciones
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type, visible: true });
+    // Auto-dismiss después de 3.5 segundos
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 3500);
+  };
+
   // Actualizar selectedBranchId cuando el usuario cambie (si no es ADMIN)
   useEffect(() => {
-    if (user && user.role !== 'ADMIN' && user.branchId) {
-      setSelectedBranchId(user.branchId);
-      // Actualizar formData con branchId del usuario
-      setFormData(prev => ({
-        ...prev,
-        branchId: user.branchId ?? undefined
-      }));
+    console.log('🔍 useEffect user cambió:', {
+      user: user?.username,
+      role: user?.role,
+      branchId: user?.branchId,
+    });
+    
+    if (user) {
+      if (user.role !== 'ADMIN') {
+        // Para usuarios NO-ADMIN, usar su branchId asignado
+        if (user.branchId) {
+          setSelectedBranchId(user.branchId);
+          setFormData(prev => ({
+            ...prev,
+            branchId: user.branchId
+          }));
+        } else {
+          console.warn('⚠️ Usuario sin branchId asignado:', user);
+        }
+      }
     }
-  }, [user?.branchId, user?.role]);
+  }, [user]);
 
   // Cargar productos del backend
   useEffect(() => {
@@ -79,15 +107,15 @@ export default function InventoryPage() {
     loadProducts();
   }, [selectedBranchId]);
 
-  // Cargar sucursales si es admin
+  // Cargar sucursales (necesario para mostrar nombres)
   useEffect(() => {
     const loadBranches = async () => {
-      if (user?.role === 'ADMIN') {
+      if (user) {
         try {
           const data = await branchService.getBranches({ active: true });
           setBranches(data);
         } catch (err) {
-          // Error al cargar sucursales
+          console.error('Error al cargar sucursales:', err);
         }
       }
     };
@@ -111,12 +139,12 @@ export default function InventoryPage() {
             // Guardar solo la ruta relativa en el formulario
             setFormData((prev) => ({ ...prev, image: result.path, emoji: '' }));
           } else {
-            alert('Error al guardar la imagen: ' + (result.error || 'Error desconocido'));
+            showToast('Error al guardar la imagen: ' + (result.error || 'Error desconocido'), 'error');
           }
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        alert('Error al procesar la imagen');
+        showToast('Error al procesar la imagen', 'error');
       }
     }
   };
@@ -138,12 +166,12 @@ export default function InventoryPage() {
             setEditFormData((prev) => ({ ...prev, image: result.path, emoji: '' }));
             setEditImageChanged(true);  // Marcar que la imagen ha sido cambiada por el usuario
           } else {
-            alert('Error al guardar la imagen: ' + (result.error || 'Error desconocido'));
+            showToast('Error al guardar la imagen: ' + (result.error || 'Error desconocido'), 'error');
           }
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        alert('Error al procesar la imagen');
+        showToast('Error al procesar la imagen', 'error');
       }
     }
   };
@@ -175,7 +203,7 @@ export default function InventoryPage() {
     e.preventDefault();
     
     if (!formData.name || !formData.price) {
-      alert('Por favor completa el nombre y precio del producto');
+      showToast('Por favor completa el nombre y precio del producto', 'error');
       return;
     }
 
@@ -184,8 +212,16 @@ export default function InventoryPage() {
       ? formData.branchId 
       : user?.branchId;
     
-    if (!branchIdToUse) {
-      alert('Por favor selecciona una sucursal para el producto');
+    // Log para debugging
+    console.log('🔍 Debug branchId:', {
+      userRole: user?.role,
+      userBranchId: user?.branchId,
+      formDataBranchId: formData.branchId,
+      branchIdToUse,
+    });
+    
+    if (!branchIdToUse || branchIdToUse === null || branchIdToUse === undefined) {
+      showToast(`Por favor selecciona una sucursal para el producto. User: ${user?.role}, BranchId: ${user?.branchId}`, 'error');
       return;
     }
 
@@ -195,8 +231,7 @@ export default function InventoryPage() {
       // Preparar datos del producto
       const quantity = Number(formData.quantity) || 0;
       
-      // Crear producto en el backend
-      const newProduct = await productService.createProduct({
+      const productPayload = {
         name: formData.name,
         description: formData.description || '',
         price: Number(formData.price),
@@ -204,7 +239,12 @@ export default function InventoryPage() {
         category: formData.category,
         image: formData.image, // Solo la ruta relativa
         branchId: branchIdToUse
-      });
+      };
+      
+      console.log('📦 Enviando producto al backend:', productPayload);
+      
+      // Crear producto en el backend
+      const newProduct = await productService.createProduct(productPayload);
 
       // Manejar diferentes estructuras de respuesta
       let product = newProduct;
@@ -214,7 +254,7 @@ export default function InventoryPage() {
       
       // Validar que el producto tenga datos mínimos
       if (!product || !product.name) {
-        alert('Error: El producto no tiene datos válidos. Por favor revisa la consola.');
+        showToast('Error: El producto no tiene datos válidos. Por favor revisa la consola.', 'error');
         return;
       }
       
@@ -248,11 +288,11 @@ export default function InventoryPage() {
         branchId: user?.role !== 'ADMIN' ? (user?.branchId ?? undefined) : undefined
       });
 
-      alert('✅ Producto creado exitosamente');
+      showToast('✅ Producto creado exitosamente', 'success');
 
     } catch (err: any) {
       const errorMessage = err?.message || 'Error al crear el producto';
-      alert(`❌ Error: ${errorMessage}`);
+      showToast(`❌ Error: ${errorMessage}`, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -262,7 +302,7 @@ export default function InventoryPage() {
     e.preventDefault();
     
     if (!editingProduct || !editFormData.name || !editFormData.price) {
-      alert('Por favor completa el nombre y precio del producto');
+      showToast('Por favor completa el nombre y precio del producto', 'error');
       return;
     }
 
@@ -272,7 +312,7 @@ export default function InventoryPage() {
       : (editingProduct.branchId || user?.branchId);
     
     if (!branchIdToUse) {
-      alert('Por favor selecciona una sucursal para el producto');
+      showToast('Por favor selecciona una sucursal para el producto', 'error');
       return;
     }
 
@@ -327,11 +367,11 @@ export default function InventoryPage() {
       setEditImageChanged(false);
       setShowEditModal(false);  // Cerrar modal ÚLTIMO
       
-      alert('✅ Producto actualizado exitosamente');
+      showToast('✅ Producto actualizado exitosamente', 'success');
       
     } catch (err: any) {
       const errorMessage = err?.message || 'Error al actualizar el producto';
-      alert(`❌ Error: ${errorMessage}`);
+      showToast(`❌ Error: ${errorMessage}`, 'error');
     } finally {
       setIsSubmitting(false);
       // Asegurar que el estado se limpia completamente
@@ -375,9 +415,9 @@ export default function InventoryPage() {
           setCurrentIndex(maxIndex);
         }
 
-        alert('✅ Producto eliminado exitosamente');
+        showToast('✅ Producto eliminado exitosamente', 'success');
       } catch (err) {
-        alert('Error al eliminar el producto');
+        showToast('Error al eliminar el producto', 'error');
       } finally {
         setIsSubmitting(false);
       }
@@ -427,7 +467,12 @@ export default function InventoryPage() {
               <label className="text-xs md:text-sm font-medium text-gray-700">Sucursal:</label>
               <select
                 value={selectedBranchId || ''}
-                onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : undefined)}
+                onChange={(e) => {
+                  const branchId = e.target.value ? Number(e.target.value) : undefined;
+                  setSelectedBranchId(branchId);
+                  // También actualizar formData.branchId para guardar en la sucursal correcta
+                  setFormData(prev => ({ ...prev, branchId }));
+                }}
                 className="px-2 md:px-4 py-1.5 md:py-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="">Todas las sucursales</option>
@@ -718,6 +763,27 @@ export default function InventoryPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                )}
+
+                {/* Indicador de sucursal para usuarios NO-ADMIN */}
+                {user?.role !== 'ADMIN' && (
+                  <div className="md:col-span-2">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-semibold text-blue-800">
+                            Sucursal: {getBranchName(user?.branchId)}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            Los productos se guardarán en esta sucursal (ID: {user?.branchId || 'No asignado'})
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -1025,6 +1091,38 @@ export default function InventoryPage() {
               Comienza agregando tu primer producto usando el formulario de arriba
             </p>
           </Card>
+        )}
+
+        {/* Toast Notification */}
+        {toast.visible && (
+          <div className={`fixed bottom-6 right-6 max-w-sm z-50 animate-in fade-in slide-in-from-bottom-4 duration-300`}>
+            <div className={`rounded-lg shadow-2xl p-4 text-white flex items-center gap-3 ${
+              toast.type === 'success' 
+                ? 'bg-green-500' 
+                : toast.type === 'error' 
+                ? 'bg-red-500' 
+                : 'bg-blue-500'
+            }`}>
+              <div>
+                {toast.type === 'success' && (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {toast.type === 'error' && (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {toast.type === 'info' && (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <p className="font-medium text-sm">{toast.message}</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
