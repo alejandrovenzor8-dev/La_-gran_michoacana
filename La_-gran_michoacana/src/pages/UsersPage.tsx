@@ -57,6 +57,20 @@ export default function UsersPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
+  const USERNAME_MAX_LENGTH = 20;
+
+  const getApiErrorMessage = (err: any, fallback: string) => {
+    const firstValidationMessage = err?.data?.errors?.[0]?.message;
+    if (firstValidationMessage) return firstValidationMessage;
+
+    const explicitMessage = err?.response?.data?.message || err?.message;
+    if (explicitMessage && explicitMessage !== 'Errores de validación' && explicitMessage !== 'Error en la API') {
+      return explicitMessage;
+    }
+
+    return fallback;
+  };
+
   // Cargar usuarios y sucursales al montar el componente
   const loadUsers = async () => {
     try {
@@ -95,6 +109,16 @@ export default function UsersPage() {
   ) => {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
     const { name, value } = target;
+
+    if (name === 'username') {
+      const sanitizedUsername = value.replace(/\s+/g, '').slice(0, USERNAME_MAX_LENGTH);
+      setFormData((prev) => ({
+        ...prev,
+        username: sanitizedUsername,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -234,6 +258,16 @@ export default function UsersPage() {
       return;
     }
 
+    if (formData.username.length > USERNAME_MAX_LENGTH) {
+      setError('El nombre de usuario debe tener entre 3 y 20 caracteres');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      setError('El nombre de usuario solo puede contener letras, números y guion bajo (_)');
+      return;
+    }
+
     if (!formData.email.trim()) {
       setError('El email es requerido');
       return;
@@ -322,7 +356,7 @@ export default function UsersPage() {
         setSuccess('');
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Error al crear el usuario. Intenta de nuevo.');
+      setError(getApiErrorMessage(err, 'Error al crear el usuario. Intenta de nuevo.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -451,10 +485,17 @@ export default function UsersPage() {
                       name="username"
                       value={formData.username}
                       onChange={handleInputChange}
-                      placeholder="Ingresa el nombre de usuario"
+                      placeholder="Ej. admin_general"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      maxLength={USERNAME_MAX_LENGTH}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       disabled={isSubmitting}
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Sin espacios. Solo letras, numeros y guion bajo (_). Maximo {USERNAME_MAX_LENGTH} caracteres.
+                    </p>
                   </div>
 
                   <div>
