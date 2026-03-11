@@ -33,6 +33,11 @@ interface LastTicketData {
   printerName?: string;
 }
 
+interface PaymentCompletionMeta {
+  syncMode: 'online' | 'queued';
+  itemsSold: Array<{ productId: number; quantity: number }>;
+}
+
 export default function POSPage() {
   const { items, total, addItem, removeItem, updateQuantity, clearCart } = useCartStore();
   const user = useAuthStore((state) => state.user);
@@ -139,14 +144,6 @@ export default function POSPage() {
     }
   }, [user, selectedBranchId, branches]);
 
-  // Recargar productos cuando el carrito se vacía (después de una venta)
-  useEffect(() => {
-    if (items.length === 0 && products.length > 0) {
-      // Se acaba de completar una venta, recargar productos
-      loadProducts();
-    }
-  }, [items.length]);
-
   // Escuchar el evento de limpiar carrito desde Electron
   useEffect(() => {
     if (window.electronAPI) {
@@ -235,10 +232,27 @@ export default function POSPage() {
     return true;
   };
 
-  const handlePaymentComplete = async (sale: any, ticketData?: LastTicketData) => {
-    // El PaymentDialog ya limpia el carrito
-    // Aquí solo recargamos los productos para la siguiente venta
-    loadProducts();
+  const handlePaymentComplete = async (
+    sale: any,
+    ticketData?: LastTicketData,
+    meta?: PaymentCompletionMeta
+  ) => {
+    if (meta?.syncMode === 'queued') {
+      const soldMap = new Map(meta.itemsSold.map((item) => [item.productId, item.quantity]));
+      setProducts((prev) =>
+        prev.map((product) => {
+          const soldQuantity = soldMap.get(product.id);
+          if (!soldQuantity) return product;
+
+          return {
+            ...product,
+            quantity: Math.max(0, product.quantity - soldQuantity),
+          };
+        })
+      );
+    } else {
+      loadProducts();
+    }
     
     // Cerrar el PaymentDialog automáticamente
     setIsPaymentDialogOpen(false);
@@ -336,10 +350,26 @@ export default function POSPage() {
         discount: 0,
       };
 
-      const createdSale = await saleService.createSale(sale);
+      const createdSale = await saleService.createSaleAdaptive(sale);
 
       clearCart();
-      alert(`✅ Venta registrada exitosamente. ID: ${createdSale.id}`);
+      if (createdSale.mode === 'online') {
+        alert(`✅ Venta registrada exitosamente. ID: ${createdSale.displaySaleId}`);
+        loadProducts();
+      } else {
+        setProducts((prev) =>
+          prev.map((product) => {
+            const soldItem = saleItems.find((item) => Number(item.productId) === product.id);
+            if (!soldItem) return product;
+
+            return {
+              ...product,
+              quantity: Math.max(0, product.quantity - soldItem.quantity),
+            };
+          })
+        );
+        alert(`⚠️ Venta guardada localmente. Folio: ${createdSale.displaySaleId}`);
+      }
 
       if (window.electronAPI) {
         window.electronAPI.onCheckoutComplete?.();

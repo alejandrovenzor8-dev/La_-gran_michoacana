@@ -1,4 +1,6 @@
 import { apiClient } from './apiClient';
+import { offlineSalesQueue, type QueuedSaleRecord } from './offlineSalesQueue';
+import { useNetworkStore } from '@/stores/networkStore';
 
 export interface SaleItem {
   id?: number;
@@ -48,6 +50,13 @@ export interface SalesStatsResponse {
   message?: string;
 }
 
+export interface CreateSaleAdaptiveResult {
+  sale: Sale;
+  mode: 'online' | 'queued';
+  displaySaleId: string;
+  queuedSale?: QueuedSaleRecord;
+}
+
 export interface DailyReportResponse {
   success: boolean;
   data: {
@@ -72,41 +81,96 @@ interface SaleFilters {
 }
 
 class SaleService {
+  private buildSalePayload(sale: Sale) {
+    return {
+      items: (sale.items || []).map((item) => {
+        const quantity = Number(item.quantity || 0);
+        const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
+        const subtotal = Number(item.subtotal ?? quantity * unitPrice);
+
+        return {
+          productId: String(item.productId),
+          productName: item.productName || `Producto ${item.productId}`,
+          quantity,
+          unitPrice,
+          subtotal,
+          discount: Number(item.discount ?? 0),
+        };
+      }),
+      paymentMethod: sale.paymentMethod,
+      branchId: sale.branchId,
+      amountReceived: sale.amountReceived,
+      changeAmount: sale.changeAmount,
+      cashAmount: sale.cashAmount,
+      cardAmount: sale.cardAmount,
+      discount: Number(sale.discount ?? 0),
+      tax: Number(sale.tax ?? 0),
+      notes: sale.notes,
+      source: sale.source || 'DESKTOP',
+    };
+  }
+
+  private isRetryableCreateError(error: any): boolean {
+    const status = Number(error?.status ?? error?.response?.status ?? 0);
+    const code = error?.code;
+    const message = String(error?.message || '').toLowerCase();
+
+    if (code === 'REQUEST_TIMEOUT') return true;
+    if (!status) return true;
+    if (status >= 500) return true;
+    if (status === 408 || status === 429) return true;
+    if (message.includes('network') || message.includes('fetch')) return true;
+
+    return false;
+  }
+
   /**
    * Crear nueva venta
    */
   async createSale(sale: Sale): Promise<Sale> {
     try {
-      const payload = {
-        items: (sale.items || []).map((item) => {
-          const quantity = Number(item.quantity || 0);
-          const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
-          const subtotal = Number(item.subtotal ?? quantity * unitPrice);
-
-          return {
-            productId: String(item.productId),
-            productName: item.productName || `Producto ${item.productId}`,
-            quantity,
-            unitPrice,
-            subtotal,
-            discount: Number(item.discount ?? 0),
-          };
-        }),
-        paymentMethod: sale.paymentMethod,
-        branchId: sale.branchId,
-        amountReceived: sale.amountReceived,
-        changeAmount: sale.changeAmount,
-        cashAmount: sale.cashAmount,
-        cardAmount: sale.cardAmount,
-        discount: Number(sale.discount ?? 0),
-        tax: Number(sale.tax ?? 0),
-        notes: sale.notes,
-        source: sale.source || 'DESKTOP',
-      };
-
+      const payload = this.buildSalePayload(sale);
       const response = await apiClient.post<SaleResponse>('/sales', payload);
       return Array.isArray(response.data) ? response.data[0] : response.data;
     } catch (error) {
+      throw error;
+    }
+  }
+
+  async createSaleAdaptive(sale: Sale): Promise<CreateSaleAdaptiveResult> {
+    const queueSaleLocally = async (): Promise<CreateSaleAdaptiveResult> => {
+      const queuedSale = await offlineSalesQueue.enqueue(sale);
+      await useNetworkStore.getState().refreshPendingSalesCount();
+
+      return {
+        sale: {
+          ...sale,
+          total: queuedSale.total,
+          status: 'PENDING_SYNC',
+          date: queuedSale.createdAt,
+        },
+        mode: 'queued',
+        displaySaleId: queuedSale.localSaleId,
+        queuedSale,
+      };
+    };
+
+    const networkStatus = useNetworkStore.getState().healthStatus;
+    if (networkStatus !== 'online') {
+      return queueSaleLocally();
+    }
+
+    try {
+      const createdSale = await this.createSale(sale);
+      return {
+        sale: createdSale,
+        mode: 'online',
+        displaySaleId: String(createdSale.id || ''),
+      };
+    } catch (error: any) {
+      if (this.isRetryableCreateError(error)) {
+        return queueSaleLocally();
+      }
       throw error;
     }
   }

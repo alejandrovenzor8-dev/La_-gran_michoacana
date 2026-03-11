@@ -17,6 +17,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 import { usePermissionsStore } from './stores/permissionsStore';
 import { usePerformanceStore } from './stores/performanceStore';
+import { useNetworkStore } from './stores/networkStore';
+import { startOfflineSalesSync } from './lib/salesSyncService';
 import UpdateNotification from './components/UpdateNotification';
 
 function App() {
@@ -24,6 +26,7 @@ function App() {
   const user = useAuthStore((state) => state.user);
   const initializeUserPermissions = usePermissionsStore((state) => state.initializeUserPermissions);
   const initializePerformanceMode = usePerformanceStore((state) => state.initializePerformanceMode);
+  const startMonitoring = useNetworkStore((state) => state.startMonitoring);
 
   // Cargar datos persistidos al iniciar
   useEffect(() => {
@@ -40,6 +43,20 @@ function App() {
   useEffect(() => {
     initializePerformanceMode();
   }, [initializePerformanceMode]);
+
+  useEffect(() => {
+    let stopMonitoring = () => {};
+    const stopSync = startOfflineSalesSync();
+
+    void startMonitoring().then((cleanup) => {
+      stopMonitoring = cleanup;
+    });
+
+    return () => {
+      stopMonitoring();
+      stopSync();
+    };
+  }, [startMonitoring]);
 
   return (
     <HashRouter>

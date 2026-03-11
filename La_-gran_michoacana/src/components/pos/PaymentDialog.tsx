@@ -11,6 +11,7 @@ import { useCartStore } from '@/stores/cartStore';
 import { saleService } from '@/lib/saleService';
 import { useAuthStore } from '@/stores/authStore';
 import { usePerformanceStore } from '@/stores/performanceStore';
+import { useNetworkStore } from '@/stores/networkStore';
 import { eventBus } from '@/lib/eventBus';
 
 interface PosTicketData {
@@ -36,7 +37,14 @@ interface PosTicketData {
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onPaymentComplete: (sale: any, ticketData: PosTicketData) => void;
+  onPaymentComplete: (
+    sale: any,
+    ticketData: PosTicketData,
+    meta?: {
+      syncMode: 'online' | 'queued';
+      itemsSold: Array<{ productId: number; quantity: number }>;
+    }
+  ) => void;
   selectedBranchId?: number;
 }
 
@@ -58,6 +66,7 @@ export function PaymentDialog({
   const { items, total, clearCart } = useCartStore();
   const { user } = useAuthStore();
   const { useBasicMode } = usePerformanceStore();
+  const networkStatus = useNetworkStore((state) => state.healthStatus);
 
   const getSelectedBranchId = () => {
     if (selectedBranchId) return selectedBranchId;
@@ -204,27 +213,35 @@ export function PaymentDialog({
       const saleData = salePayload;
 
       // Llamar al servicio de ventas
-      const sale = await saleService.createSale(saleData);
+      const saleResult = await saleService.createSaleAdaptive(saleData);
+      const sale = saleResult.sale;
+      const saleIdString = saleResult.displaySaleId;
 
       // Notificar éxito con toast
-      const saleIdString = String(sale.id || '');
-      toast.success('¡Venta completada!', {
-        description: `Total: $${sale.total} - Venta #${saleIdString.slice(0, 8)}`,
-        duration: 5000
-      });
+      if (saleResult.mode === 'online') {
+        toast.success('¡Venta completada!', {
+          description: `Total: $${sale.total} - Venta #${saleIdString.slice(0, 8)}`,
+          duration: 5000,
+        });
+      } else {
+        toast.warning('Venta guardada localmente', {
+          description: `Folio ${saleIdString}. Se sincronizara cuando mejore la conexion (${networkStatus}).`,
+          duration: 6000,
+        });
+      }
 
       // Notificar al CustomerDisplay con el método de pago
       if (window.electronAPI?.notifyPaymentMethod) {
         window.electronAPI.notifyPaymentMethod({
           method: paymentMethod,
-          total: sale.total,
+          total: sale.total || total,
           saleId: saleIdString
         });
       } else {
         // Fallback usando eventBus
         eventBus.emit('PAYMENT_METHOD', {
           method: paymentMethod,
-          total: sale.total,
+          total: sale.total || total,
           saleId: saleIdString
         });
       }
@@ -232,13 +249,13 @@ export function PaymentDialog({
       // Notificar al CustomerDisplay que muestre mensaje de éxito
       if (window.electronAPI?.notifyPaymentCompleted) {
         window.electronAPI.notifyPaymentCompleted({
-          total: sale.total,
+          total: sale.total || total,
           saleId: saleIdString
         });
       } else {
         // Fallback usando eventBus
         eventBus.emit('PAYMENT_COMPLETED', {
-          total: sale.total,
+          total: sale.total || total,
           saleId: saleIdString
         });
       }
@@ -251,7 +268,7 @@ export function PaymentDialog({
         : (user?.branch?.name || 'Sucursal');
 
       const ticketData: PosTicketData = {
-        saleId: String(sale.id || ''),
+        saleId: saleIdString,
         items: items.map(item => {
           const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
           return {
@@ -273,7 +290,13 @@ export function PaymentDialog({
         branchName: resolvedBranchName,
       };
 
-      onPaymentComplete(sale, ticketData);
+      onPaymentComplete(sale, ticketData, {
+        syncMode: saleResult.mode,
+        itemsSold: items.map((item) => ({
+          productId: Number(item.id),
+          quantity: item.quantity,
+        })),
+      });
 
       // Limpiar carrito
       clearCart();

@@ -2,7 +2,7 @@
  * Configuración de la API
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://la-granmichoacana-production.up.railway.app/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://la-granmichoacana-production.up.railway.app/api';
 
 export const API_CONFIG = {
   baseURL: API_BASE_URL,
@@ -19,6 +19,29 @@ export class ApiClient {
   constructor(baseURL = API_BASE_URL) {
     this.baseURL = baseURL;
     this.loadToken();
+  }
+
+  private async request<T>(endpoint: string, init: RequestInit): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), API_CONFIG.timeout);
+
+    try {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...init,
+        signal: controller.signal,
+      });
+      return await this.handleResponse<T>(response);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        const timeoutError = new Error('La solicitud excedio el tiempo de espera');
+        (timeoutError as any).status = 408;
+        (timeoutError as any).code = 'REQUEST_TIMEOUT';
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   }
 
   /**
@@ -48,58 +71,53 @@ export class ApiClient {
    * Método genérico GET
    */
   public async get<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    return this.request<T>(endpoint, {
       method: 'GET',
       headers: this.getHeaders(),
     });
-    return this.handleResponse<T>(response);
   }
 
   /**
    * Método genérico POST
    */
   public async post<T>(endpoint: string, data: unknown): Promise<T> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    return this.request<T>(endpoint, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<T>(response);
   }
 
   /**
    * Método genérico PUT
    */
   public async put<T>(endpoint: string, data: unknown): Promise<T> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    return this.request<T>(endpoint, {
       method: 'PUT',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<T>(response);
   }
 
   /**
    * Método genérico PATCH
    */
   public async patch<T>(endpoint: string, data: unknown): Promise<T> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    return this.request<T>(endpoint, {
       method: 'PATCH',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<T>(response);
   }
 
   /**
    * Método genérico DELETE
    */
   public async delete<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    return this.request<T>(endpoint, {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
-    return this.handleResponse<T>(response);
   }
 
   /**
@@ -121,7 +139,8 @@ export class ApiClient {
    * Maneja la respuesta HTTP
    */
   private async handleResponse<T>(response: Response): Promise<T> {
-    const data = await response.json();
+    const rawText = await response.text();
+    const data = rawText ? JSON.parse(rawText) : {};
 
     if (!response.ok) {
       const error = new Error((data as any).message || 'Error en la API');
