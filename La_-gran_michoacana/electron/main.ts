@@ -31,6 +31,46 @@ let cartState = {
   total: 0,
 };
 
+type QueuedSaleStatus = 'pending' | 'syncing' | 'failed';
+
+interface QueuedSaleRecord {
+  id: string;
+  localSaleId: string;
+  payload: any;
+  status: QueuedSaleStatus;
+  retries: number;
+  total: number;
+  branchId?: number;
+  createdAt: string;
+  updatedAt: string;
+  lastError?: string | null;
+}
+
+function getSalesQueuePath() {
+  return path.join(app.getPath('userData'), 'sales-queue.json');
+}
+
+function readSalesQueue(): QueuedSaleRecord[] {
+  try {
+    const queuePath = getSalesQueuePath();
+    if (!fs.existsSync(queuePath)) {
+      return [];
+    }
+
+    const rawQueue = fs.readFileSync(queuePath, 'utf-8');
+    const parsedQueue = JSON.parse(rawQueue);
+    return Array.isArray(parsedQueue) ? parsedQueue : [];
+  } catch (error) {
+    log.error('Error leyendo cola local de ventas:', error);
+    return [];
+  }
+}
+
+function writeSalesQueue(queue: QueuedSaleRecord[]) {
+  const queuePath = getSalesQueuePath();
+  fs.writeFileSync(queuePath, JSON.stringify(queue, null, 2), 'utf-8');
+}
+
 // ============================================================
 // SISTEMA DE AUTO-ACTUALIZACIÓN
 // ============================================================
@@ -350,6 +390,80 @@ ipcMain.on('cart:clear', () => {
 
 ipcMain.handle('cart:get', () => {
   return cartState;
+});
+
+ipcMain.handle('sales-queue:list', async () => {
+  return readSalesQueue();
+});
+
+ipcMain.handle('sales-queue:enqueue', async (_event, saleRecord: QueuedSaleRecord) => {
+  try {
+    const queue = readSalesQueue();
+    const normalizedRecord: QueuedSaleRecord = {
+      ...saleRecord,
+      status: saleRecord.status || 'pending',
+      retries: Number(saleRecord.retries || 0),
+      updatedAt: new Date().toISOString(),
+      lastError: saleRecord.lastError ?? null,
+    };
+
+    queue.push(normalizedRecord);
+    writeSalesQueue(queue);
+    return { success: true, item: normalizedRecord };
+  } catch (error) {
+    log.error('Error guardando venta en cola local:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido al guardar venta local',
+    };
+  }
+});
+
+ipcMain.handle('sales-queue:update', async (_event, id: string, updates: Partial<QueuedSaleRecord>) => {
+  try {
+    const queue = readSalesQueue();
+    const itemIndex = queue.findIndex((item) => item.id === id);
+
+    if (itemIndex === -1) {
+      return { success: false, error: 'Venta local no encontrada' };
+    }
+
+    queue[itemIndex] = {
+      ...queue[itemIndex],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    writeSalesQueue(queue);
+    return { success: true, item: queue[itemIndex] };
+  } catch (error) {
+    log.error('Error actualizando venta en cola local:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido al actualizar venta local',
+    };
+  }
+});
+
+ipcMain.handle('sales-queue:remove', async (_event, id: string) => {
+  try {
+    const queue = readSalesQueue();
+    const nextQueue = queue.filter((item) => item.id !== id);
+    const removed = nextQueue.length !== queue.length;
+
+    if (removed) {
+      writeSalesQueue(nextQueue);
+    }
+
+    return { success: true, removed };
+  } catch (error) {
+    log.error('Error eliminando venta de cola local:', error);
+    return {
+      success: false,
+      removed: false,
+      error: error instanceof Error ? error.message : 'Error desconocido al eliminar venta local',
+    };
+  }
 });
 
 // IPC Handler para login exitoso - abre las dos ventanas principales

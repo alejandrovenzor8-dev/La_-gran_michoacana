@@ -1,5 +1,20 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+type QueuedSaleStatus = 'pending' | 'syncing' | 'failed';
+
+export interface QueuedSaleRecord {
+  id: string;
+  localSaleId: string;
+  payload: any;
+  status: QueuedSaleStatus;
+  retries: number;
+  total: number;
+  branchId?: number;
+  createdAt: string;
+  updatedAt: string;
+  lastError?: string | null;
+}
+
 // API segura expuesta al renderer (usando 'electronAPI' como nombre global)
 contextBridge.exposeInMainWorld('electronAPI', {
   // Notificar login exitoso
@@ -196,6 +211,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSavedPrinter: async (branchId: number) => {
     return await ipcRenderer.invoke('printer:get', branchId);
   },
+
+  // Cola local de ventas para sincronizacion diferida
+  enqueuePendingSale: async (saleRecord: QueuedSaleRecord) => {
+    return await ipcRenderer.invoke('sales-queue:enqueue', saleRecord);
+  },
+
+  getPendingSalesQueue: async () => {
+    return await ipcRenderer.invoke('sales-queue:list');
+  },
+
+  updatePendingSale: async (id: string, updates: Partial<QueuedSaleRecord>) => {
+    return await ipcRenderer.invoke('sales-queue:update', id, updates);
+  },
+
+  removePendingSale: async (id: string) => {
+    return await ipcRenderer.invoke('sales-queue:remove', id);
+  },
 });
 
 // Type definitions para TypeScript
@@ -250,6 +282,12 @@ export interface ElectronAPI {
   getPrinters: () => Promise<Array<{ name: string; displayName: string; isDefault: boolean }>>;
   savePrinter: (printerName: string, branchId: number) => Promise<{ success: boolean; error?: string }>;
   getSavedPrinter: (branchId: number) => Promise<{ printerName: string | null }>;
+
+  // Cola local de ventas
+  enqueuePendingSale: (saleRecord: QueuedSaleRecord) => Promise<{ success: boolean; item?: QueuedSaleRecord; error?: string }>;
+  getPendingSalesQueue: () => Promise<QueuedSaleRecord[]>;
+  updatePendingSale: (id: string, updates: Partial<QueuedSaleRecord>) => Promise<{ success: boolean; item?: QueuedSaleRecord; error?: string }>;
+  removePendingSale: (id: string) => Promise<{ success: boolean; removed?: boolean; error?: string }>;
 }
 
 declare global {
