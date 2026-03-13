@@ -256,6 +256,21 @@ export default function POSPage() {
     return true;
   };
 
+  const openCashDrawerAfterSale = async () => {
+    if (!window.electronAPI?.openCashDrawer) {
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.openCashDrawer();
+      if (!result?.success) {
+        console.warn('⚠️ [POSPage] No se pudo abrir la caja registradora:', result?.message);
+      }
+    } catch (error) {
+      console.error('⚠️ [POSPage] Error abriendo caja registradora:', error);
+    }
+  };
+
   const handlePaymentComplete = async (
     sale: any,
     ticketData?: LastTicketData,
@@ -308,7 +323,14 @@ export default function POSPage() {
 
       setLastTicketData(enrichedTicket);
       localStorage.setItem('last_pos_ticket', JSON.stringify(enrichedTicket));
-      await printTicketData(enrichedTicket);
+      const printed = await printTicketData(enrichedTicket);
+      const shouldOpenDrawer =
+        enrichedTicket.paymentMethod === 'EFECTIVO' ||
+        enrichedTicket.paymentMethod === 'MIXTO';
+
+      if (printed && shouldOpenDrawer) {
+        await openCashDrawerAfterSale();
+      }
     }
   };
 

@@ -8,12 +8,12 @@ export default function CustomerDisplayPage() {
   const [localItems, setLocalItems] = useState<CartItem[]>([]);
   const [localTotal, setLocalTotal] = useState(0);
   const [logoImage, setLogoImage] = useState<string>('./logo.png');
-  const [showAd, setShowAd] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [branchName, setBranchName] = useState('Sin sucursal');
+  const shouldShowAd = localItems.length === 0 && !isProcessing;
 
   useEffect(() => {
     const readBranchName = () => {
@@ -57,30 +57,31 @@ export default function CustomerDisplayPage() {
   useEffect(() => {
     // Verificar si estamos en Electron
     if (window.electronAPI) {
+      let unsubscribeCartUpdated: (() => void) | undefined;
+      let unsubscribeCartCleared: (() => void) | undefined;
+
       // Cargar estado inicial
       window.electronAPI.getCart().then((cart) => {
         if (cart) {
           setLocalItems(cart.items || []);
           setLocalTotal(cart.total || 0);
-          setShowAd((cart.items || []).length === 0);
         }
       });
 
       // Escuchar actualizaciones
-      window.electronAPI.onCartUpdated((data) => {
+      unsubscribeCartUpdated = window.electronAPI.onCartUpdated((data) => {
         const newItems = data.items || [];
         setLocalItems(newItems);
         setLocalTotal(data.total || 0);
-        // Actualizar showAd solo si hay items (no mostrar ad si hay items)
-        setShowAd(newItems.length === 0);
+        setIsProcessing(false);
         setPaymentMethod(null); // Resetear payment method
         setSaleId(null);
       });
 
-      window.electronAPI.onCartCleared(() => {
+      unsubscribeCartCleared = window.electronAPI.onCartCleared(() => {
         setLocalItems([]);
         setLocalTotal(0);
-        setShowAd(true);
+        setIsProcessing(false);
         setPaymentMethod(null);
         setSaleId(null);
         setShowSuccessMessage(false);
@@ -110,7 +111,6 @@ export default function CustomerDisplayPage() {
       const total = useCartStore.getState().total;
       setLocalItems(items);
       setLocalTotal(total);
-      setShowAd(items.length === 0);
     }
 
     // Escuchar eventos globales
@@ -126,7 +126,6 @@ export default function CustomerDisplayPage() {
     const unsubPaymentCompleted = eventBus.on('PAYMENT_COMPLETED', () => {
       setTimeout(() => {
         setIsProcessing(false);
-        setShowAd(true);
       }, 1500);
     });
 
@@ -140,6 +139,10 @@ export default function CustomerDisplayPage() {
 
     // Cleanup
     return () => {
+      if (window.electronAPI) {
+        unsubscribeCartUpdated?.();
+        unsubscribeCartCleared?.();
+      }
       unsubCheckout();
       unsubPaymentMethod();
       unsubPaymentCompleted();
@@ -180,7 +183,7 @@ export default function CustomerDisplayPage() {
       {/* Contenido Principal */}
       <div className="flex-1 flex flex-col p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 2xl:p-10 overflow-auto min-h-0">
         <AnimatePresence mode="wait">
-          {showAd ? (
+          {shouldShowAd ? (
             <Advertisement key="ad" />
           ) : (
             <CartDisplay 

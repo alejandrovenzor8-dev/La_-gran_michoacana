@@ -50,7 +50,12 @@ window.addEventListener('storage', (e: StorageEvent) => {
     const eventName = e.key.replace('__event__', '');
     try {
       const value = JSON.parse(e.newValue || '{}');
-      eventBus.emit(eventName, value.data);
+      // Importante: no volver a emitir con eventBus.emit para evitar
+      // reescribir localStorage y crear un bucle entre ventanas.
+      window.dispatchEvent(new CustomEvent(eventName, { detail: value.data }));
+      if (listeners[eventName]) {
+        listeners[eventName].forEach(callback => callback(value.data));
+      }
     } catch (err) {
       // Error parsing event from storage
     }

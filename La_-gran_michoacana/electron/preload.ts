@@ -212,6 +212,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke('printer:get', branchId);
   },
 
+  // Abrir caja registradora conectada a la impresora
+  openCashDrawer: async () => {
+    return await ipcRenderer.invoke('cashDrawer:open');
+  },
+
   // Cola local de ventas para sincronizacion diferida
   enqueuePendingSale: async (saleRecord: QueuedSaleRecord) => {
     return await ipcRenderer.invoke('sales-queue:enqueue', saleRecord);
@@ -282,6 +287,7 @@ export interface ElectronAPI {
   getPrinters: () => Promise<Array<{ name: string; displayName: string; isDefault: boolean }>>;
   savePrinter: (printerName: string, branchId: number) => Promise<{ success: boolean; error?: string }>;
   getSavedPrinter: (branchId: number) => Promise<{ printerName: string | null }>;
+  openCashDrawer: () => Promise<{ success: boolean; message?: string }>;
 
   // Cola local de ventas
   enqueuePendingSale: (saleRecord: QueuedSaleRecord) => Promise<{ success: boolean; item?: QueuedSaleRecord; error?: string }>;

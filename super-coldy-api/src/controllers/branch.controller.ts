@@ -3,6 +3,7 @@ import { branchService } from '../services/branch.service.js';
 import { logger } from '../utils/logger.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { getRequestInfo } from '../utils/auditLogger.js';
+import prisma from '../config/database.js';
 
 /**
  * Interface extendida de Request con usuario autenticado
@@ -214,6 +215,30 @@ class BranchController {
           message: 'El monto de caja inicial debe ser un número positivo',
         });
         return;
+      }
+
+      // Seguridad: usuarios que no son admin solo pueden actualizar su propia sucursal.
+      if (req.user?.role !== 'ADMIN') {
+        const requester = await prisma.user.findUnique({
+          where: { id: req.user!.userId },
+          select: { branchId: true },
+        });
+
+        if (!requester?.branchId) {
+          res.status(400).json({
+            status: 'error',
+            message: 'El usuario no tiene una sucursal asignada',
+          });
+          return;
+        }
+
+        if (requester.branchId !== id) {
+          res.status(403).json({
+            status: 'error',
+            message: 'No tienes permisos para actualizar otra sucursal',
+          });
+          return;
+        }
       }
 
       const { ipAddress, userAgent } = getRequestInfo(req);

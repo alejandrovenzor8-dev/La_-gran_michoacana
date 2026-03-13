@@ -18,8 +18,8 @@ export interface ElectronAPI {
   updateCart: (data: any) => void;
   clearCart: () => void;
   getCart: () => Promise<any>;
-  onCartUpdated: (callback: (data: any) => void) => void;
-  onCartCleared: (callback: () => void) => void;
+  onCartUpdated: (callback: (data: any) => void) => () => void;
+  onCartCleared: (callback: () => void) => () => void;
   removeCartListeners: () => void;
   clearSession: () => Promise<{ success: boolean }>;
   logout: () => Promise<{ success: boolean }>;
@@ -54,6 +54,7 @@ export interface ElectronAPI {
   getPrinters: () => Promise<Array<{ name: string; displayName: string; isDefault?: boolean }>>;
   savePrinter: (printerName: string, branchId: number) => Promise<{ success: boolean; error?: string }>;
   getSavedPrinter: (branchId: number) => Promise<{ printerName: string | null }>;
+  openCashDrawer: () => Promise<{ success: boolean; message?: string }>;
 }
 
 declare global {

@@ -556,6 +556,24 @@ export default function ReportsPage() {
         return;
       }
 
+      // Abrir caja registradora en el momento de iniciar el cierre
+      if (window.electron && window.electron.ipcRenderer) {
+        try {
+          let drawerResult: { success?: boolean; message?: string } | undefined;
+          if (window.electronAPI?.openCashDrawer) {
+            drawerResult = await window.electronAPI.openCashDrawer();
+          } else {
+            drawerResult = await window.electron.ipcRenderer.invoke('cashDrawer:open');
+          }
+
+          if (!drawerResult?.success) {
+            alert(`⚠️ No se pudo abrir la caja registradora: ${drawerResult?.message || 'Error desconocido'}`);
+          }
+        } catch (error) {
+          alert(`⚠️ Error al abrir la caja registradora: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
+      }
+
       // Mostrar modal de retiro de efectivo
       setCashierCutDataForWithdrawal(cashierCutData);
       setShowCashWithdrawalModal(true);

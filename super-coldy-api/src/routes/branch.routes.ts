@@ -130,12 +130,12 @@ router.patch(
 /**
  * PATCH /api/branches/:id/initial-cash
  * Actualizar la caja inicial de una sucursal
- * Requiere: autenticación, permisos de ADMIN o GERENTE
+ * Requiere: autenticación, permisos de ADMIN, GERENTE o CAJERO
  */
 router.patch(
   '/:id/initial-cash',
   authenticateToken,
-  requireRole('ADMIN', 'GERENTE'),
+  requireRole('ADMIN', 'GERENTE', 'CAJERO'),
   param('id')
     .isInt({ min: 1 })
     .withMessage('ID de sucursal inválido'),
