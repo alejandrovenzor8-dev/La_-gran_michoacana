@@ -1,7 +1,7 @@
 {
-  "tag_name": "v1.1.9",
-  "name": "La Gran Michoacana v1.1.9",
-  "body": "## Cambios en v1.1.9\n\n- Fix: Corregido cálculo de IVA en ventas\n- Fix: Efectivo de ventas MIXTO ahora se incluye correctamente en retiro de caja\n- Fix: URL del backend configurada por defecto a Railway\n- Feature: Desglose completo de pagos mixtos en reportes\n- Feature: Modales de apertura y retiro de caja mejorados",
+  "tag_name": "v1.1.15",
+  "name": "La Gran Michoacana v1.1.15",
+  "body": "## Cambios en v1.1.15\n\n- Fix: Segunda venta vuelve a mostrar productos en pantalla cliente\n- Fix: Permisos para apertura de caja inicial por cajero (con validacion por sucursal)\n- Feature: Apertura automatica de caja al imprimir ticket en ventas EFECTIVO y MIXTO\n- Feature: En corte de caja, apertura de cajon al iniciar el flujo de impresion",
   "draft": false,
   "prerelease": false
 }
