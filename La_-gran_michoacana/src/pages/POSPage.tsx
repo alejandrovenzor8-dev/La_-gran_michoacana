@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import { ShoppingCart, Plus, Minus, Trash2, Package, Loader, DollarSign, Printer } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { productService, Product } from '@/lib/productService';
 import { saleService, Sale, SaleItem } from '@/lib/saleService';
 import { PaymentDialog } from '@/components/pos/PaymentDialog';
@@ -44,11 +44,29 @@ export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [lastTicketData, setLastTicketData] = useState<LastTicketData | null>(null);
+
+  const availableCategories = useMemo(() => {
+    const uniqueCategories = Array.from(
+      new Set(
+        products
+          .map((product) => product.category?.trim())
+          .filter((category): category is string => Boolean(category))
+      )
+    );
+
+    return uniqueCategories.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (!selectedCategory) return products;
+    return products.filter((product) => product.category === selectedCategory);
+  }, [products, selectedCategory]);
 
   const getAdminBranchName = () => {
     if (!selectedBranchId) return 'Todas las sucursales';
@@ -117,6 +135,12 @@ export default function POSPage() {
       loadProducts();
     }
   }, [user?.branchId, selectedBranchId]); // Recargar cuando cambie la sucursal del usuario o la selección
+
+  useEffect(() => {
+    if (selectedCategory && !availableCategories.includes(selectedCategory)) {
+      setSelectedCategory('');
+    }
+  }, [availableCategories, selectedCategory]);
 
   useEffect(() => {
     if (!user) return;
@@ -426,6 +450,27 @@ export default function POSPage() {
             )}
           </div>
 
+          <div className="mb-3 md:mb-4 p-3 bg-white border rounded-lg">
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+              <label className="text-xs md:text-sm font-medium text-gray-700">Categoría:</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-2 md:px-4 py-1.5 md:py-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-primary focus:border-transparent md:min-w-64"
+              >
+                <option value="">Todas las categorías</option>
+                {availableCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs md:text-sm text-gray-500">
+                {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+
           {user && (
             <div className="mt-3 space-y-1">
               <p className="text-sm text-gray-500">
@@ -454,17 +499,19 @@ export default function POSPage() {
               <Package className="w-16 h-16 mx-auto text-red-300 mb-3" />
               <p className="text-red-600 font-semibold">{error}</p>
             </div>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <Package className="w-16 h-16 mx-auto text-gray-300 mb-3" />
               <p className="text-gray-500">
-                {user?.branchId 
-                  ? 'No hay productos disponibles para tu sucursal' 
-                  : 'Asigna una sucursal a tu usuario para ver productos'}
+                {products.length === 0
+                  ? (user?.branchId
+                    ? 'No hay productos disponibles para tu sucursal'
+                    : 'Asigna una sucursal a tu usuario para ver productos')
+                  : 'No hay productos en la categoría seleccionada'}
               </p>
             </div>
           ) : (
-            products.map((product) => (
+            filteredProducts.map((product) => (
               <Card
                 key={product.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"

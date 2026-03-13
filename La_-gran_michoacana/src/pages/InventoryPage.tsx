@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Package, Edit, Trash2, Upload, X, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -428,6 +428,16 @@ export default function InventoryPage() {
   const safeProducts = Array.isArray(products) ? products : [];
   // Filtrar productos válidos (con id)
   const validProducts = safeProducts.filter(p => p && p.id);
+  const existingCategories = useMemo(() => {
+    const unique = new Set(
+      safeProducts
+        .map((product) => product.category?.trim())
+        .filter((category): category is string => Boolean(category))
+    );
+
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  }, [safeProducts]);
+
   const getBranchName = (branchId?: number) => {
     if (!branchId) return 'Sin sucursal';
     return branches.find((branch) => branch.id === branchId)?.name || 'Sin sucursal';
@@ -450,6 +460,12 @@ export default function InventoryPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-50 to-purple-50">
+      <datalist id="inventory-categories-list">
+        {existingCategories.map((category) => (
+          <option key={category} value={category} />
+        ))}
+      </datalist>
+
       <div className="max-w-7xl mx-auto p-3 md:p-4 lg:p-6 pb-8 md:pb-12">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 md:mb-6">
@@ -566,8 +582,9 @@ export default function InventoryPage() {
                         type="text"
                         value={editFormData.category ?? ''}
                         onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                        list="inventory-categories-list"
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                        placeholder="Ej: Paletas, Helados"
+                        placeholder="Selecciona o escribe una categoría nueva"
                       />
                     </div>
 
@@ -714,8 +731,9 @@ export default function InventoryPage() {
                     type="text"
                     value={formData.category ?? ''}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    list="inventory-categories-list"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Ej: Paletas, Helados"
+                    placeholder="Selecciona o escribe una categoría nueva"
                   />
                 </div>
 
