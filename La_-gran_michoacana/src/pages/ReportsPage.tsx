@@ -516,6 +516,10 @@ export default function ReportsPage() {
       color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5],
     })) || [];
 
+  const topProductsByQuantity =
+    [...(statsData?.topProducts || [])]
+      .sort((a: any, b: any) => Number(b.quantity || 0) - Number(a.quantity || 0));
+
   // Datos actuales de ventas (usando backend si está disponible)
   const currentData = statsData
     ? {
@@ -1109,8 +1113,8 @@ export default function ReportsPage() {
                     <Loader className="w-8 h-8 animate-spin text-primary" />
                     <span className="ml-2 text-gray-500">Cargando productos...</span>
                   </div>
-                ) : statsData?.topProducts && statsData.topProducts.length > 0 ? (
-                  statsData.topProducts.slice(0, 5).map((product: any, idx: number) => (
+                ) : topProductsByQuantity.length > 0 ? (
+                  topProductsByQuantity.slice(0, 5).map((product: any, idx: number) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
