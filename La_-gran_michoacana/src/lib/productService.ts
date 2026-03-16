@@ -24,26 +24,77 @@ export interface ProductDetailResponse {
   message?: string;
 }
 
+interface ProductsPagePayload {
+  products?: any[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+}
+
 class ProductService {
+  private normalizeProduct(raw: any): Product {
+    return {
+      ...raw,
+      quantity: raw?.stock ?? raw?.quantity ?? 0,
+      image: raw?.imageUrl ?? raw?.image ?? '',
+      emoji: raw?.emoji ?? '',
+      description: raw?.description ?? '',
+      category: raw?.category ?? '',
+    };
+  }
+
+  private buildQueryString(queryParams: string = ''): string {
+    const raw = queryParams.startsWith('?') ? queryParams.slice(1) : queryParams;
+    const params = new URLSearchParams(raw);
+
+    // Evitar el limite por defecto del backend (50)
+    if (!params.has('limit')) {
+      params.set('limit', '200');
+    }
+
+    return params.toString() ? `?${params.toString()}` : '';
+  }
+
   /**
    * Obtener todos los productos
    */
   async getAllProducts(queryParams: string = ''): Promise<Product[]> {
     try {
-      const url = `/products${queryParams}`;
-      const response = await apiClient.get<ProductResponse>(url);
-      // Asegurarse de que la respuesta tiene un array en data
-      let products = Array.isArray(response.data) ? response.data : (response as any).data?.products || (response as any).data?.data || [];
-      
-      // Mapear campos del backend al frontend (stock → quantity, imageUrl → image)
-      products = products.map((p: any) => ({
-        ...p,
-        quantity: p.stock || p.quantity || 0,
-        image: p.imageUrl || p.image || '',
-        emoji: p.emoji || '',
-      }));
-      
-      return products || [];
+      const normalizedQuery = this.buildQueryString(queryParams);
+      const response = await apiClient.get<any>(`/products${normalizedQuery}`);
+
+      const firstPagePayload: ProductsPagePayload = (response as any)?.data || {};
+      const firstPageProducts = Array.isArray(firstPagePayload.products)
+        ? firstPagePayload.products
+        : Array.isArray((response as any)?.data)
+          ? (response as any).data
+          : [];
+
+      let allProducts = [...firstPageProducts];
+
+      // Si la API responde paginada, traer el resto de paginas
+      const totalPages = firstPagePayload.totalPages ?? 1;
+      const hasExplicitPage = new URLSearchParams(normalizedQuery.startsWith('?') ? normalizedQuery.slice(1) : normalizedQuery).has('page');
+
+      if (totalPages > 1 && !hasExplicitPage) {
+        const extraRequests: Promise<any>[] = [];
+        for (let page = 2; page <= totalPages; page += 1) {
+          const pageParams = new URLSearchParams(normalizedQuery.startsWith('?') ? normalizedQuery.slice(1) : normalizedQuery);
+          pageParams.set('page', String(page));
+          extraRequests.push(apiClient.get<any>(`/products?${pageParams.toString()}`));
+        }
+
+        const extraResponses = await Promise.all(extraRequests);
+        for (const extraResponse of extraResponses) {
+          const pageProducts = (extraResponse as any)?.data?.products;
+          if (Array.isArray(pageProducts)) {
+            allProducts = allProducts.concat(pageProducts);
+          }
+        }
+      }
+
+      return allProducts.map((p) => this.normalizeProduct(p));
     } catch (error) {
       // Retornar array vacío en caso de error para evitar errores de .map()
       return [];
@@ -58,12 +109,7 @@ class ProductService {
       const response = await apiClient.get<ProductDetailResponse>(`/products/${id}`);
       const data = (response.data as any).product || response.data;
       // Mapear campos del backend al frontend
-      return {
-        ...data,
-        quantity: data.stock || data.quantity || 0,
-        image: data.imageUrl || data.image || '',
-        emoji: data.emoji || '',
-      };
+      return this.normalizeProduct(data);
     } catch (error) {
       throw error;
     }
@@ -78,11 +124,7 @@ class ProductService {
       let products = response.data || [];
       
       // Mapear campos del backend al frontend
-      products = products.map((p: any) => ({
-        ...p,
-        quantity: p.stock || p.quantity || 0,
-        image: p.imageUrl || p.image || '',
-      }));
+      products = products.map((p: any) => this.normalizeProduct(p));
       
       return products || [];
     } catch (error) {
@@ -99,11 +141,7 @@ class ProductService {
       let products = response.data || [];
       
       // Mapear campos del backend al frontend
-      products = products.map((p: any) => ({
-        ...p,
-        quantity: p.stock || p.quantity || 0,
-        image: p.imageUrl || p.image || '',
-      }));
+      products = products.map((p: any) => this.normalizeProduct(p));
       
       return products || [];
     } catch (error) {
@@ -138,12 +176,10 @@ class ProductService {
       const data = (response.data as any).product || response.data;
       
       // Mapear de vuelta los campos del backend al frontend
-      return {
+      return this.normalizeProduct({
         ...data,
-        quantity: data.stock || 0,  // Mapear stock → quantity
-        image: data.imageUrl || '',  // Mapear imageUrl → image
-        branchId: data.branchId,  // ✅ Incluir branchId en respuesta
-      };
+        branchId: data.branchId,
+      });
     } catch (error) {
       throw error;
     }
@@ -172,12 +208,10 @@ class ProductService {
       const data = (response.data as any).product || response.data;
       
       // Mapear de vuelta los campos del backend al frontend
-      const mapped = {
+      const mapped = this.normalizeProduct({
         ...data,
-        quantity: data.stock || data.quantity || 0,
-        image: data.imageUrl || data.image || '',
-        branchId: data.branchId,  // ✅ Incluir branchId en respuesta
-      };
+        branchId: data.branchId,
+      });
       
       return mapped;
     } catch (error) {

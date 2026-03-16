@@ -244,37 +244,12 @@ export default function InventoryPage() {
       console.log('📦 Enviando producto al backend:', productPayload);
       
       // Crear producto en el backend
-      const newProduct = await productService.createProduct(productPayload);
+      await productService.createProduct(productPayload);
 
-      // Manejar diferentes estructuras de respuesta
-      let product = newProduct;
-      if ((newProduct as any).product) {
-        product = (newProduct as any).product;
-      }
-      
-      // Validar que el producto tenga datos mínimos
-      if (!product || !product.name) {
-        showToast('Error: El producto no tiene datos válidos. Por favor revisa la consola.', 'error');
-        return;
-      }
-      
-      // Usar el id del producto, o generar uno si es necesario
-      const productId = product.id || Date.now();
-      
-      // Normalizar el producto recibido del servidor
-      const normalizedProduct: Product = {
-        id: productId,
-        name: product.name || 'Producto sin nombre',
-        description: product.description || '',
-        price: typeof product.price === 'string' ? Number(product.price) : (product.price ?? 0),
-        quantity: typeof product.quantity === 'string' ? Number(product.quantity) : (product.quantity ?? 0),
-        category: product.category || '',
-        image: product.image || '',
-      };
-      
-      // Agregar el producto a la lista local
-      const updatedProducts = [...(Array.isArray(products) ? products : []), normalizedProduct];
-      setProducts(updatedProducts);
+      // Refrescar productos desde backend para evitar desincronización local
+      const branchIdParam = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+      const refreshedProducts = await productService.getAllProducts(branchIdParam);
+      setProducts(Array.isArray(refreshedProducts) ? refreshedProducts : []);
       
       // Resetear formulario
       setFormData({
@@ -346,7 +321,7 @@ export default function InventoryPage() {
       const updatedProduct = await productService.updateProduct(editingProduct.id, payload);
 
       // Actualizar la lista local
-      setProducts((Array.isArray(products) ? products : []).map(p => 
+      setProducts((prev) => (Array.isArray(prev) ? prev : []).map((p) => 
         p.id === editingProduct.id 
           ? updatedProduct
           : p
@@ -406,7 +381,7 @@ export default function InventoryPage() {
         await productService.deleteProduct(id);
         
         // Eliminar de la lista local
-        setProducts((Array.isArray(products) ? products : []).filter(p => p.id !== id));
+        setProducts((prev) => (Array.isArray(prev) ? prev : []).filter((p) => p.id !== id));
         
         // Ajustar el índice si es necesario
         const newProductsLength = (Array.isArray(products) ? products : []).length - 1;
