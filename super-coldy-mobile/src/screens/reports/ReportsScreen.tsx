@@ -10,6 +10,7 @@ import {
   ScrollView,
   RefreshControl,
   Dimensions,
+  Platform,
 } from 'react-native';
 import {
   Card,
@@ -21,12 +22,17 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { useAuthStore } from '../../stores/authStore';
 import { saleService } from '../../api/saleService';
 import { getTodayInConfiguredTimezone } from '../../utils/dateFormatter';
 import type { DailySalesStats } from '../../types';
 
 type ReportPeriod = 'day' | 'week' | 'month' | 'year';
+type ReportQueryMode = 'preset' | 'customDay' | 'customRange';
+type DatePickerTarget = 'customDay' | 'rangeStart' | 'rangeEnd';
 
 const screenWidth = Dimensions.get('window').width;
 const chartWidth = screenWidth - 32;
@@ -36,29 +42,72 @@ export default function ReportsScreen() {
   const user = useAuthStore((state) => state.user);
   
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('day');
+  const [queryMode, setQueryMode] = useState<ReportQueryMode>('preset');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statsData, setStatsData] = useState<DailySalesStats | null>(null);
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [customDay, setCustomDay] = useState<Date>(new Date());
+  const [rangeStartDate, setRangeStartDate] = useState<Date>(new Date());
+  const [rangeEndDate, setRangeEndDate] = useState<Date>(new Date());
+  const [pickerTarget, setPickerTarget] = useState<DatePickerTarget>('customDay');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const formatDateLabel = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const setDateAtBoundary = (date: Date, boundary: 'start' | 'end') => {
+    const boundaryDate = new Date(date);
+    if (boundary === 'start') {
+      boundaryDate.setHours(0, 0, 0, 0);
+    } else {
+      boundaryDate.setHours(23, 59, 59, 999);
+    }
+    return boundaryDate;
+  };
+
+  const openPicker = (target: DatePickerTarget) => {
+    setPickerTarget(target);
+    setShowDatePicker(true);
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS !== 'ios') {
+      setShowDatePicker(false);
+    }
+
+    if (event.type === 'dismissed' || !selectedDate) {
+      return;
+    }
+
+    if (pickerTarget === 'customDay') {
+      setCustomDay(selectedDate);
+      return;
+    }
+
+    if (pickerTarget === 'rangeStart') {
+      setRangeStartDate(selectedDate);
+      if (selectedDate > rangeEndDate) {
+        setRangeEndDate(selectedDate);
+      }
+      return;
+    }
+
+    setRangeEndDate(selectedDate);
+    if (selectedDate < rangeStartDate) {
+      setRangeStartDate(selectedDate);
+    }
+  };
 
   const loadStats = async () => {
     try {
       setIsLoading(true);
       
-      // Según el período, cargar estadísticas diferentes
-      let salesData;
-      
-      if (selectedPeriod === 'day') {
-        salesData = await saleService.getDailySales();
-      } else {
-        // Para otros períodos, usar getReportStats
-        const stats = await saleService.getReportStats(selectedPeriod);
-        salesData = { stats };
-      }
-      
-      setStatsData(salesData.stats);
-
       // Obtener las fechas en la zona horaria correcta
       const today = await getTodayInConfiguredTimezone();
       let startDate: Date;
@@ -68,28 +117,44 @@ export default function ReportsScreen() {
       const [year, month, day] = today.split('-').map(Number);
       endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
 
-      switch (selectedPeriod) {
-        case 'day':
-          startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-          break;
-        case 'week':
-          // Calcular lunes de esta semana (no los últimos 7 días)
-          const todayDate = new Date(year, month - 1, day);
-          const dayOfWeek = todayDate.getDay(); // 0=domingo, 1=lunes, 6=sábado
-          const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calcular cuántos días atrás es el lunes
-          startDate = new Date(year, month - 1, day - daysToMonday, 0, 0, 0, 0);
-          // El domingo es 6 días después del lunes
-          endDate = new Date(year, month - 1, day - daysToMonday + 6, 23, 59, 59, 999);
-          break;
-        case 'month':
-          startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
-          break;
-        case 'year':
-          startDate = new Date(year, 0, 1, 0, 0, 0, 0);
-          break;
-        default:
-          startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+      if (queryMode === 'customDay') {
+        startDate = setDateAtBoundary(customDay, 'start');
+        endDate = setDateAtBoundary(customDay, 'end');
+      } else if (queryMode === 'customRange') {
+        const minDate = rangeStartDate <= rangeEndDate ? rangeStartDate : rangeEndDate;
+        const maxDate = rangeStartDate <= rangeEndDate ? rangeEndDate : rangeStartDate;
+        startDate = setDateAtBoundary(minDate, 'start');
+        endDate = setDateAtBoundary(maxDate, 'end');
+      } else {
+        switch (selectedPeriod) {
+          case 'day':
+            startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+            break;
+          case 'week':
+            // Calcular lunes de esta semana (no los últimos 7 días)
+            const todayDate = new Date(year, month - 1, day);
+            const dayOfWeek = todayDate.getDay(); // 0=domingo, 1=lunes, 6=sábado
+            const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calcular cuántos días atrás es el lunes
+            startDate = new Date(year, month - 1, day - daysToMonday, 0, 0, 0, 0);
+            // El domingo es 6 días después del lunes
+            endDate = new Date(year, month - 1, day - daysToMonday + 6, 23, 59, 59, 999);
+            break;
+          case 'month':
+            startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
+            break;
+          case 'year':
+            startDate = new Date(year, 0, 1, 0, 0, 0, 0);
+            break;
+          default:
+            startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+        }
       }
+
+      const stats = await saleService.getReportStats(selectedPeriod, {
+        startDate,
+        endDate,
+      });
+      setStatsData(stats);
 
       // Siempre cargar datos para gráficas
       try {
@@ -118,7 +183,7 @@ export default function ReportsScreen() {
 
   useEffect(() => {
     loadStats();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, queryMode, customDay, rangeStartDate, rangeEndDate]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -167,21 +232,23 @@ export default function ReportsScreen() {
 
   // Preparar datos para gráfica de línea (tendencia según el período)
   const prepareLineChartData = () => {
+    const effectivePeriod: ReportPeriod = queryMode === 'preset' ? selectedPeriod : 'week';
+
     // Definir labels por defecto según el período
-    const defaultLabels = selectedPeriod === 'year' 
+    const defaultLabels = effectivePeriod === 'year' 
       ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-      : selectedPeriod === 'month'
+      : effectivePeriod === 'month'
       ? ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4']
       : ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'];
 
-    const defaultData = selectedPeriod === 'year' 
+    const defaultData = effectivePeriod === 'year' 
       ? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-      : selectedPeriod === 'month'
+      : effectivePeriod === 'month'
       ? [0, 0, 0, 0]
       : [0, 0, 0, 0, 0, 0, 0];
 
     try {
-      if (selectedPeriod === 'year') {
+      if (effectivePeriod === 'year') {
         // Para año: usar monthlyData (semanas del mes actual)
         if (!monthlyData || monthlyData.length === 0) {
           return {
@@ -207,7 +274,7 @@ export default function ReportsScreen() {
           labels: months,
           datasets: [{ data: chartData }],
         };
-      } else if (selectedPeriod === 'month') {
+      } else if (effectivePeriod === 'month') {
         // Para mes: mostrar semanas del mes desde monthlyData
         if (!monthlyData || monthlyData.length === 0) {
           return {
@@ -355,21 +422,115 @@ export default function ReportsScreen() {
       <Card style={styles.card}>
         <Card.Content>
           <Text variant="titleSmall" style={styles.sectionTitle}>
-            Período
+            Tipo de consulta
           </Text>
-          <View style={styles.periodButtons}>
-            {(['day', 'week', 'month', 'year'] as ReportPeriod[]).map((period) => (
-              <Button
-                key={period}
-                mode={selectedPeriod === period ? 'contained' : 'outlined'}
-                onPress={() => setSelectedPeriod(period)}
-                style={styles.periodButton}
-                labelStyle={styles.periodButtonLabel}
-              >
-                {periodLabels[period]}
-              </Button>
-            ))}
+          <View style={styles.modeButtons}>
+            <Button
+              mode={queryMode === 'preset' ? 'contained' : 'outlined'}
+              onPress={() => setQueryMode('preset')}
+              style={styles.modeButton}
+              labelStyle={styles.periodButtonLabel}
+            >
+              Rápido
+            </Button>
+            <Button
+              mode={queryMode === 'customDay' ? 'contained' : 'outlined'}
+              onPress={() => setQueryMode('customDay')}
+              style={styles.modeButton}
+              labelStyle={styles.periodButtonLabel}
+            >
+              Día específico
+            </Button>
+            <Button
+              mode={queryMode === 'customRange' ? 'contained' : 'outlined'}
+              onPress={() => setQueryMode('customRange')}
+              style={styles.modeButton}
+              labelStyle={styles.periodButtonLabel}
+            >
+              Rango
+            </Button>
           </View>
+
+          {queryMode === 'preset' && (
+            <>
+              <Text variant="titleSmall" style={styles.sectionTitleSecondary}>
+                Período
+              </Text>
+              <View style={styles.periodButtons}>
+                {(['day', 'week', 'month', 'year'] as ReportPeriod[]).map((period) => (
+                  <Button
+                    key={period}
+                    mode={selectedPeriod === period ? 'contained' : 'outlined'}
+                    onPress={() => setSelectedPeriod(period)}
+                    style={styles.periodButton}
+                    labelStyle={styles.periodButtonLabel}
+                  >
+                    {periodLabels[period]}
+                  </Button>
+                ))}
+              </View>
+            </>
+          )}
+
+          {queryMode === 'customDay' && (
+            <View style={styles.customDateContainer}>
+              <Text style={styles.dateLabel}>Fecha seleccionada</Text>
+              <Button
+                mode="outlined"
+                icon="calendar"
+                onPress={() => openPicker('customDay')}
+              >
+                {formatDateLabel(customDay)}
+              </Button>
+            </View>
+          )}
+
+          {queryMode === 'customRange' && (
+            <View style={styles.customDateContainer}>
+              <Text style={styles.dateLabel}>Desde</Text>
+              <Button
+                mode="outlined"
+                icon="calendar-start"
+                onPress={() => openPicker('rangeStart')}
+                style={styles.dateButton}
+              >
+                {formatDateLabel(rangeStartDate)}
+              </Button>
+
+              <Text style={[styles.dateLabel, styles.dateLabelSpacing]}>Hasta</Text>
+              <Button
+                mode="outlined"
+                icon="calendar-end"
+                onPress={() => openPicker('rangeEnd')}
+                style={styles.dateButton}
+              >
+                {formatDateLabel(rangeEndDate)}
+              </Button>
+            </View>
+          )}
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={
+                pickerTarget === 'customDay'
+                  ? customDay
+                  : pickerTarget === 'rangeStart'
+                  ? rangeStartDate
+                  : rangeEndDate
+              }
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={handleDateChange}
+            />
+          )}
+
+          <Text variant="bodySmall" style={styles.filterSummary}>
+            {queryMode === 'preset'
+              ? `Mostrando: ${periodLabels[selectedPeriod]}`
+              : queryMode === 'customDay'
+              ? `Mostrando día: ${formatDateLabel(customDay)}`
+              : `Mostrando rango: ${formatDateLabel(rangeStartDate)} a ${formatDateLabel(rangeEndDate)}`}
+          </Text>
         </Card.Content>
       </Card>
 
@@ -658,6 +819,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
+  sectionTitleSecondary: {
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  modeButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modeButton: {
+    flex: 1,
+    minWidth: '30%',
+  },
   periodButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -669,6 +844,23 @@ const styles = StyleSheet.create({
   },
   periodButtonLabel: {
     fontSize: 12,
+  },
+  customDateContainer: {
+    marginTop: 8,
+  },
+  dateLabel: {
+    color: '#666',
+    marginBottom: 8,
+  },
+  dateLabelSpacing: {
+    marginTop: 12,
+  },
+  dateButton: {
+    alignSelf: 'flex-start',
+  },
+  filterSummary: {
+    color: '#666',
+    marginTop: 12,
   },
   gridContainer: {
     flexDirection: 'row',

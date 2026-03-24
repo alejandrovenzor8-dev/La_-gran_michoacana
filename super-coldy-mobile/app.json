@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icons/app-icon-192.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "scheme": "lagranmichoacana",
     "runtimeVersion": {
       "policy": "appVersion"
@@ -18,7 +17,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#1f2937"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -41,7 +41,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.alejandrovenzor.lagranmichoacana",
       "versionCode": 1,

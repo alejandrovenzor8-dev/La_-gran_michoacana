@@ -239,28 +239,36 @@ class SaleService {
   /**
    * Obtener estadísticas de reporte por período
    */
-  async getReportStats(period: 'day' | 'week' | 'month' | 'year'): Promise<DailySalesStats> {
+  async getReportStats(
+    period: 'day' | 'week' | 'month' | 'year',
+    options?: { startDate?: Date; endDate?: Date }
+  ): Promise<DailySalesStats> {
     try {
       let startDate = new Date();
       let endDate = new Date();
 
-      // Calcular fechas según el período
-      switch (period) {
-        case 'day':
-          // Hoy solamente
-          break;
-        case 'week':
-          // Últimos 7 días
-          startDate.setDate(endDate.getDate() - 6);
-          break;
-        case 'month':
-          // Este mes
-          startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
-          break;
-        case 'year':
-          // Este año
-          startDate = new Date(endDate.getFullYear(), 0, 1);
-          break;
+      if (options?.startDate || options?.endDate) {
+        startDate = options.startDate ? new Date(options.startDate) : new Date();
+        endDate = options.endDate ? new Date(options.endDate) : new Date();
+      } else {
+        // Calcular fechas según el período
+        switch (period) {
+          case 'day':
+            // Hoy solamente
+            break;
+          case 'week':
+            // Últimos 7 días
+            startDate.setDate(endDate.getDate() - 6);
+            break;
+          case 'month':
+            // Este mes
+            startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+            break;
+          case 'year':
+            // Este año
+            startDate = new Date(endDate.getFullYear(), 0, 1);
+            break;
+        }
       }
 
       // Configurar horas
