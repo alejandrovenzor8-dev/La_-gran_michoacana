@@ -53,6 +53,8 @@ export default function ReportsScreen() {
   const [rangeEndDate, setRangeEndDate] = useState<Date>(new Date());
   const [pickerTarget, setPickerTarget] = useState<DatePickerTarget>('customDay');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [salesList, setSalesList] = useState<any[]>([]);
+  const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
 
   const formatDateLabel = (date: Date) => {
     const year = date.getFullYear();
@@ -155,6 +157,19 @@ export default function ReportsScreen() {
         endDate,
       });
       setStatsData(stats);
+
+      // Cargar lista de ventas
+      try {
+        const sales = await saleService.getSalesList({
+          startDate,
+          endDate,
+          limit: 100,
+        });
+        setSalesList(sales || []);
+      } catch (error) {
+        console.error('Error fetching sales list:', error);
+        setSalesList([]);
+      }
 
       // Siempre cargar datos para gráficas
       try {
@@ -763,6 +778,105 @@ export default function ReportsScreen() {
               </Card.Content>
             </Card>
           )}
+
+          {/* Detalle de Ventas */}
+          {salesList && salesList.length > 0 && (
+            <Card style={styles.card}>
+              <Card.Title title={`📋 Detalle de Ventas (${salesList.length})`} />
+              <Card.Content>
+                {salesList.map((sale: any) => (
+                  <View key={sale.id}>
+                    <View
+                      style={[
+                        styles.saleRow,
+                        expandedSaleId === sale.id && styles.saleRowExpanded,
+                      ]}
+                    >
+                      <View style={styles.saleHeader}>
+                        <View style={styles.saleInfo}>
+                          <Text style={styles.saleId}>Venta #{sale.id}</Text>
+                          <Text style={styles.saleDate}>
+                            {sale.createdAt
+                              ? new Date(sale.createdAt).toLocaleDateString(
+                                  'es-MX',
+                                  {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )
+                              : 'N/A'}
+                          </Text>
+                        </View>
+                        <View style={styles.saleAmount}>
+                          <Text style={styles.saleTotal}>
+                            ${(sale.total || 0).toFixed(2)}
+                          </Text>
+                          <Text style={styles.saleItems}>
+                            {sale.items?.length || 0} art.
+                          </Text>
+                        </View>
+                      </View>
+                      <Button
+                        onPress={() =>
+                          setExpandedSaleId(
+                            expandedSaleId === sale.id ? null : sale.id
+                          )
+                        }
+                        style={{ alignSelf: 'center', marginTop: 8 }}
+                      >
+                        {expandedSaleId === sale.id ? '▼' : '▶'}
+                      </Button>
+                    </View>
+
+                    {/* Detalle expandido */}
+                    {expandedSaleId === sale.id && sale.items && (
+                      <View style={styles.saleDetails}>
+                        <Text style={styles.saleDetailsTitle}>
+                          Productos:
+                        </Text>
+                        {sale.items.map((item: any, idx: number) => (
+                          <View key={idx} style={styles.itemRow}>
+                            <View style={styles.itemInfo}>
+                              <Text style={styles.itemName}>
+                                {item.productName ||
+                                  `Producto #${item.productId}`}
+                              </Text>
+                              <Text style={styles.itemQty}>
+                                {item.quantity} x ${(
+                                  item.unitPrice || 0
+                                ).toFixed(2)}
+                              </Text>
+                            </View>
+                            <Text style={styles.itemSubtotal}>
+                              ${(
+                                item.subtotal ||
+                                item.quantity * item.unitPrice
+                              ).toFixed(2)}
+                            </Text>
+                          </View>
+                        ))}
+                        <Divider style={styles.divider} />
+                        <View
+                          style={[
+                            styles.itemRow,
+                            { paddingTop: 8, marginTop: 8 },
+                          ]}
+                        >
+                          <Text style={styles.totalLabel}>Total:</Text>
+                          <Text style={styles.totalAmount}>
+                            ${(sale.total || 0).toFixed(2)}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                    <Divider style={styles.divider} />
+                  </View>
+                ))}
+              </Card.Content>
+            </Card>
+          )}
         </>
       ) : (
         <View style={styles.emptyContainer}>
@@ -953,6 +1067,100 @@ const styles = StyleSheet.create({
   productRevenue: {
     fontWeight: '600',
     fontSize: 16,
+  },
+  saleRow: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1976D2',
+  },
+  saleRowExpanded: {
+    backgroundColor: '#E3F2FD',
+    borderLeftColor: '#45B7D1',
+  },
+  saleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  saleInfo: {
+    flex: 1,
+  },
+  saleId: {
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#333',
+  },
+  saleDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  saleAmount: {
+    alignItems: 'flex-end',
+  },
+  saleTotal: {
+    fontWeight: '700',
+    fontSize: 16,
+    color: '#1976D2',
+  },
+  saleItems: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  saleDetails: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E3F2FD',
+  },
+  saleDetailsTitle: {
+    fontWeight: '600',
+    fontSize: 13,
+    marginBottom: 8,
+    color: '#333',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 6,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333',
+  },
+  itemQty: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  itemSubtotal: {
+    fontWeight: '600',
+    fontSize: 13,
+    color: '#333',
+    marginLeft: 12,
+  },
+  totalLabel: {
+    fontWeight: '600',
+    fontSize: 13,
+    color: '#333',
+    flex: 1,
+  },
+  totalAmount: {
+    fontWeight: '700',
+    fontSize: 14,
+    color: '#1976D2',
   },
   centerContainer: {
     justifyContent: 'center',

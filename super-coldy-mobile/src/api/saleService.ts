@@ -237,6 +237,41 @@ class SaleService {
   }
 
   /**
+   * Obtener listado de ventas en un rango de fechas
+   */
+  async getSalesList(filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    page?: number;
+  }): Promise<Sale[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.startDate)
+        params.append('startDate', filters.startDate.toISOString());
+      if (filters?.endDate)
+        params.append('endDate', filters.endDate.toISOString());
+      if (filters?.limit) params.append('limit', String(filters.limit));
+      else params.append('limit', '100'); // Máximo permitido por el backend
+
+      if (filters?.page) params.append('page', String(filters.page));
+      else params.append('page', '1');
+
+      const queryString = params.toString();
+      const endpoint = `/sales${queryString ? `?${queryString}` : ''}`;
+
+      const response = await apiClient.get<
+        ApiResponse<{ sales: Sale[] }>
+      >(endpoint);
+
+      return response.data.sales || [];
+    } catch (error) {
+      console.error('Error fetching sales list:', error);
+      return [];
+    }
+  }
+
+  /**
    * Obtener estadísticas de reporte por período
    */
   async getReportStats(

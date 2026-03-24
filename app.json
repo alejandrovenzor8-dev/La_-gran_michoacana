@@ -7,6 +7,12 @@
     },
     "android": {
       "package": "com.venzorgtz.la_gran_michoacana"
+    },
+    "ios": {
+      "bundleIdentifier": "host.exp.Exponent",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }
